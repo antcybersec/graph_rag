@@ -154,7 +154,17 @@ def _generate_local(
     # instructions themselves, depending on template layout) gets silently dropped
     # before the model ever sees it -- observed in production as answers that
     # ignore the actual question entirely, not just "lower quality" ones.
-    OLLAMA_NUM_CTX = int(os.environ.get("OLLAMA_NUM_CTX", 32768))
+    # 32768 was the first safe-looking value tried (see comment above) but its
+    # KV cache alone pushed llama-server to ~10GB RSS -- plus additional
+    # GPU/Metal buffer overhead on Apple Silicon's shared unified memory that
+    # doesn't fully show up in per-process RSS -- enough to repeatedly OOM-kill
+    # everything else on a 16GB machine (observed in production, 2026-09-11).
+    # Real per-call contexts observed under this project's actual prompts
+    # (GraphRAG's LIMIT-capped facts+chunks, agentic's accumulated evidence)
+    # top out around 19k tokens, so 20480 keeps real headroom above that
+    # ceiling while meaningfully cutting the fixed KV-cache memory cost vs
+    # 32768. Raise this back up only alongside more free RAM.
+    OLLAMA_NUM_CTX = int(os.environ.get("OLLAMA_NUM_CTX", 20480))
     body = {"model": model_name, "messages": messages, "stream": False, "options": {"num_ctx": OLLAMA_NUM_CTX}}
     if response_schema is not None:
         # Ollama's structured-output support: pass the target JSON schema directly
