@@ -103,9 +103,21 @@ def _run_link_entities(conn, query: str, tracker, question_id) -> tuple:
 def _run_graph_traverse(conn, entity_ids: list) -> tuple:
     if not entity_ids:
         return [], []
-    result = conn.runInstalledQuery("entity_neighbors_1hop", params={"seeds": entity_ids})
+    try:
+        result = conn.runInstalledQuery("entity_neighbors_1hop", params={"seeds": entity_ids})
+    except Exception:
+        # entity_ids can include orchestrator-hallucinated IDs (decision.entity_ids is
+        # free-form LLM output, not validated against the graph -- see the filtering at
+        # the call site) or hit a transient graph error. Either way, one bad action
+        # shouldn't torch an entire multi-step investigation (and the tokens already
+        # spent on it) -- treat it as "this action found nothing" and let the
+        # orchestrator try something else next iteration.
+        return [], []
     neighbors = result[0]["Neighbors"]
-    related_edges = result[1]["related_edges"]
+    # Defensive cap independent of the GSQL-side LIMIT -- see graphrag/pipeline.py's
+    # MAX_FACTS comment: ACCUM runs over every matched edge before LIMIT trims the
+    # output vertex set, so this isn't guaranteed bounded by the query alone.
+    related_edges = result[1]["related_edges"][:20]
     chunks = result[2]["ChunksOfNeighbors"]
 
     all_ids = list({e["v_id"] for e in neighbors} | set(entity_ids))
@@ -181,7 +193,11 @@ def answer_question(conn, question: str, tracker=None, question_id=None, max_ite
             evidence.extend(new_evidence)
 
         elif decision.action == "graph_traverse":
-            target_ids = decision.entity_ids or known_entity_ids
+            # decision.entity_ids is free-form LLM output -- prefer the subset that
+            # matches entities we've actually linked/discovered so far over trusting
+            # it outright (it can hallucinate IDs not in the graph at all).
+            requested = [e for e in (decision.entity_ids or []) if e in known_entity_ids]
+            target_ids = requested or decision.entity_ids or known_entity_ids
             new_ids, new_evidence = _run_graph_traverse(conn, target_ids)
             known_entity_ids = list(set(known_entity_ids) | set(new_ids))
             evidence.extend(new_evidence)

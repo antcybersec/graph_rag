@@ -9,6 +9,8 @@ answers for eval_public.jsonl); groundedness is scored against the actual
 retrieved CONTEXT the pipeline used, not the reference -- a pipeline can be
 faithful to bad context and still be wrong, and unfaithful to good context.
 """
+import os
+
 from pydantic import BaseModel
 
 from src.common.llm import generate
@@ -51,6 +53,8 @@ def score_answer(question: str, reference_answer: str, context: str, candidate_a
     )
     result, _rec = generate(
         prompt,
+        model=os.environ.get("JUDGE_MODEL"),  # was missing -- generate() silently fell back to
+        # GEN_MODEL without this, defeating the different-model self-preference-bias mitigation.
         system_instruction=JUDGE_SYSTEM_INSTRUCTION,
         response_schema=JudgeScore,
         pipeline=pipeline,

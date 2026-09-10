@@ -71,10 +71,22 @@ def _get_local_embed_model(model_name: str):
         return model
 
 
+GEMINI_REQUEST_TIMEOUT_MS = int(os.environ.get("GEMINI_REQUEST_TIMEOUT_MS", 90_000))
+
+
 def _get_client() -> genai.Client:
     global _client
     if _client is None:
-        _client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
+        # Explicit timeout matters here: confirmed in production (2026-09-10)
+        # that some Gemini model aliases (gemini-3.8-flash, gemini-flash-latest
+        # at the time) don't error on overload/unavailability -- they just
+        # never respond. Without a client-side timeout, tenacity's @retry
+        # below can't do its job: each "attempt" hangs indefinitely instead of
+        # failing and moving to the next attempt/backoff.
+        _client = genai.Client(
+            api_key=os.environ["GOOGLE_API_KEY"],
+            http_options=types.HttpOptions(timeout=GEMINI_REQUEST_TIMEOUT_MS),
+        )
     return _client
 
 

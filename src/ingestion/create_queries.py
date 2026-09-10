@@ -44,16 +44,25 @@ INSTALL QUERY vector_search_entities
 USE GRAPH {GRAPH_NAME}
 
 CREATE QUERY entity_neighbors_1hop(SET<VERTEX<Entity>> seeds) FOR GRAPH {GRAPH_NAME} SYNTAX v3 {{
+  // Both selects below are capped with LIMIT -- unbounded, a single hub
+  // entity (e.g. "2018 Winter Olympics") can have hundreds/thousands of
+  // RELATED_TO edges and MENTIONS chunks, blowing the answer-synthesis
+  // context to 100k+ tokens for one question (observed in production,
+  // 2026-09-10: one GraphRAG call hit 169k tokens and scored WORSE than
+  // plain RAG's 12k-token answer on the same question -- more context
+  // isn't better here, it's mostly noise that also risks quota exhaustion).
   ListAccum<EDGE> @@edges;
   Seeds = {{seeds}};
   Neighbors = SELECT t FROM Seeds:s -(RELATED_TO:e)- Entity:t
               WHERE t != s
-              ACCUM @@edges += e;
+              ACCUM @@edges += e
+              LIMIT 20;
   PRINT Neighbors;
   PRINT @@edges AS related_edges;
 
   AllEntities = Seeds UNION Neighbors;
-  ChunksOfNeighbors = SELECT c FROM Chunk:c -(MENTIONS>:m)- AllEntities:v;
+  ChunksOfNeighbors = SELECT c FROM Chunk:c -(MENTIONS>:m)- AllEntities:v
+                      LIMIT 20;
   PRINT ChunksOfNeighbors;
 }}
 
