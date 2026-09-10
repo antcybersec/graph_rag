@@ -19,6 +19,7 @@ writeup this follows):
     why it stopped (`stop_reason`) -- required by the hackathon's own
     "agentic effectiveness" judging criterion, not optional instrumentation.
 """
+import re
 from typing import Optional
 
 from pydantic import BaseModel
@@ -229,14 +230,22 @@ def answer_question(conn, question: str, tracker=None, question_id=None, max_ite
         final_answer = decision.final_answer or "(no answer produced)"
 
     strategies_used = {t["action"] for t in trace}
+    chunks_used = [e["citation_id"] for e in evidence if e["source"] == "chunk"]
     return {
         "answer": final_answer,
         "trace": trace,
         "num_steps": len(trace),
         "stop_reason": stop_reason,
         "strategy_changed": len(strategies_used) > 1,
-        "chunks_used": [e["citation_id"] for e in evidence if e["source"] == "chunk"],
+        "chunks_used": chunks_used,
         "facts_used": [e["citation_id"] for e in evidence if e["source"] == "fact"],
+        # chunk_id format is "{doc_id}_c{index}" (see load_documents_chunks.py) --
+        # derived here rather than threaded through from each retrieval helper.
+        # Was missing entirely before this fix, so run_benchmark.py's doc
+        # precision/recall silently scored agentic against an empty list every
+        # time (always 0.0), not because retrieval was bad but because this
+        # field never existed.
+        "retrieved_doc_ids": sorted({re.sub(r"_c\d+$", "", cid) for cid in chunks_used}),
         "context_text": _format_evidence(evidence),
     }
 
