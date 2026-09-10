@@ -51,18 +51,23 @@ CREATE QUERY entity_neighbors_1hop(SET<VERTEX<Entity>> seeds) FOR GRAPH {GRAPH_N
   // 2026-09-10: one GraphRAG call hit 169k tokens and scored WORSE than
   // plain RAG's 12k-token answer on the same question -- more context
   // isn't better here, it's mostly noise that also risks quota exhaustion).
+  // Tightened from 20 to 8 on 2026-09-11: a free-tier provider's 8k-token-
+  // per-minute cap flatly rejected the ~15-19k-token contexts LIMIT 20
+  // produced. 8 is a deliberate design choice, not just a quota workaround --
+  // GraphRAG was already the weakest-performing pipeline at LIMIT 20, so
+  // there's no evidence more evidence here was helping.
   ListAccum<EDGE> @@edges;
   Seeds = {{seeds}};
   Neighbors = SELECT t FROM Seeds:s -(RELATED_TO:e)- Entity:t
               WHERE t != s
               ACCUM @@edges += e
-              LIMIT 20;
+              LIMIT 8;
   PRINT Neighbors;
   PRINT @@edges AS related_edges;
 
   AllEntities = Seeds UNION Neighbors;
   ChunksOfNeighbors = SELECT c FROM Chunk:c -(MENTIONS>:m)- AllEntities:v
-                      LIMIT 20;
+                      LIMIT 8;
   PRINT ChunksOfNeighbors;
 }}
 

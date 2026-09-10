@@ -55,6 +55,36 @@ OLLAMA_REQUEST_TIMEOUT_SEC = int(os.environ.get("OLLAMA_REQUEST_TIMEOUT_SEC", 30
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 OPENROUTER_REQUEST_TIMEOUT_SEC = int(os.environ.get("OPENROUTER_REQUEST_TIMEOUT_SEC", 120))
 
+# Groq: also hosted (no local RAM cost), no card required. Added 2026-09-11 after
+# OpenRouter's free tier turned out to be a shared 50-requests/day cap across all
+# free models. Groq's free tier is generous on request COUNT (up to 1000/day on
+# some models) but several models cap total tokens-per-minute (TPM) at just 8000
+# -- confirmed this flatly REJECTS (413, not throttles) a single ~15k-token
+# GraphRAG-sized prompt outright. That's why LIMIT 8 (create_queries.py,
+# graphrag/pipeline.py, agentic/pipeline.py) replaced LIMIT 20 the same day.
+GROQ_BASE_URL = "https://api.groq.com/openai/v1"
+GROQ_REQUEST_TIMEOUT_SEC = int(os.environ.get("GROQ_REQUEST_TIMEOUT_SEC", 60))
+
+
+def _to_strict_json_schema(schema: dict) -> dict:
+    """OpenAI-style "strict" structured output (Groq included) requires, on EVERY
+    object node: `additionalProperties: false`, AND every property key listed in
+    `required` (an Optional[...] field is expressed by its nullable TYPE, e.g.
+    anyOf: [{type}, {type: null}], not by omission from `required`) -- pydantic's
+    model_json_schema() does neither by default. Confirmed via two separate 400s
+    (\"must be set on every object\" / \"must be listed in required\"). Walks the
+    schema recursively since a future schema could nest objects even though
+    today's (JudgeScore, OrchestratorDecision) are flat."""
+    if isinstance(schema, dict):
+        if schema.get("type") == "object":
+            schema = {**schema, "additionalProperties": False}
+            if "properties" in schema:
+                schema["required"] = list(schema["properties"].keys())
+        return {k: _to_strict_json_schema(v) for k, v in schema.items()}
+    if isinstance(schema, list):
+        return [_to_strict_json_schema(v) for v in schema]
+    return schema
+
 # BGE's own model card instruction: prepending this to the QUERY side only
 # (never the document/passage side) measurably improves retrieval for the
 # bge-*-en-v1.5 family -- this is a property of those checkpoints, not a
@@ -278,6 +308,70 @@ def _generate_openrouter(
     return content, record
 
 
+def _generate_groq(
+    prompt: str,
+    model_name: str,
+    system_instruction: Optional[str],
+    response_schema: Optional[Type[T]],
+    tracker: Optional[TokenTracker],
+    pipeline: str,
+    call_type: str,
+    question_id: Optional[str],
+    context_tokens: int,
+) -> tuple:
+    """Generate via Groq (OpenAI-compatible API) -- hosted, no local RAM cost,
+    no card required. See GROQ_BASE_URL comment above for the TPM caveat."""
+    messages = []
+    if system_instruction:
+        messages.append({"role": "system", "content": system_instruction})
+    messages.append({"role": "user", "content": prompt})
+
+    body = {"model": model_name, "messages": messages}
+    if response_schema is not None:
+        schema = _to_strict_json_schema(response_schema.model_json_schema())
+        body["response_format"] = {
+            "type": "json_schema",
+            "json_schema": {"name": response_schema.__name__, "schema": schema, "strict": True},
+        }
+
+    t0 = time.time()
+    resp = requests.post(
+        f"{GROQ_BASE_URL}/chat/completions",
+        headers={"Authorization": f"Bearer {os.environ['GROQ_API_KEY']}"},
+        json=body,
+        timeout=GROQ_REQUEST_TIMEOUT_SEC,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    latency = time.time() - t0
+
+    content = data["choices"][0]["message"]["content"]
+    usage = data.get("usage", {})
+    record = CallRecord(
+        pipeline=pipeline,
+        call_type=call_type,
+        model=model_name,
+        input_tokens=usage.get("prompt_tokens", 0) or 0,
+        output_tokens=usage.get("completion_tokens", 0) or 0,
+        total_tokens=usage.get("total_tokens", 0) or 0,
+        context_tokens=context_tokens,
+        latency_sec=latency,
+        question_id=question_id,
+        note="provider=groq",
+    )
+    (tracker or default_tracker).log(record)
+
+    if response_schema is not None:
+        try:
+            return response_schema.model_validate_json(content), record
+        except Exception as e:
+            raise RuntimeError(
+                f"groq model {model_name} returned invalid JSON for schema "
+                f"{response_schema.__name__}: {content[:300]!r} ({e})"
+            )
+    return content, record
+
+
 @retry(wait=wait_random_exponential(min=2, max=60), stop=stop_after_attempt(5), reraise=True)
 def generate(
     prompt: str,
@@ -312,6 +406,11 @@ def generate(
         )
     if provider == "openrouter":
         return _generate_openrouter(
+            prompt, model_name, system_instruction, response_schema,
+            tracker, pipeline, call_type, question_id, context_tokens,
+        )
+    if provider == "groq":
+        return _generate_groq(
             prompt, model_name, system_instruction, response_schema,
             tracker, pipeline, call_type, question_id, context_tokens,
         )

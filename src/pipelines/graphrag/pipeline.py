@@ -39,7 +39,7 @@ def link_entities(conn, question: str, k: int = TOP_K_ENTITIES, tracker=None, qu
     return seeds  # list of {"v_id":..., "v_type":..., "attributes": {...}}
 
 
-MAX_FACTS = 20  # defensive cap independent of the GSQL-side LIMIT -- GSQL's ACCUM
+MAX_FACTS = 8  # defensive cap independent of the GSQL-side LIMIT -- GSQL's ACCUM
 # still runs over every matched edge before LIMIT trims the output vertex set, so
 # related_edges isn't guaranteed bounded by the query's own LIMIT alone (see
 # create_queries.py). Chunks ARE bounded there (plain SELECT, no ACCUM), so no

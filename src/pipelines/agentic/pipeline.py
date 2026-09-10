@@ -124,7 +124,7 @@ def _run_graph_traverse(conn, entity_ids: list) -> tuple:
         # Defensive cap independent of the GSQL-side LIMIT -- see graphrag/pipeline.py's
         # MAX_FACTS comment: ACCUM runs over every matched edge before LIMIT trims the
         # output vertex set, so this isn't guaranteed bounded by the query alone.
-        related_edges = result[1]["related_edges"][:20]
+        related_edges = result[1]["related_edges"][:8]
         chunks = result[2]["ChunksOfNeighbors"]
 
         all_ids = list({e["v_id"] for e in neighbors} | set(entity_ids))
