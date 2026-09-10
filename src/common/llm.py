@@ -49,6 +49,12 @@ OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 # its own, much longer allowance.
 OLLAMA_REQUEST_TIMEOUT_SEC = int(os.environ.get("OLLAMA_REQUEST_TIMEOUT_SEC", 300))
 
+# OpenRouter: hosted inference (no local RAM cost, unlike Ollama), added
+# 2026-09-11 as a third option alongside gemini/local -- free-tier (":free"
+# model suffix) models are rate-limited but need no local compute at all.
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+OPENROUTER_REQUEST_TIMEOUT_SEC = int(os.environ.get("OPENROUTER_REQUEST_TIMEOUT_SEC", 120))
+
 # BGE's own model card instruction: prepending this to the QUERY side only
 # (never the document/passage side) measurably improves retrieval for the
 # bge-*-en-v1.5 family -- this is a property of those checkpoints, not a
@@ -203,6 +209,75 @@ def _generate_local(
     return content, record
 
 
+def _generate_openrouter(
+    prompt: str,
+    model_name: str,
+    system_instruction: Optional[str],
+    response_schema: Optional[Type[T]],
+    tracker: Optional[TokenTracker],
+    pipeline: str,
+    call_type: str,
+    question_id: Optional[str],
+    context_tokens: int,
+) -> tuple:
+    """Generate via OpenRouter (OpenAI-compatible API) -- hosted, no local RAM cost.
+    No rate limiter needed here either (OpenRouter enforces its own free-tier
+    limits server-side and returns a normal 429 on breach, which tenacity's
+    @retry on generate() already handles)."""
+    messages = []
+    if system_instruction:
+        messages.append({"role": "system", "content": system_instruction})
+    messages.append({"role": "user", "content": prompt})
+
+    body = {"model": model_name, "messages": messages}
+    if response_schema is not None:
+        body["response_format"] = {
+            "type": "json_schema",
+            "json_schema": {
+                "name": response_schema.__name__,
+                "schema": response_schema.model_json_schema(),
+                "strict": True,
+            },
+        }
+
+    t0 = time.time()
+    resp = requests.post(
+        f"{OPENROUTER_BASE_URL}/chat/completions",
+        headers={"Authorization": f"Bearer {os.environ['OPENROUTER_API_KEY']}"},
+        json=body,
+        timeout=OPENROUTER_REQUEST_TIMEOUT_SEC,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    latency = time.time() - t0
+
+    content = data["choices"][0]["message"]["content"]
+    usage = data.get("usage", {})
+    record = CallRecord(
+        pipeline=pipeline,
+        call_type=call_type,
+        model=model_name,
+        input_tokens=usage.get("prompt_tokens", 0) or 0,
+        output_tokens=usage.get("completion_tokens", 0) or 0,
+        total_tokens=usage.get("total_tokens", 0) or 0,
+        context_tokens=context_tokens,
+        latency_sec=latency,
+        question_id=question_id,
+        note="provider=openrouter",
+    )
+    (tracker or default_tracker).log(record)
+
+    if response_schema is not None:
+        try:
+            return response_schema.model_validate_json(content), record
+        except Exception as e:
+            raise RuntimeError(
+                f"openrouter model {model_name} returned invalid JSON for schema "
+                f"{response_schema.__name__}: {content[:300]!r} ({e})"
+            )
+    return content, record
+
+
 @retry(wait=wait_random_exponential(min=2, max=60), stop=stop_after_attempt(5), reraise=True)
 def generate(
     prompt: str,
@@ -232,6 +307,11 @@ def generate(
 
     if provider == "local":
         return _generate_local(
+            prompt, model_name, system_instruction, response_schema,
+            tracker, pipeline, call_type, question_id, context_tokens,
+        )
+    if provider == "openrouter":
+        return _generate_openrouter(
             prompt, model_name, system_instruction, response_schema,
             tracker, pipeline, call_type, question_id, context_tokens,
         )
