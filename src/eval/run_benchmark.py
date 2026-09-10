@@ -42,6 +42,15 @@ def load_questions(limit=None):
 
 
 def load_done_keys(path: str) -> set:
+    """(qid, pipeline) pairs that succeeded and don't need re-running.
+
+    Error rows are deliberately NOT counted as done -- a transient failure
+    (rate limit, quota, a crashed dependency) shouldn't be permanent.
+    Observed in production, 2026-09-10/11: 141 rows failed on a 429 quota
+    wall; without this exclusion, resuming after fixing the quota issue
+    (switching providers) reported "already done: 300, remaining: 0" and
+    silently did nothing -- the checkpoint had no way to distinguish
+    "answered" from "gave up on this one.\""""
     done = set()
     if os.path.exists(path):
         with open(path) as f:
@@ -51,6 +60,8 @@ def load_done_keys(path: str) -> set:
                     continue
                 try:
                     r = json.loads(line)
+                    if "error" in r:
+                        continue
                     done.add((r["qid"], r["pipeline"]))
                 except Exception:
                     pass
