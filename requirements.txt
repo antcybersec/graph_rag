@@ -14,3 +14,5 @@ gdown>=5.2
 tenacity>=9.0
 sentence-transformers>=3.0
 torch>=2.2
+requests>=2.31  # already a transitive dep (pyTigerGraph/google-genai) but now imported
+# directly by both tg_conn.py and llm.py's Ollama integration -- declaring explicitly.

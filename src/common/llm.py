@@ -6,10 +6,13 @@ that log is the raw material for the metrics dashboard's token-efficiency
 and per-question breakdown.
 
 Embeddings can run against either Gemini's API or a local open-source model
-(BGE, via sentence-transformers) -- see `embed()`. Generation always goes
-through Gemini; only the embedding quota was the bottleneck in practice
-(free-tier RPD cap hit mid-ingestion, 2026-09-09), so EMBED_PROVIDER=local
-is the escape hatch for that, independent of GEN_MODEL/generate().
+(BGE, via sentence-transformers) -- see `embed()`. Generation can likewise run
+against Gemini or a local Ollama model -- see `generate()` / GEN_PROVIDER.
+Added 2026-09-10 after Gemini's free-tier *generation* quota (separate pool
+from embeddings, and separate again from the embedding outage on 2026-09-09)
+turned out to be a hard 500-requests/day cap with no billing account to lift
+it -- EMBED_PROVIDER and GEN_PROVIDER are independent switches; embeddings
+stay on local BGE either way since that's already resolved and free.
 """
 import os
 
@@ -25,6 +28,7 @@ import threading
 import time
 from typing import Optional, Type, TypeVar
 
+import requests
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
@@ -37,6 +41,13 @@ load_dotenv()
 
 _client: Optional[genai.Client] = None
 T = TypeVar("T", bound=BaseModel)
+
+OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+# Local inference on a CPU/GPU-shared-memory Mac can genuinely take minutes for a
+# large prompt (structured agentic-orchestrator calls especially) -- this is NOT
+# the same "something is hanging" signal as GEMINI_REQUEST_TIMEOUT_MS, so it gets
+# its own, much longer allowance.
+OLLAMA_REQUEST_TIMEOUT_SEC = int(os.environ.get("OLLAMA_REQUEST_TIMEOUT_SEC", 300))
 
 # BGE's own model card instruction: prepending this to the QUERY side only
 # (never the document/passage side) measurably improves retrieval for the
@@ -116,6 +127,64 @@ class _RateLimiter:
 _rate_limiter = _RateLimiter(min_interval_sec=float(os.environ.get("LLM_MIN_INTERVAL_SEC", 6.5)))
 
 
+def _generate_local(
+    prompt: str,
+    model_name: str,
+    system_instruction: Optional[str],
+    response_schema: Optional[Type[T]],
+    tracker: Optional[TokenTracker],
+    pipeline: str,
+    call_type: str,
+    question_id: Optional[str],
+    context_tokens: int,
+) -> tuple:
+    """Generate via a local Ollama model -- no network, no quota. No rate limiter
+    needed (nothing external to protect); no thinking_budget support (most local
+    models don't expose that control the way Gemini does, so it's silently
+    ignored here rather than failing)."""
+    messages = []
+    if system_instruction:
+        messages.append({"role": "system", "content": system_instruction})
+    messages.append({"role": "user", "content": prompt})
+
+    body = {"model": model_name, "messages": messages, "stream": False}
+    if response_schema is not None:
+        # Ollama's structured-output support: pass the target JSON schema directly
+        # as `format` and it constrains decoding to match it.
+        body["format"] = response_schema.model_json_schema()
+
+    t0 = time.time()
+    resp = requests.post(f"{OLLAMA_HOST}/api/chat", json=body, timeout=OLLAMA_REQUEST_TIMEOUT_SEC)
+    resp.raise_for_status()
+    data = resp.json()
+    latency = time.time() - t0
+
+    content = data.get("message", {}).get("content", "")
+    record = CallRecord(
+        pipeline=pipeline,
+        call_type=call_type,
+        model=model_name,
+        input_tokens=data.get("prompt_eval_count", 0) or 0,
+        output_tokens=data.get("eval_count", 0) or 0,
+        total_tokens=(data.get("prompt_eval_count", 0) or 0) + (data.get("eval_count", 0) or 0),
+        context_tokens=context_tokens,
+        latency_sec=latency,
+        question_id=question_id,
+        note="provider=local",
+    )
+    (tracker or default_tracker).log(record)
+
+    if response_schema is not None:
+        try:
+            return response_schema.model_validate_json(content), record
+        except Exception as e:
+            raise RuntimeError(
+                f"local model {model_name} returned invalid JSON for schema "
+                f"{response_schema.__name__}: {content[:300]!r} ({e})"
+            )
+    return content, record
+
+
 @retry(wait=wait_random_exponential(min=2, max=60), stop=stop_after_attempt(5), reraise=True)
 def generate(
     prompt: str,
@@ -138,9 +207,18 @@ def generate(
     thinking_budget: pass 0 to disable extended thinking (cheap/deterministic
     bulk calls like entity extraction); leave None to use the model default
     (better for orchestrator reasoning / judge calls where quality matters).
+    Ignored entirely under GEN_PROVIDER=local (see module docstring).
     """
-    client = _get_client()
     model_name = model or os.environ.get("GEN_MODEL", "gemini-3.8-flash")
+    provider = os.environ.get("GEN_PROVIDER", "gemini").lower()
+
+    if provider == "local":
+        return _generate_local(
+            prompt, model_name, system_instruction, response_schema,
+            tracker, pipeline, call_type, question_id, context_tokens,
+        )
+
+    client = _get_client()
 
     config_kwargs = {}
     if system_instruction:
