@@ -162,6 +162,15 @@ class _RateLimiter:
 
 _rate_limiter = _RateLimiter(min_interval_sec=float(os.environ.get("LLM_MIN_INTERVAL_SEC", 6.5)))
 
+# Groq's free tier request-per-day budget is generous (up to 1000/day, confirmed
+# via response headers) but several models cap tokens-per-minute at just 8000 --
+# a rolling window, not a fixed daily allowance, so simply pacing calls (like
+# Gemini above) avoids ever tripping it instead of permanently running out.
+# Our real per-call context (~5-10k tokens post the LIMIT=8 tightening) already
+# uses most of one window's budget, so this paces conservatively per-model
+# rather than trying to precisely track the rolling window via response headers.
+_groq_rate_limiter = _RateLimiter(min_interval_sec=float(os.environ.get("GROQ_MIN_INTERVAL_SEC", 70)))
+
 
 def _generate_local(
     prompt: str,
@@ -334,6 +343,7 @@ def _generate_groq(
             "json_schema": {"name": response_schema.__name__, "schema": schema, "strict": True},
         }
 
+    _groq_rate_limiter.wait(model_name)
     t0 = time.time()
     resp = requests.post(
         f"{GROQ_BASE_URL}/chat/completions",
