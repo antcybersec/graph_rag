@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+data/corpus/*
+data/questions/*
+data/results/*
+!data/corpus/.gitkeep
+!data/questions/.gitkeep
+!data/results/.gitkeep
+.DS_Store
+*.log
+.ipynb_checkpoints/
+.omc/
