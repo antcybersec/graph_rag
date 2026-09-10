@@ -147,7 +147,15 @@ def _generate_local(
         messages.append({"role": "system", "content": system_instruction})
     messages.append({"role": "user", "content": prompt})
 
-    body = {"model": model_name, "messages": messages, "stream": False}
+    # Ollama defaults num_ctx to a small value (historically 2048-4096) regardless
+    # of what the model itself supports -- silently truncating anything longer
+    # instead of erroring. Our RAG/GraphRAG contexts run 10-20k+ tokens, so without
+    # this override most of the actual context (and possibly the question/
+    # instructions themselves, depending on template layout) gets silently dropped
+    # before the model ever sees it -- observed in production as answers that
+    # ignore the actual question entirely, not just "lower quality" ones.
+    OLLAMA_NUM_CTX = int(os.environ.get("OLLAMA_NUM_CTX", 32768))
+    body = {"model": model_name, "messages": messages, "stream": False, "options": {"num_ctx": OLLAMA_NUM_CTX}}
     if response_schema is not None:
         # Ollama's structured-output support: pass the target JSON schema directly
         # as `format` and it constrains decoding to match it.

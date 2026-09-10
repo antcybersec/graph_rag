@@ -20,7 +20,7 @@ writeup this follows):
     "agentic effectiveness" judging criterion, not optional instrumentation.
 """
 import re
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel
 
@@ -59,7 +59,13 @@ Rules:
 
 class OrchestratorDecision(BaseModel):
     reasoning: str
-    action: str  # "link_entities" | "graph_traverse" | "search_chunks" | "answer"
+    # A plain `str` here let a local model (Ministral-3, via Ollama) emit
+    # "graph_traverse([entity:foo])" -- valid JSON, invalid action, no schema-level
+    # rejection -- which fell through to the "unknown action" branch and aborted the
+    # whole investigation. Literal makes malformed values a hard schema-validation
+    # failure (caught by generate()'s existing retry-on-parse-failure path) instead
+    # of a value this loop has to detect and handle itself.
+    action: Literal["link_entities", "graph_traverse", "search_chunks", "answer"]
     query: Optional[str] = None
     entity_ids: Optional[list[str]] = None
     final_answer: Optional[str] = None
@@ -183,7 +189,11 @@ def answer_question(conn, question: str, tracker=None, question_id=None, max_ite
         step = {"iteration": i, "action": decision.action, "query": decision.query, "entity_ids": decision.entity_ids, "reasoning": decision.reasoning}
 
         if decision.action == "answer":
-            final_answer = decision.final_answer or "(no answer produced)"
+            # Some models (observed: Ministral-3 via Ollama) choose action="answer" and
+            # write the actual answer into `reasoning` while leaving `final_answer`
+            # empty, despite the schema and instructions -- reasoning is a much better
+            # fallback than a placeholder when that happens.
+            final_answer = decision.final_answer or decision.reasoning or "(no answer produced)"
             stop_reason = "answer_found"
             trace.append(step)
             break
