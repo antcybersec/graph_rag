@@ -1,0 +1,11 @@
+# Streamlit Community Cloud auto-detects a requirements.txt from the SAME FOLDER
+# as the app's main file first, falling back to the repo root only if this one
+# doesn't exist -- there's no UI field to point it at an arbitrary path (checked
+# against the actual "Advanced settings" dialog, 2026-09-11). So this file, not a
+# root-level one, is what keeps a dashboard-only deploy from building the full
+# project's torch/sentence-transformers/pyTigerGraph stack, which data.py and
+# app.py never import (see their module docstrings) and which would add 1GB+ and
+# real build time for nothing this app uses.
+streamlit>=1.38
+plotly>=5.24
+pandas>=2.0
