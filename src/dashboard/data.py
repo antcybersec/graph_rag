@@ -50,7 +50,6 @@ METRIC_LABELS = {
     "num_llm_calls": "LLM calls",
 }
 
-_ROOT_MARKERS = ("requirements.txt", "pyproject.toml", ".git")
 RESULTS_RELPATH = os.path.join("data", "results", "benchmark_results.jsonl")
 
 _NUMERIC_FIELDS = [
@@ -72,10 +71,25 @@ def project_root() -> Path:
 
     `streamlit run src/dashboard/app.py` can be launched from anywhere, so the
     results path must never depend on where the process started.
+
+    Two passes, not one: .git or the data/results directory itself (the thing
+    this function exists to find) are checked across every candidate first,
+    because neither can plausibly exist anywhere but the true repo root.
+    requirements.txt/pyproject.toml are checked only as a fallback, because
+    either can legitimately exist in a subdirectory too -- src/dashboard/
+    requirements.txt exists deliberately, for a dashboard-only cloud deploy
+    (see that file). A single combined pass previously matched on it and
+    stopped at src/dashboard/ instead of the real repo root, which broke the
+    deployed dashboard's data path entirely: "No benchmark results found at
+    .../src/dashboard/data/results/benchmark_results.jsonl" (Streamlit
+    Community Cloud, 2026-09-11).
     """
     here = Path(__file__).resolve()
     for candidate in here.parents:
-        if any((candidate / marker).exists() for marker in _ROOT_MARKERS):
+        if (candidate / ".git").exists() or (candidate / "data" / "results").is_dir():
+            return candidate
+    for candidate in here.parents:
+        if any((candidate / marker).exists() for marker in ("requirements.txt", "pyproject.toml")):
             return candidate
     return here.parents[2]  # src/dashboard/data.py -> src/dashboard -> src -> root
 
