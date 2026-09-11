@@ -8,6 +8,10 @@ data/results/*
 !data/corpus/.gitkeep
 !data/questions/.gitkeep
 !data/results/.gitkeep
+# Tracked deliberately: this is the dashboard's only data source. Without it,
+# anyone who clones the repo (or a cloud deploy of src/dashboard/app.py) sees
+# "no benchmark results found" instead of the actual 300 graded rows.
+!data/results/benchmark_results.jsonl
 .DS_Store
 *.log
 .ipynb_checkpoints/

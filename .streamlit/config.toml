@@ -1,0 +1,19 @@
+# Dark-only, on purpose: one considered theme beats a light/dark pair that's each
+# half-tuned. backgroundColor/secondaryBackgroundColor/textColor are hand-picked
+# (not Streamlit's stock dark palette) and app.py's THEME["dark"]["surface"] is kept
+# in sync with backgroundColor below -- ring_markers() strokes markers in that exact
+# color so overlapping points separate cleanly, so if you change backgroundColor here,
+# change THEME["dark"]["surface"] in app.py to match.
+#
+# primaryColor is deliberately a muted neutral slate, NOT any of the three pipeline
+# colors (blue/orange/teal, see app.py THEME) and NOT TigerGraph's brand orange --
+# on a first pass this used TigerGraph orange as the UI accent, which collided with
+# orange also being GraphRAG's data color (a widget and a data series reading as the
+# same color is a real ambiguity, not just a taste call). Chrome stays neutral so
+# every color on the page has exactly one meaning: which pipeline it is.
+[theme]
+base = "dark"
+backgroundColor = "#0b0d10"
+secondaryBackgroundColor = "#14171c"
+textColor = "#e7e9ec"
+primaryColor = "#8b93a5"
