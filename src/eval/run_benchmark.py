@@ -1,15 +1,23 @@
-"""Runs all three pipelines (RAG, GraphRAG, Agentic GraphRAG) over the public
-eval set, judges each answer, and writes one row per (question, pipeline) to
-data/results/benchmark_results.jsonl -- the raw material for the metrics
-dashboard.
+"""Runs the pipelines (RAG, GraphRAG, Agentic GraphRAG, Event-graph GraphRAG)
+over an eval set, scores each answer, and writes one row per (question,
+pipeline) to data/results/benchmark_results.jsonl -- the raw material for the
+metrics dashboard.
+
+Scoring: every question with a gold answer gets `exact_match` (deterministic,
+src/eval/exact_match.py, no quota). The LLM judge runs only on a fixed
+`--judge-rate` sample of questions -- the same qids for every pipeline -- since
+its calls count against the same free-tier quota as the pipelines. Questions
+without gold answers (eval_hidden.jsonl) are answered but not scored.
 
 Checkpointed per (qid, pipeline) pair so an interrupted run (rate limits,
 crashes) never redoes already-scored questions.
 
 Usage:
-  python -m src.eval.run_benchmark [--limit N] [--pipelines rag,graphrag,agentic]
+  python -m src.eval.run_benchmark [--limit N] [--pipelines rag,graphrag,agentic,event_graph]
+                                   [--questions PATH] [--output PATH] [--judge-rate 0.2]
 """
 import argparse
+import hashlib
 import json
 import os
 import time
@@ -18,10 +26,12 @@ from tqdm import tqdm
 
 from src.common.token_tracker import TokenTracker
 from src.common.tg_conn import get_connection
+from src.eval.exact_match import is_correct
 from src.eval.judge import score_answer
 from src.pipelines.rag import pipeline as rag_pipeline
 from src.pipelines.graphrag import pipeline as graphrag_pipeline
 from src.pipelines.agentic import pipeline as agentic_pipeline
+from src.pipelines.event_graph import pipeline as event_graph_pipeline
 
 EVAL_PUBLIC_PATH = "data/raw_dataset/questions/eval_public.jsonl"
 OUTPUT_PATH = "data/results/benchmark_results.jsonl"
@@ -30,12 +40,18 @@ PIPELINES = {
     "rag": rag_pipeline,
     "graphrag": graphrag_pipeline,
     "agentic": agentic_pipeline,
+    "event_graph": event_graph_pipeline,
 }
 
 
-def load_questions(limit=None):
+def in_judge_sample(qid: str, rate: float) -> bool:
+    """Stable per-qid bucket, so every pipeline is judged on the same questions."""
+    return int(hashlib.md5(qid.encode()).hexdigest()[:8], 16) / 0x100000000 < rate
+
+
+def load_questions(path=EVAL_PUBLIC_PATH, limit=None):
     qs = []
-    with open(EVAL_PUBLIC_PATH) as f:
+    with open(path) as f:
         for line in f:
             qs.append(json.loads(line))
     return qs[:limit] if limit else qs
@@ -80,19 +96,23 @@ def doc_prf(retrieved: list, gold: list) -> dict:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", type=int, default=None)
-    parser.add_argument("--pipelines", type=str, default="rag,graphrag,agentic")
+    parser.add_argument("--pipelines", type=str, default="rag,graphrag,agentic,event_graph")
+    parser.add_argument("--questions", type=str, default=EVAL_PUBLIC_PATH)
+    parser.add_argument("--output", type=str, default=OUTPUT_PATH)
+    parser.add_argument("--judge-rate", type=float, default=0.2,
+                        help="fraction of questions (same qids for every pipeline) also scored by the LLM judge")
     args = parser.parse_args()
     pipeline_names = args.pipelines.split(",")
 
-    os.makedirs("data/results", exist_ok=True)
+    os.makedirs(os.path.dirname(args.output) or ".", exist_ok=True)
     conn = get_connection()
-    questions = load_questions(args.limit)
-    done = load_done_keys(OUTPUT_PATH)
+    questions = load_questions(args.questions, args.limit)
+    done = load_done_keys(args.output)
 
     jobs = [(q, p) for q in questions for p in pipeline_names if (q["qid"], p) not in done]
     print(f"Total (question,pipeline) pairs: {len(questions) * len(pipeline_names)}, already done: {len(done)}, remaining: {len(jobs)}")
 
-    out_f = open(OUTPUT_PATH, "a")
+    out_f = open(args.output, "a")
 
     for q, pname in tqdm(jobs, desc="benchmarking"):
         tracker = TokenTracker()
@@ -105,16 +125,24 @@ def main():
             out_f.flush()
             continue
         latency = time.time() - t0
+        # Snapshot before judging: total_* below include the judge call, which
+        # is evaluation overhead, not what the pipeline itself costs to run.
+        pipeline_totals = tracker.totals_for(q["qid"])
 
-        reference_answer = "; ".join(q.get("answer", [])) if q.get("answer") else ""
-        try:
-            judge = score_answer(
-                q["question"], reference_answer, result.get("context_text", ""), result["answer"],
-                tracker=tracker, question_id=q["qid"], pipeline=pname,
-            )
-            judge_dict = judge.model_dump()
-        except Exception as e:
-            judge_dict = {"accuracy": None, "completeness": None, "groundedness": None, "reasoning": f"judge_failed: {e}"}
+        gold_answers = q.get("answer") or []
+        reference_answer = "; ".join(gold_answers)
+        exact_match = is_correct(result["answer"], gold_answers, q["question"], result.get("short_answer")) if gold_answers else None
+
+        judge_dict = {"accuracy": None, "completeness": None, "groundedness": None, "reasoning": "not_sampled"}
+        if gold_answers and in_judge_sample(q["qid"], args.judge_rate):
+            try:
+                judge = score_answer(
+                    q["question"], reference_answer, result.get("context_text", ""), result["answer"],
+                    tracker=tracker, question_id=q["qid"], pipeline=pname,
+                )
+                judge_dict = judge.model_dump()
+            except Exception as e:
+                judge_dict["reasoning"] = f"judge_failed: {e}"
 
         totals = tracker.totals_for(q["qid"])
         retrieved_doc_ids = result.get("retrieved_doc_ids", [])
@@ -128,19 +156,32 @@ def main():
             "question": q["question"],
             "reference_answer": reference_answer,
             "answer": result["answer"],
+            "short_answer": result.get("short_answer"),
+            "exact_match": exact_match,
             "judge": judge_dict,
             "retrieved_doc_ids": retrieved_doc_ids,
             "gold_doc_ids": gold_doc_ids,
             "doc_precision": prf["precision"],
             "doc_recall": prf["recall"],
             "latency_sec": latency,
-            **totals,
+            # Pipeline-only cost: the judge runs on a sample of rows, so folding its
+            # calls in would make sampled rows look costlier than the rest.
+            **pipeline_totals,
+            "pipeline_tokens": pipeline_totals["total_tokens"],
+            "pipeline_input_tokens": pipeline_totals["total_input_tokens"],
+            "judge_tokens": totals["total_tokens"] - pipeline_totals["total_tokens"],
+            "judge_calls": totals["num_llm_calls"] - pipeline_totals["num_llm_calls"],
         }
         if pname == "agentic":
             row["num_steps"] = result.get("num_steps")
             row["stop_reason"] = result.get("stop_reason")
             row["strategy_changed"] = result.get("strategy_changed")
             row["trace"] = result.get("trace")
+        if pname == "event_graph":
+            row["route"] = result.get("route")
+            row["plan"] = result.get("plan")
+            row["plan_cached"] = result.get("plan_cached")
+            row["ambiguous"] = " | " in (result.get("short_answer") or "")
 
         out_f.write(json.dumps(row) + "\n")
         out_f.flush()

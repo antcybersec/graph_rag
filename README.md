@@ -18,6 +18,7 @@ that differs between them is *how they retrieve evidence*.
 | **RAG** (baseline) | Vector similarity search over chunk embeddings only. No graph, no structure. The floor everything else is measured against. | `src/pipelines/rag/pipeline.py` |
 | **GraphRAG** | Fixed sequence: entity linking (vector search over entity embeddings) → 1-hop graph traversal (`RELATED_TO` neighbors + their `MENTIONS`'d chunks) → answer synthesis grounded in both structured facts and chunk text. This is GraphRAG's "local search" mode; global search (community summaries) was skipped for the time budget — see `docs/architecture.md`. | `src/pipelines/graphrag/pipeline.py` |
 | **Agentic GraphRAG** | An orchestrator LLM, run in a loop (max 5 iterations), picks the *next* action — `link_entities`, `graph_traverse`, `search_chunks`, or `answer` — based on the question and evidence collected so far, instead of following a fixed sequence. It also decides when evidence is "sufficient" and answers in that same call. Every action is logged to a trace for auditability. | `src/pipelines/agentic/pipeline.py` |
+| **Event-graph GraphRAG** | One LLM call turns the question into a typed query plan. GSQL then traverses a structured event layer (`OlympicEvent`–`Games`–`Sport`–`Venue`, plus `PREV_GAMES`) that was built deterministically from the corpus infoboxes, and Python does the filtering, counting and argmax. It falls back to RAG when the graph can't answer. | `src/pipelines/event_graph/pipeline.py` |
 
 The knowledge graph schema is:
 
@@ -30,12 +31,54 @@ strategy, schema choices, why per-document extraction, why the agentic loop
 is capped, etc.) — most of it is already documented as comments at the top
 of the relevant source files; the doc pulls it together in one place.
 
-## Results (100-question public eval set, 300 graded runs)
+## Results (100-question public eval set)
 
-Judged by a separate/stronger LLM (`JUDGE_MODEL`, see `.env`) on a 1-5 scale
-for accuracy and completeness (against the reference answer) and
-groundedness (against the pipeline's own retrieved context). Full
-methodology in `src/eval/judge.py`.
+### Headline: exact match
+
+Scored with `src/eval/exact_match.py`, which compares each answer
+deterministically against the gold answer (no LLM). A pipeline that lists
+several candidate answers is scored wrong.
+
+| Pipeline | Exact match | Aggregation | Superlative | Multi-hop | Temporal | Lookup | Generation calls/q ³ | Tokens/q | Latency (s) | Doc P / R |
+|---|---|---|---|---|---|---|---|---|---|---|
+| RAG ¹ | 58/100 | 0/21 | 5/10 | 15/28 | 19/22 | 19/19 | 1.0 | ~9,980 ² | 9.8 | 0.30 / 0.69 |
+| GraphRAG ¹ | 15/100 | 0/21 | 2/10 | 2/28 | 7/22 | 4/19 | 1.0 | ~14,330 ² | 16.9 | 0.12 / 0.20 |
+| Agentic GraphRAG ¹ | 59/100 | 2/21 | 6/10 | 15/28 | 19/22 | 17/19 | 3.0 | ~15,600 ² | 29.4 | 0.15 / 0.30 |
+| **Event-graph GraphRAG** | **99/100** | **21/21** | **10/10** | **27/28** | **22/22** | **19/19** | **1.01** | **~620** | **8.9** | **0.99 / 0.90** |
+
+¹ From the first benchmark run (2026-09-11), before the local reranker was
+added. The exact-match numbers are recomputed from those saved answers.
+² Includes one judge call per question; later runs report pipeline-only tokens.
+³ Generation-model calls only. The dashboard's "LLM calls" also counts local
+embedding calls and, for the first run, the judge. Agentic's count comes from
+its saved traces (orchestrator steps plus any forced final answer).
+Event-graph's 1.01 is 100 planner calls plus one RAG fallback generation (pub-049).
+
+Event-graph's single miss, pub-099, is a genuinely ambiguous question: two
+events were held at Laura Biathlon & Ski Complex on 22 February 2014. The
+pipeline names both, and the strict scorer counts that as wrong. 99 of 100
+questions were answered from the graph and 1 via the RAG fallback. It also
+answered all 50 hidden questions from the graph
+(`data/results/hidden_answers_event_graph.jsonl`); one, eval-032, is ambiguous
+in the same way.
+
+**Why the jump.** Every question in the eval set asks about fields of the
+`[Infobox Olympic event]` block: competitors, nations, venue, date, gold.
+Aggregation questions span 8–43 documents, which no top-k retrieval can
+count, and the LLM-extracted entity graph never stored those fields as
+queryable properties. Modeling them as a graph turns counting, argmax,
+venue+date lookup and "the previous Games" into traversals. See
+`docs/architecture.md`, "Structured event layer".
+
+### First run: LLM-judge scores (2026-09-11)
+
+Judged by a separate LLM (`JUDGE_MODEL`, see `.env`) on a 1-5 scale for
+accuracy and completeness (against the reference answer) and groundedness
+(against the pipeline's own retrieved context). Full methodology in
+`src/eval/judge.py`. In 14 of 298 judged rows the judge gave accuracy 4–5 to
+an answer that exact match shows is wrong, often one that said "the corpus
+has no information". The judge now runs only on a 20% sample (`--judge-rate`),
+and exact match is the headline metric.
 
 | Pipeline | Accuracy | Completeness | Groundedness | Doc precision | Doc recall | Latency (s) | Tokens/query | LLM calls |
 |---|---|---|---|---|---|---|---|---|
@@ -106,7 +149,14 @@ transient provider rate limits):
 ```bash
 python -m src.eval.run_benchmark
 # or a quick subset:
-python -m src.eval.run_benchmark --limit 10 --pipelines rag,graphrag,agentic
+python -m src.eval.run_benchmark --limit 10 --pipelines rag,graphrag,agentic,event_graph
+# answer the hidden set (no gold answers, so no scoring):
+python -m src.eval.run_benchmark --pipelines event_graph --questions data/raw_dataset/questions/eval_hidden.jsonl --output data/results/hidden_answers_event_graph.jsonl
+```
+
+The event layer is built once after the steps above, with no LLM calls:
+```bash
+python -m src.ingestion.build_event_graph
 ```
 
 View the comparison dashboard:

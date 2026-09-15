@@ -23,11 +23,14 @@ from pathlib import Path
 
 import pandas as pd
 
-PIPELINES = ["rag", "graphrag", "agentic"]
+from src.eval.exact_match import is_correct
+
+PIPELINES = ["rag", "graphrag", "agentic", "event_graph"]
 PIPELINE_LABELS = {
     "rag": "RAG",
     "graphrag": "GraphRAG",
     "agentic": "Agentic GraphRAG",
+    "event_graph": "Event-graph GraphRAG",
 }
 PIPELINE_ORDER = [PIPELINE_LABELS[p] for p in PIPELINES]
 
@@ -42,6 +45,7 @@ METRIC_LABELS = {
     "completeness": "Completeness",
     "groundedness": "Groundedness",
     "judge_mean": "Mean judge score",
+    "exact_match": "Exact match",
     "doc_precision": "Doc precision",
     "doc_recall": "Doc recall",
     "latency_sec": "Pipeline latency (s)",
@@ -139,6 +143,15 @@ def _flatten(row: dict) -> dict:
     flat.update(scores)
     for field in _NUMERIC_FIELDS:
         flat[field] = _number(row.get(field))
+    # _number maps bools to NaN on purpose (a stray bool in a numeric field is a
+    # bug); exact_match is the one field that is legitimately boolean. Rows from
+    # runs before exact-match scoring existed are scored here with the same
+    # deterministic scorer, so every pipeline shares one headline metric.
+    em = row.get("exact_match")
+    if em is None and row.get("reference_answer"):
+        em = is_correct(row.get("answer") or "", row["reference_answer"].split("; "),
+                        row.get("question") or "", row.get("short_answer"))
+    flat["exact_match"] = float(em) if isinstance(em, bool) else math.nan
     return flat
 
 
@@ -231,6 +244,7 @@ def qtype_label(qtype: str) -> str:
 
 
 SUMMARY_METRICS = [
+    "exact_match",
     "accuracy",
     "completeness",
     "groundedness",

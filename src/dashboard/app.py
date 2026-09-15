@@ -1,4 +1,4 @@
-"""Streamlit dashboard comparing the three RAG pipelines on the shared eval set.
+"""Streamlit dashboard comparing the RAG pipelines on the shared eval set.
 
 Run from anywhere:  streamlit run src/dashboard/app.py
 
@@ -130,7 +130,7 @@ def section_header(title: str) -> None:
 THEMES = {
     "light": {
         "surface": "#ffffff",
-        "series": {"RAG": "#2a78d6", "GraphRAG": "#eb6834", "Agentic GraphRAG": "#1baf7a"},
+        "series": {"RAG": "#2a78d6", "GraphRAG": "#eb6834", "Agentic GraphRAG": "#1baf7a", "Event-graph GraphRAG": "#eda100"},
         "text_primary": "#0b0b0b",
         "text_secondary": "#52514e",
         "muted": "#898781",
@@ -142,7 +142,7 @@ THEMES = {
         # Kept in sync with .streamlit/config.toml's backgroundColor -- ring_markers()
         # strokes markers in this exact color so overlapping points separate cleanly.
         "surface": "#0b0d10",
-        "series": {"RAG": "#3987e5", "GraphRAG": "#d95926", "Agentic GraphRAG": "#199e70"},
+        "series": {"RAG": "#3987e5", "GraphRAG": "#d95926", "Agentic GraphRAG": "#199e70", "Event-graph GraphRAG": "#c98500"},
         "text_primary": "#ffffff",
         "text_secondary": "#c3c2b7",
         "muted": "#898781",
@@ -304,7 +304,7 @@ ORDER = bench.pipeline_order(df)
 QTYPES = bench.qtype_order(df)
 
 st.markdown('<div class="kicker">GRAPH_RAG BENCHMARK</div>', unsafe_allow_html=True)
-st.title("RAG vs GraphRAG vs Agentic GraphRAG")
+st.title("RAG vs GraphRAG vs Agentic vs Event-graph GraphRAG")
 st.markdown(
     """
 Three retrieval-augmented pipelines answer the same eval set of
@@ -376,14 +376,20 @@ for col, name in zip(tiles, ORDER):
     if name not in means.groups:
         continue
     rows = means.get_group(name)
+    # Exact match is the headline: deterministic and scored on every question.
+    # The judge runs on a sample, so its mean is only shown with its sample size.
+    em = rows["exact_match"].dropna()
+    judged = rows["judge_mean"].dropna()
+    headline = f"{em.mean():.0%}" if len(em) else "n/a"
+    judge_note = f"judge {judged.mean():.2f} (n={len(judged)})" if len(judged) else "not judged"
     with col:
         with st.container(border=True):
             st.markdown(swatch(name), unsafe_allow_html=True)
             st.markdown(
                 f"""
-                <div class="kpi-label">Mean judge score (1-5)</div>
-                <div class="kpi-value">{rows['judge_mean'].mean():.2f}</div>
-                <div class="kpi-sub">{rows[latency_field].mean():.1f}s {latency_label.split('(')[0].strip().lower()}
+                <div class="kpi-label">Exact match (n={len(em)})</div>
+                <div class="kpi-value">{headline}</div>
+                <div class="kpi-sub">{judge_note} &middot; {rows[latency_field].mean():.1f}s {latency_label.split('(')[0].strip().lower()}
                     &middot; {rows['total_tokens'].mean():,.0f} tok &middot; {rows['num_llm_calls'].mean():.1f} calls/q</div>
                 """,
                 unsafe_allow_html=True,
@@ -397,6 +403,7 @@ st.dataframe(
     column_config={
         "Pipeline": st.column_config.TextColumn(width="medium"),
         "questions": st.column_config.NumberColumn("Questions", format="%d"),
+        "Exact match": st.column_config.NumberColumn(format="percent"),
         "Accuracy": st.column_config.NumberColumn(format="%.2f"),
         "Completeness": st.column_config.NumberColumn(format="%.2f"),
         "Groundedness": st.column_config.NumberColumn(format="%.2f"),
@@ -499,7 +506,7 @@ fig.update_yaxes(range=[0, 5.6], dtick=1)
 fig = band_categories(style(label_bars(fig, "%{y:.1f}"), height=420), len(picked_qtypes))
 chart(fig, "qtype-grouped")
 
-with st.expander("All three dimensions, one panel per question type"):
+with st.expander("All three judge dimensions, one panel per question type"):
     facet_src = bench.mean_by(view, bench.JUDGE_DIMS, ["qtype", "pipeline_label"]).melt(
         id_vars=["qtype", "pipeline_label"],
         value_vars=bench.JUDGE_DIMS,
@@ -662,7 +669,7 @@ with right:
 # ------------------------------------------------------------------ drilldown
 
 section_header("Per-question drill-down")
-st.markdown("Spot-check a single question across all three pipelines, side by side.")
+st.markdown("Spot-check a single question across every pipeline, side by side.")
 
 qids = list(dict.fromkeys(view.sort_values(["qtype", "qid"])["qid"].tolist()))
 questions = view.drop_duplicates("qid").set_index("qid")

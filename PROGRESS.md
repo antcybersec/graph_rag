@@ -7,6 +7,100 @@ them here.
 
 ---
 
+## 2026-09-16 — Event-graph pipeline built: 99/100 exact match at ~1 LLM call/question
+
+Acted on the root cause below (user chose: LLM planner + graph tools; exact
+match on everything plus a 20% judge sample).
+
+**Built:**
+- `src/common/infobox.py`: deterministic infobox parser. 2,210 events, 47 sports, 316 venues.
+- `src/ingestion/build_event_graph.py`: `OlympicEvent`/`Games`/`Sport`/`Venue`
+  vertices; `IN_GAMES`/`IN_SPORT`/`HELD_AT`/`DESCRIBED_BY`/`PREV_GAMES` edges;
+  3 GSQL queries. Already loaded and installed on Savanna graph `test`.
+- `src/pipelines/event_graph/pipeline.py`: 1 planner call (typed `QueryPlan`),
+  then GSQL + Python; falls back to RAG.
+- `src/eval/exact_match.py`: strict scorer, with multi-candidate answers
+  counted wrong. `run_benchmark.py` gained `event_graph`, `--questions`,
+  `--judge-rate`, `exact_match`/`ambiguous`/`route`/`plan` fields; cost
+  fields are now pipeline-only.
+- Dashboard shows a 4th series and exact match as the headline.
+
+**Results** (`data/results/benchmark_v2.jsonl`, also appended to
+`benchmark_results.jsonl` for the dashboard):
+- **Public:** 99/100 exact match. All of aggregation 21, superlative 10,
+  temporal 22 and lookup 19 correct; multi_hop 27/28.
+- **Cost:** 1.02 calls, ~620 tokens, 8.9s per question; doc P/R 0.99/0.90; 0 errors.
+- **Only miss:** pub-099, which is ambiguous (two events share venue + date).
+- **Hidden set:** 50/50 answered from the graph (`hidden_answers_event_graph.jsonl`);
+  eval-032 is ambiguous.
+- **Old runs by exact match:** RAG 58, GraphRAG 15, Agentic 59;
+  aggregation 0/21 for RAG and GraphRAG, 2/21 for Agentic.
+
+**Review:** an independent code-reviewer pass found 2 HIGH issues, both fixed
+and regression-checked before the final run:
+- date matching accepted events with no infobox date;
+- " | " multi-answer scoring was lenient for event_graph only.
+
+It also found MEDIUM issues, all fixed: gender-crossing fuzzy matches, the
+planner dropping "men's"/"women's", invalid Games ids raising, and judge
+cost mixed into row cost. An earlier partial run on pre-fix code was stopped
+and kept as `benchmark_v2_precodefix_partial.jsonl`; don't use its numbers.
+
+**Caveats / next up:**
+- The rag/graphrag/agentic numbers predate the 2026-09-13 reranker. A rerun
+  would cost roughly 600+ Gemini calls (about 1.5 days of quota).
+- Temporal doc recall is capped at 0.5 by design (see architecture doc).
+- The one RAG fallback, pub-049, happened because the planner left `season`
+  null ("...Winter Olympics held immediately before 2022"). RAG still answered
+  correctly. Cheap fix: fill a missing season from "Summer"/"Winter" in the question text.
+- A zero-quota regression test exists as a scratch script only
+  (regex plans → `execute_plan` → exact match, 99/100). Worth moving into the repo.
+
+---
+
+## 2026-09-15 — Root cause of poor scores found: it's retrieval design, not quota
+
+Deep-dive after a context loss. **Every eval question (100 public + 50 hidden)
+is one of 5 templates over `[Infobox Olympic event]` fields** at the top of
+each doc (2,203 of 2,951 docs have one), keyed by titles like
+`"<Sport> at the <YYYY> <Summer|Winter> Olympics – <Event>"`:
+
+| qtype | template | infobox field used |
+|---|---|---|
+| lookup | How many nations competed in `<title>`? | `nations` |
+| multi_hop | Who won gold in the event held at `<venue>` on `<date>`? | `venue` + `date`/`dates` → `gold` (strings verbatim, glitches included) |
+| temporal | Who won gold in `<event> <sport>` at the Games immediately before `<year>`? | previous Games → `gold` |
+| aggregation | How many `<sport>` events at `<games>` had more than N competitors? | count over `competitors` |
+| superlative | Which `<sport>` event at `<games>` had the most competitors? | argmax `competitors` |
+
+**Proof:** a scratch parser with no LLM, embeddings, or TigerGraph answered
+**99/100 public questions correctly** and gave an answer for all 50 hidden ones. The only miss
+(pub-099) is genuinely ambiguous: two events share that venue and date.
+Gotchas it hit: tennis docs carry two infoboxes (the Olympic one is second);
+normalization must keep `+` (`80 kg` ≠ `+80 kg`); "immediately before"
+means the real Olympic calendar (Winter 1992 → 1994).
+
+**Why the current pipelines score badly:**
+- aggregation/superlative gold answers span 8–43 docs; top-5 chunks can't
+  count them (RAG doc recall 0.42 → accuracy 2.0). No prompt or reranker fixes that.
+- The LLM-extracted entity graph (12k entities, ~4/doc, free-text
+  relation labels) never stores competitors/venue/date as queryable
+  properties, so GraphRAG has nothing to filter or count on.
+- The quota walls were a symptom: LLM extraction, the LLM judge, and
+  5-step agent loops spent ~10 calls/question on an approach that can't
+  answer these questions.
+- The LLM judge is weak signal: groundedness is 5 on almost every wrong
+  answer. Gold answers are exact strings, so exact match is possible.
+- Reranker smoke test (`smoke_rerank.jsonl`, 10 q): roughly halved tokens;
+  GraphRAG 2.2→3.4, RAG/agentic flat. That's 10 questions, so treat it as noise.
+
+**Next up:** build a deterministic Event layer in TigerGraph from the
+infoboxes (no LLM ingestion) and expose it as graph query tools for the
+GraphRAG/agentic pipelines; add exact-match scoring. Direction pending the
+user's call.
+
+---
+
 ## 2026-09-11 14:xx — Benchmark run interrupted by power outage, provider merry-go-round
 
 **State:** `data/results/benchmark_results.jsonl` — 213/300 (question, pipeline)

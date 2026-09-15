@@ -23,6 +23,111 @@ Built in `src/ingestion/create_schema.py`. Two choices worth calling out:
   by any of the three pipelines** — see "What's deliberately out of scope"
   below.
 
+## Structured event layer (added 2026-09-16)
+
+```
+Games <-IN_GAMES- OlympicEvent -IN_SPORT-> Sport
+Games -PREV_GAMES-> Games                 (real Olympic calendar, later -> earlier)
+OlympicEvent -HELD_AT-> Venue
+OlympicEvent -DESCRIBED_BY-> Document     (provenance)
+```
+
+Built by `src/ingestion/build_event_graph.py` from `src/common/infobox.py`,
+with **no LLM or embedding calls**. It lives in the same graph as the chunk/
+entity layer above, and the event-graph pipeline answers from it.
+
+**Why it exists.** A close read of the eval set showed that every question,
+public and hidden, is one of five templates over the `[Infobox Olympic
+event]` block that heads 2,203 of the 2,951 documents:
+
+| qtype | asks for | graph operation |
+|---|---|---|
+| lookup | nations in one event | one event's `nations` |
+| multi_hop | gold at `<venue>` on `<date>` | `Venue` → events, filter by date |
+| temporal | gold in an event at the previous Games | `Games -PREV_GAMES->` → events of that sport |
+| aggregation | how many events of a sport at a Games had > N competitors | `Games ∩ Sport` → count |
+| superlative | which of those events had the most competitors | `Games ∩ Sport` → argmax |
+
+The first three pipelines couldn't answer these reliably, for structural reasons
+that no amount of prompt or reranker tuning fixes:
+
+- **Counting needs the whole set.** An aggregation question spans 8–43 event
+  documents; top-5 chunk retrieval sees a handful and counts those. By
+  exact match, RAG and GraphRAG scored 0/21 on aggregation, and Agentic 2/21.
+- **The LLM-extracted entity graph never stored the fields.** ~4 entities
+  per document with free-text relation labels. Competitors, venue and date
+  aren't properties you can filter or count on.
+- **Quota pressure was a symptom.** Extraction, the agentic loop, and the
+  judge together spent many calls per question on an approach that couldn't
+  answer these questions anyway.
+
+**Parsing gotchas handled in `infobox.py`:** tennis articles stack two
+infoboxes (the Olympic one is second); normalized keys keep `+` (`Men's 80
+kg` ≠ `Men's +80 kg`); "immediately before" uses the real Games calendar
+(Winter 1992 → 1994), not the years present in the corpus; missing
+competitor/nation counts are stored as `-1` and excluded from counts and argmax.
+
+**Modeling caveat.** `Venue` is keyed by normalized name, so identically named
+venues at different Games ("Olympic Tennis Centre" in Athens and Rio) share a
+vertex. Venue queries therefore always filter by date, and by Games when the
+question names one.
+
+### Event-graph pipeline (`src/pipelines/event_graph/pipeline.py`)
+
+1. **Plan (the only LLM call):** the question becomes a typed `QueryPlan` of
+   operation, sport, Games, event name, venue, date, and threshold.
+   `operation` and `season` are `Literal`s, and the prompt lists the graph's
+   sports so the planner copies an exact name.
+2. **Snap:** sport, venue and event names are matched to graph keys: the
+   exact normalized key, else a *unique* `difflib` match ≥ 0.85 that agrees on
+   every number, `+` and gender word. Near-identical names differ in exactly
+   those tokens ("Men's K-1 500 m" vs "Women's K-1 500 m", "Riocentro –
+   Pavilion 4" vs "Pavilion 6"), so an ambiguous or crossing match returns
+   nothing and the pipeline falls back instead of answering wrongly. If the
+   planner drops the gender ("pole vault"), it is restored from the question
+   text, never guessed.
+3. **Query:** `events_by_games_sport`, `events_at_venue`, or
+   `events_in_previous_games` runs the traversal. Python then filters, counts
+   or takes the argmax. Dates are matched in tiers: exact; then, within the
+   Games, token overlap that shares a day number (an event with no infobox
+   date never matches); then, only when the question gave no date, the single
+   event at that venue in those Games. A Games year outside the real
+   calendar is rejected before querying.
+4. **Answer:** a templated answer citing each source document, plus a
+   `short_answer` for scoring. If several events match (a tied argmax, or two
+   events sharing a venue and date as in pub-099), all are listed and the row
+   is flagged `ambiguous`.
+5. **Fallback:** an `unsupported` plan, an empty graph result, or any query
+   error is routed to plain RAG. `route` records which path answered.
+
+Doc recall for temporal questions tops out at 0.5 for this pipeline. The gold
+docs include the article for the Games named in the question, but the
+evidence only contains the previous Games' event.
+
+Planning runs with `thinking_budget=0`. Answering isn't an LLM call at all, so
+the pipeline costs one call per question. `EVENT_PLAN_CACHE=true` reuses
+earlier plans during development; rows record `plan_cached`, so cached runs
+are never mistaken for cold-run costs.
+
+### Scoring: exact match first, judge on a sample
+
+`src/eval/exact_match.py` scores against the gold strings with no LLM. If a
+pipeline reports a `short_answer`, that is compared directly. A short answer
+listing several alternatives scores as wrong, because the free-text pipelines
+state one answer and get no credit for hedging. For free-text
+answers, the scorer takes the first number attached to "nations"/"events"
+(skipping numbers copied from the question and years), otherwise checks for
+the gold name/event as a whole-token match. The LLM judge now runs only on a
+fixed `--judge-rate` sample of qids, the same for every pipeline. Cost fields
+in each row (`total_tokens`, `num_llm_calls`, `total_latency_sec`) now cover the
+pipeline only. The judge is reported separately in `judge_tokens`/`judge_calls`,
+so sampled rows don't look costlier than unsampled ones.
+
+On the 298 judged rows from the first benchmark, the judge disagreed with
+exact match on 15. In 14 of them the judge was wrong: it scored accuracy 4–5
+on answers that said "the corpus doesn't contain this," or gave the wrong
+count or medallist. That is why the judge is no longer the headline metric.
+
 ## Corpus processing
 
 - **Chunking** (`src/common/chunking.py`): paragraph-aware, token-based
@@ -74,6 +179,33 @@ trims the output vertex set, so the `LIMIT` bounds the result, not the
 work done — both the GSQL query and the agentic pipeline's own defensive
 cap on `related_edges` (`src/pipelines/agentic/pipeline.py`) account for
 this.
+
+### Retrieve wide, rerank locally, send few (added 2026-09-13)
+
+Review feedback asked for lower token cost *and* higher accuracy. Both came
+from the same place: what reached the LLM was chosen by retrieval order, not
+relevance. Every pipeline now pulls a wide candidate pool, which costs no LLM
+tokens, and scores it with a local cross-encoder (`BAAI/bge-reranker-base`,
+`src/common/rerank.py`). Only the top few passages go into the prompt:
+
+- **RAG**: 20 ANN candidates → top 5 chunks (was 8 unranked).
+- **GraphRAG**: the traversal's `MENTIONS` chunks *plus* 20 ANN chunk
+  candidates → top 5 chunks, and all related edges → top 6 facts. The graph
+  query's `LIMIT 8` chunks are arbitrary, not relevant ones, and adding vector
+  candidates gives GraphRAG a fallback when entity linking misses. This makes
+  it a hybrid local search. `chunks_from_graph` in its result shows how many
+  selected chunks still came from the traversal.
+- **Agentic**: each retrieval action adds only its top 4 chunks / 6 facts,
+  and evidence already collected is never added twice. Every orchestrator
+  step re-sends all evidence, so each extra item costs tokens on every later
+  step. The action history now also shows how many *new* items each action
+  added, so the orchestrator can see that a search found nothing new.
+
+`run_benchmark.py` now records `pipeline_tokens` (the pipeline's own calls)
+separately from `judge_tokens`. In `benchmark_results.jsonl` (the first,
+pre-rerank run), `total_tokens` also includes the judge call, which is
+evaluation overhead, not pipeline cost. Since 2026-09-16, `total_tokens` and
+`num_llm_calls` are pipeline-only (see "Scoring" above).
 
 ### Why fixed-sequence GraphRAG underperforms RAG (see README for the numbers)
 
