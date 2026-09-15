@@ -52,7 +52,23 @@ and kept as `benchmark_v2_precodefix_partial.jsonl`; don't use its numbers.
 - Temporal doc recall is capped at 0.5 by design (see architecture doc).
 - The one RAG fallback, pub-049, happened because the planner left `season`
   null ("...Winter Olympics held immediately before 2022"). RAG still answered
-  correctly. Cheap fix: fill a missing season from "Summer"/"Winter" in the question text.
+  correctly. **Fixed 2026-09-16** (`execute_plan` fills a missing season from
+  the question text; pub-049's saved plan now answers from the graph). The
+  benchmark_v2 rows were produced before this fix and were not re-run.
+- Committed as `238188a` (reranker) and `d67e24c` (event graph). Not pushed.
+- Baseline rerun (rag/graphrag/agentic with the reranker, judge-rate 0.2) started
+  2026-09-16, appending to `benchmark_v2.jsonl`. It needs ~560 Gemini calls, more
+  than one day's quota, so rerun the same command after the daily reset; it
+  resumes per (qid, pipeline).
+  **First pass stopped at the daily quota** (159 `RESOURCE_EXHAUSTED` error rows,
+  which the next run retries). Done: rag 48, graphrag 48, agentic 45.
+  Partial read on the 45 questions all 4 pipelines finished (exact match):
+  rag 30, graphrag 30, agentic 32, event_graph 45. The reranker helped GraphRAG
+  a lot (the old run scored 15/100) and cut tokens to ~3.5k/3.9k/6.5k per question
+  (from 10–15k). Aggregation is still ≤3/10 for every chunk-based pipeline.
+  Known latency inflation: graphrag/agentic pass the `seeds` VERTEX param as a
+  plain value, so pyTigerGraph fails over POST and retries with GET on every
+  traversal. Left unfixed so latency stays consistent within the run.
 - A zero-quota regression test exists as a scratch script only
   (regex plans → `execute_plan` → exact match, 99/100). Worth moving into the repo.
 
