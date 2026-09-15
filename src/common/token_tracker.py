@@ -43,8 +43,12 @@ class TokenTracker:
     def records_for(self, question_id: str) -> list[CallRecord]:
         return [r for r in self._records if r.question_id == question_id]
 
-    def totals_for(self, question_id: str) -> dict:
+    def totals_for(self, question_id: str, call_types: Optional[set] = None) -> dict:
+        """Sum usage for one question, optionally only over the given call_types
+        (e.g. everything but "judge", to report a pipeline's own cost)."""
         recs = self.records_for(question_id)
+        if call_types is not None:
+            recs = [r for r in recs if r.call_type in call_types]
         return {
             "num_llm_calls": len(recs),
             "total_input_tokens": sum(r.input_tokens for r in recs),

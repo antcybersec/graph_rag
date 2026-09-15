@@ -14,6 +14,10 @@ writeup this follows):
   - A hard MAX_ITERATIONS cap is non-negotiable (Agentic RAG survey /
     LangGraph literature: uncapped agentic loops are a documented failure
     mode -- "retrieval thrash").
+  - Every orchestrator call re-sends ALL evidence collected so far, so each
+    item added costs tokens on every later step. Retrieval actions therefore
+    rerank their candidates locally and add only the top few, and evidence
+    already collected is never added twice.
   - Every action taken is recorded in `trace` so the metrics dashboard can
     show whether the agent changed strategy, how many steps it took, and
     why it stopped (`stop_reason`) -- required by the hackathon's own
@@ -26,11 +30,15 @@ from pydantic import BaseModel
 
 from src.common.chunking import n_tokens
 from src.common.llm import embed, generate
+from src.common.rerank import rerank
 from src.common.tg_conn import get_connection
 
 MAX_ITERATIONS = 5
 TOP_K_ENTITIES = 5
-TOP_K_CHUNKS = 6
+CANDIDATE_K_CHUNKS = 20
+TOP_K_CHUNKS = 4
+MAX_FACTS = 6
+MAX_FACT_CANDIDATES = 50  # bound on reranker work -- see graphrag/pipeline.py
 
 ORCHESTRATOR_SYSTEM_INSTRUCTION = """You are the orchestrator of an investigation agent answering
 questions over a knowledge graph + document corpus about the Olympics (and some unrelated topics).
@@ -42,17 +50,21 @@ Available actions:
     facts connected to entities you've already linked.
   - search_chunks(query): direct semantic search over document text chunks (bypasses the graph
     entirely). Use this when the question needs raw text/context the graph's structured facts won't
-    capture, or when entity linking found nothing useful.
+    capture, or when entity linking found nothing useful. For multi-part questions, search for one
+    specific missing piece at a time rather than re-asking the whole question.
   - answer: STOP investigating and produce the final answer now, using only the evidence collected
     so far. Choose this as soon as you have enough evidence -- do not keep gathering more once you
     can already answer, and do not answer if the evidence so far clearly does not cover the question
     (in that case take one more action instead).
 
 Rules:
-  - Never repeat the exact same action+query/entity_ids combination twice in a row.
+  - Never repeat the exact same action+query/entity_ids combination twice in a row. If an action
+    returned 0 new evidence items, change strategy rather than trying a near-identical query.
   - When you choose "answer", `final_answer` must cite the evidence you used, with citation tags
-    exactly as given (e.g. "[Q123_c0]" for a chunk, "[edge:a--b--c]" for a fact). If the collected
-    evidence is insufficient to answer, say so explicitly in `final_answer` rather than guessing.
+    exactly as given (e.g. "[Q123_c0]" for a chunk, "[edge:a--b--c]" for a fact). If the question
+    asks how many, which ones, or for a list, first enumerate every qualifying item found in the
+    evidence (each with its citation), then give the count or list. If the collected evidence is
+    insufficient to answer, say so explicitly in `final_answer` rather than guessing.
   - If you have taken {max_iterations} actions already and still lack enough evidence, choose
     "answer" anyway and give your best-effort answer, noting what's missing."""
 
@@ -80,7 +92,13 @@ def _format_evidence(evidence: list) -> str:
 def _format_history(trace: list) -> str:
     if not trace:
         return "(none yet)"
-    return "\n".join(f"{i+1}. {t['action']}({t.get('query') or t.get('entity_ids') or ''})" for i, t in enumerate(trace))
+    lines = []
+    for i, t in enumerate(trace):
+        line = f"{i+1}. {t['action']}({t.get('query') or t.get('entity_ids') or ''})"
+        if "new_evidence" in t:
+            line += f" -> {t['new_evidence']} new evidence items"
+        lines.append(line)
+    return "\n".join(lines)
 
 
 def _build_orchestrator_prompt(question: str, evidence: list, trace: list) -> str:
@@ -95,6 +113,33 @@ Actions already taken:
 Decide the next action."""
 
 
+def _add_evidence(evidence: list, new_evidence: list) -> int:
+    """Append items whose citation_id isn't already collected; return how many were added."""
+    seen = {e["citation_id"] for e in evidence}
+    added = 0
+    for e in new_evidence:
+        if e["citation_id"] not in seen:
+            seen.add(e["citation_id"])
+            evidence.append(e)
+            added += 1
+    return added
+
+
+def _chunk_text(c: dict) -> str:
+    return c["attributes"].get("text", "")
+
+
+def _chunk_evidence(conn, chunks: list) -> list:
+    doc_ids = list({c["attributes"].get("doc_id", "") for c in chunks if c["attributes"].get("doc_id")})
+    doc_lookup = {d["v_id"]: d["attributes"] for d in conn.getVerticesById("Document", doc_ids)} if doc_ids else {}
+    evidence = []
+    for c in chunks:
+        attrs = c["attributes"]
+        doc = doc_lookup.get(attrs.get("doc_id", ""), {})
+        evidence.append({"citation_id": c["v_id"], "source": "chunk", "text": f"(from \"{doc.get('title','?')}\") {attrs.get('text', '')}"})
+    return evidence
+
+
 def _run_link_entities(conn, query: str, tracker, question_id) -> tuple:
     vec, _ = embed([query], task_type="RETRIEVAL_QUERY", pipeline="agentic", tracker=tracker, question_id=question_id)
     result = conn.runInstalledQuery("vector_search_entities", params={"query_vector": vec[0], "k": TOP_K_ENTITIES})
@@ -107,7 +152,7 @@ def _run_link_entities(conn, query: str, tracker, question_id) -> tuple:
     return entity_ids, evidence
 
 
-def _run_graph_traverse(conn, entity_ids: list) -> tuple:
+def _run_graph_traverse(conn, entity_ids: list, question: str) -> tuple:
     if not entity_ids:
         return [], []
     try:
@@ -121,10 +166,7 @@ def _run_graph_traverse(conn, entity_ids: list) -> tuple:
         # action found nothing" and let the orchestrator try something else.
         result = conn.runInstalledQuery("entity_neighbors_1hop", params={"seeds": entity_ids})
         neighbors = result[0]["Neighbors"]
-        # Defensive cap independent of the GSQL-side LIMIT -- see graphrag/pipeline.py's
-        # MAX_FACTS comment: ACCUM runs over every matched edge before LIMIT trims the
-        # output vertex set, so this isn't guaranteed bounded by the query alone.
-        related_edges = result[1]["related_edges"][:8]
+        related_edges = result[1]["related_edges"][:MAX_FACT_CANDIDATES]
         chunks = result[2]["ChunksOfNeighbors"]
 
         all_ids = list({e["v_id"] for e in neighbors} | set(entity_ids))
@@ -132,22 +174,19 @@ def _run_graph_traverse(conn, entity_ids: list) -> tuple:
     except Exception:
         return [], []
 
-    evidence = []
-    for e in related_edges:
-        a, b = e["from_id"], e["to_id"]
-        a_name = ent_lookup.get(a, {}).get("name", a)
-        b_name = ent_lookup.get(b, {}).get("name", b)
+    def fact_line(e):
+        a_name = ent_lookup.get(e["from_id"], {}).get("name", e["from_id"])
+        b_name = ent_lookup.get(e["to_id"], {}).get("name", e["to_id"])
         attrs = e.get("attributes", {})
-        label = attrs.get("relation_label", "related_to")
-        cite = f"edge:{a}--{label}--{b}"
-        evidence.append({"citation_id": cite, "source": "fact", "text": f"{a_name} --[{label}]--> {b_name}: {attrs.get('description', '')}"})
+        return f"{a_name} --[{attrs.get('relation_label', 'related_to')}]--> {b_name}: {attrs.get('description', '')}"
 
-    doc_ids = list({c["attributes"].get("doc_id", "") for c in chunks if c["attributes"].get("doc_id")})
-    doc_lookup = {d["v_id"]: d["attributes"] for d in conn.getVerticesById("Document", doc_ids)} if doc_ids else {}
-    for c in chunks:
-        attrs = c["attributes"]
-        doc = doc_lookup.get(attrs.get("doc_id", ""), {})
-        evidence.append({"citation_id": c["v_id"], "source": "chunk", "text": f"(from \"{doc.get('title','?')}\") {attrs.get('text', '')}"})
+    evidence = []
+    for e in rerank(question, related_edges, text_of=fact_line, top_n=MAX_FACTS):
+        label = e.get("attributes", {}).get("relation_label", "related_to")
+        cite = f"edge:{e['from_id']}--{label}--{e['to_id']}"
+        evidence.append({"citation_id": cite, "source": "fact", "text": fact_line(e)})
+
+    evidence.extend(_chunk_evidence(conn, rerank(question, chunks, text_of=_chunk_text, top_n=TOP_K_CHUNKS)))
 
     new_entity_ids = [n["v_id"] for n in neighbors]
     return new_entity_ids, evidence
@@ -155,16 +194,11 @@ def _run_graph_traverse(conn, entity_ids: list) -> tuple:
 
 def _run_search_chunks(conn, query: str, tracker, question_id) -> list:
     vec, _ = embed([query], task_type="RETRIEVAL_QUERY", pipeline="agentic", tracker=tracker, question_id=question_id)
-    result = conn.runInstalledQuery("vector_search_chunks", params={"query_vector": vec[0], "k": TOP_K_CHUNKS})
-    chunks = result[0]["Result"]
-    doc_ids = list({c["attributes"].get("doc_id", "") for c in chunks if c["attributes"].get("doc_id")})
-    doc_lookup = {d["v_id"]: d["attributes"] for d in conn.getVerticesById("Document", doc_ids)} if doc_ids else {}
-    evidence = []
-    for c in chunks:
-        attrs = c["attributes"]
-        doc = doc_lookup.get(attrs.get("doc_id", ""), {})
-        evidence.append({"citation_id": c["v_id"], "source": "chunk", "text": f"(from \"{doc.get('title','?')}\") {attrs.get('text', '')}"})
-    return evidence
+    result = conn.runInstalledQuery("vector_search_chunks", params={"query_vector": vec[0], "k": CANDIDATE_K_CHUNKS})
+    # Rerank against the orchestrator's sub-query, not the original question:
+    # on multi-hop questions the sub-query targets the specific missing piece.
+    chunks = rerank(query, result[0]["Result"], text_of=_chunk_text, top_n=TOP_K_CHUNKS)
+    return _chunk_evidence(conn, chunks)
 
 
 def answer_question(conn, question: str, tracker=None, question_id=None, max_iterations: int = MAX_ITERATIONS) -> dict:
@@ -203,7 +237,7 @@ def answer_question(conn, question: str, tracker=None, question_id=None, max_ite
         elif decision.action == "link_entities":
             new_ids, new_evidence = _run_link_entities(conn, decision.query or question, tracker, question_id)
             known_entity_ids = list(set(known_entity_ids) | set(new_ids))
-            evidence.extend(new_evidence)
+            step["new_evidence"] = _add_evidence(evidence, new_evidence)
 
         elif decision.action == "graph_traverse":
             # decision.entity_ids is free-form LLM output -- prefer the subset that
@@ -216,13 +250,13 @@ def answer_question(conn, question: str, tracker=None, question_id=None, max_ite
             # even though it means occasionally ignoring the model's stated request.
             requested = [e for e in (decision.entity_ids or []) if e in known_entity_ids]
             target_ids = requested or known_entity_ids
-            new_ids, new_evidence = _run_graph_traverse(conn, target_ids)
+            new_ids, new_evidence = _run_graph_traverse(conn, target_ids, question)
             known_entity_ids = list(set(known_entity_ids) | set(new_ids))
-            evidence.extend(new_evidence)
+            step["new_evidence"] = _add_evidence(evidence, new_evidence)
 
         elif decision.action == "search_chunks":
             new_evidence = _run_search_chunks(conn, decision.query or question, tracker, question_id)
-            evidence.extend(new_evidence)
+            step["new_evidence"] = _add_evidence(evidence, new_evidence)
 
         else:
             step["error"] = f"unknown action: {decision.action}"

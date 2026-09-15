@@ -8,14 +8,20 @@ isolates the effect of retrieval strategy rather than generation settings.
 """
 from src.common.chunking import n_tokens
 from src.common.llm import embed, generate
+from src.common.rerank import rerank
 from src.common.tg_conn import get_connection
 
-TOP_K = 8
+# Retrieve wide (ANN search costs no LLM tokens), then send only the best
+# TOP_K after local cross-encoder reranking -- see src/common/rerank.py.
+CANDIDATE_K = 20
+TOP_K = 5
 
 SYSTEM_INSTRUCTION = """You answer questions using ONLY the provided context chunks -- do not use
 outside knowledge. Cite the chunk_id(s) you relied on in square brackets right after each claim,
-e.g. "Simone Biles won gold [Q26233801_c0]." If the context doesn't contain enough information to
-answer, say so explicitly rather than guessing."""
+e.g. "Simone Biles won gold [Q26233801_c0]." If the question asks how many, which ones, or for a
+list, first enumerate every qualifying item found in the context (each with its citation), then
+give the count or list. If the context doesn't contain enough information to answer, say so
+explicitly rather than guessing."""
 
 PROMPT_TEMPLATE = """Question: {question}
 
@@ -25,7 +31,7 @@ Context:
 Answer the question, citing chunk_ids as instructed."""
 
 
-def retrieve(conn, question: str, k: int = TOP_K, tracker=None, question_id=None):
+def retrieve(conn, question: str, k: int = CANDIDATE_K, tracker=None, question_id=None):
     vec, _rec = embed([question], task_type="RETRIEVAL_QUERY", pipeline="rag", tracker=tracker, question_id=question_id)
     result = conn.runInstalledQuery("vector_search_chunks", params={"query_vector": vec[0], "k": k})
     chunks = result[0]["Result"]
@@ -45,7 +51,8 @@ def build_context(chunks: list, doc_lookup: dict) -> str:
 
 
 def answer_question(conn, question: str, k: int = TOP_K, tracker=None, question_id=None) -> dict:
-    chunks, distances = retrieve(conn, question, k, tracker=tracker, question_id=question_id)
+    candidates, distances = retrieve(conn, question, CANDIDATE_K, tracker=tracker, question_id=question_id)
+    chunks = rerank(question, candidates, text_of=lambda c: c["attributes"].get("text", ""), top_n=k)
 
     doc_ids = list({c["attributes"].get("doc_id", "") for c in chunks if c["attributes"].get("doc_id")})
     docs = conn.getVerticesById("Document", doc_ids) if doc_ids else []
