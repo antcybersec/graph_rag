@@ -56,16 +56,18 @@ and kept as `benchmark_v2_precodefix_partial.jsonl`; don't use its numbers.
   the question text; pub-049's saved plan now answers from the graph). The
   benchmark_v2 rows were produced before this fix and were not re-run.
 - Committed as `238188a` (reranker) and `d67e24c` (event graph). Not pushed.
-- Baseline rerun (rag/graphrag/agentic with the reranker, judge-rate 0.2) started
-  2026-09-16, appending to `benchmark_v2.jsonl`. It needs ~560 Gemini calls, more
-  than one day's quota, so rerun the same command after the daily reset; it
-  resumes per (qid, pipeline).
-  **First pass stopped at the daily quota** (159 `RESOURCE_EXHAUSTED` error rows,
-  which the next run retries). Done: rag 48, graphrag 48, agentic 45.
-  Partial read on the 45 questions all 4 pipelines finished (exact match):
-  rag 30, graphrag 30, agentic 32, event_graph 45. The reranker helped GraphRAG
-  a lot (the old run scored 15/100) and cut tokens to ~3.5k/3.9k/6.5k per question
-  (from 10–15k). Aggregation is still ≤3/10 for every chunk-based pipeline.
+- **Baseline rerun COMPLETE** (2026-09-16): all 400 (qid, pipeline) pairs in
+  `benchmark_v2.jsonl`, every pipeline on the same reranker-era code.
+  Exact match: **rag 67, graphrag 67, agentic 70, event_graph 99**.
+  Aggregation 1/21, 0/21, 3/21, 21/21. Superlative 4/10, 4/10, 4/10, 10/10.
+  Tokens/q 3,586 / 3,952 / 6,065 / 619. Latency 6.8 / 10.2 / 20.2 / 8.9s.
+  Judge (same 21-question sample) 3.86 / 3.67 / 4.05 / 5.00.
+  The reranker is what lifted GraphRAG from 15 to 67 and cut tokens ~3x; it did
+  nothing for aggregation, which is the structural limit the event layer fixes.
+  Getting there took 3 attempts: the run was killed twice by macOS low-memory
+  pressure (not quota) with the local BGE embedder + reranker resident. It
+  checkpoints per pair, so re-running the same command each time resumed it; the
+  last 15 pairs finished in a foreground run.
   Known latency inflation: graphrag/agentic pass the `seeds` VERTEX param as a
   plain value, so pyTigerGraph fails over POST and retries with GET on every
   traversal. Left unfixed so latency stays consistent within the run.

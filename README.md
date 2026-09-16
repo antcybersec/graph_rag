@@ -39,20 +39,27 @@ Scored with `src/eval/exact_match.py`, which compares each answer
 deterministically against the gold answer (no LLM). A pipeline that lists
 several candidate answers is scored wrong.
 
-| Pipeline | Exact match | Aggregation | Superlative | Multi-hop | Temporal | Lookup | Generation calls/q ³ | Tokens/q | Latency (s) | Doc P / R |
-|---|---|---|---|---|---|---|---|---|---|---|
-| RAG ¹ | 58/100 | 0/21 | 5/10 | 15/28 | 19/22 | 19/19 | 1.0 | ~9,980 ² | 9.8 | 0.30 / 0.69 |
-| GraphRAG ¹ | 15/100 | 0/21 | 2/10 | 2/28 | 7/22 | 4/19 | 1.0 | ~14,330 ² | 16.9 | 0.12 / 0.20 |
-| Agentic GraphRAG ¹ | 59/100 | 2/21 | 6/10 | 15/28 | 19/22 | 17/19 | 3.0 | ~15,600 ² | 29.4 | 0.15 / 0.30 |
-| **Event-graph GraphRAG** | **99/100** | **21/21** | **10/10** | **27/28** | **22/22** | **19/19** | **1.01** | **~620** | **8.9** | **0.99 / 0.90** |
+All four pipelines share the corpus, the questions, the generation model and the
+local reranker (2026-09-16 run, `data/results/benchmark_v2.jsonl`, 400/400 pairs).
 
-¹ From the first benchmark run (2026-09-11), before the local reranker was
-added. The exact-match numbers are recomputed from those saved answers.
-² Includes one judge call per question; later runs report pipeline-only tokens.
-³ Generation-model calls only. The dashboard's "LLM calls" also counts local
-embedding calls and, for the first run, the judge. Agentic's count comes from
-its saved traces (orchestrator steps plus any forced final answer).
-Event-graph's 1.01 is 100 planner calls plus one RAG fallback generation (pub-049).
+| Pipeline | Exact match | Aggregation | Superlative | Multi-hop | Temporal | Lookup | LLM calls/q ¹ | Tokens/q ² | Latency (s) | Doc P / R | Judge acc ³ |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| RAG | 67/100 | 1/21 | 4/10 | 22/28 | 21/22 | 19/19 | 2.0 | 3,586 | 6.8 | 0.43 / 0.73 | 3.86 |
+| GraphRAG | 67/100 | 0/21 | 4/10 | 23/28 | 21/22 | 19/19 | 2.0 | 3,952 | 10.2 | 0.43 / 0.73 | 3.67 |
+| Agentic GraphRAG | 70/100 | 3/21 | 4/10 | 22/28 | 22/22 | 19/19 | 4.1 | 6,065 | 20.2 | 0.46 / 0.70 | 4.05 |
+| **Event-graph GraphRAG** | **99/100** | **21/21** | **10/10** | **27/28** | **22/22** | **19/19** | **1.02** | **619** | **8.9** | **0.99 / 0.90** | **5.00** |
+
+¹ Every call logged through the shared client, local embedding calls included.
+RAG and GraphRAG are one embedding + one generation; event-graph's 1.02 is 100
+planner calls plus the single RAG fallback (pub-049, one embedding + one generation).
+² Pipeline only — judge cost is tracked separately in `judge_tokens`/`judge_calls`.
+³ LLM judge (1-5 accuracy) on the same 21-question 20% sample for every pipeline.
+
+**The three chunk-based pipelines are separated by 3 points; event-graph is 29
+ahead of the best of them.** The gap is almost entirely `aggregation` (0-3/21
+versus 21/21) and `superlative` (4/10 versus 10/10) — the two types that need
+every matching document at once rather than the top few. On `lookup` all four
+are perfect, and on `temporal` all four are near-perfect.
 
 Event-graph's single miss, pub-099, is a genuinely ambiguous question: two
 events were held at Laura Biathlon & Ski Complex on 22 February 2014. The
@@ -70,7 +77,7 @@ queryable properties. Modeling them as a graph turns counting, argmax,
 venue+date lookup and "the previous Games" into traversals. See
 `docs/architecture.md`, "Structured event layer".
 
-### First run: LLM-judge scores (2026-09-11)
+### First run: LLM-judge scores (2026-09-11, before the reranker)
 
 Judged by a separate LLM (`JUDGE_MODEL`, see `.env`) on a 1-5 scale for
 accuracy and completeness (against the reference answer) and groundedness
@@ -79,6 +86,10 @@ accuracy and completeness (against the reference answer) and groundedness
 an answer that exact match shows is wrong, often one that said "the corpus
 has no information". The judge now runs only on a 20% sample (`--judge-rate`),
 and exact match is the headline metric.
+
+Scored by exact match, that pre-reranker run was RAG 58, GraphRAG 15, Agentic 59.
+The reranker is what closed GraphRAG's gap (15 → 67) and cut every pipeline's
+tokens by roughly 3x; it did not help the counting questions at all.
 
 | Pipeline | Accuracy | Completeness | Groundedness | Doc precision | Doc recall | Latency (s) | Tokens/query | LLM calls |
 |---|---|---|---|---|---|---|---|---|
