@@ -103,6 +103,46 @@ row carrying a `short_answer` — and **0 disagreements** with the earlier
 event_graph answers. Regenerate after the corrected temporal reload so the
 submission artifact comes from final code.
 
+**Short-answer precedence was still wrong after the first fix** (found by
+regenerating the hidden set and diffing). Tool-first precedence corrupted two
+rows while the *prose* answer was correct in both:
+- eval-040: `gold_at_venue_date` matched 5 events on a partial date; its
+  five-name list overrode the model's correctly disambiguated single name.
+- eval-042: an exploratory `top_event_by_competitors` left an event title that
+  overrode a correct medallist name.
+Exact match reads `short_answer`, so both correct investigations would have
+scored wrong. Now `decision.short_answer or tool_short_answer` (commit 2652518).
+
+**STATE AS OF 2026-09-17 EOD — quota exhausted mid-re-measure. Resume tomorrow:**
+Gemini hit its daily 429 wall after ~480 calls; a probe confirms it. Nothing
+requiring the API can run until the daily reset (observed to reset earlier than
+midnight Pacific — probe before assuming).
+
+Result files and what each holds — **none of these is final**:
+| File | Generation | Trust |
+|---|---|---|
+| `benchmark_v3_investigator.jsonl` | final code, public set | only 1 of 100 done (5 × 429) |
+| `hidden_answers_investigator_toolfirst.jsonl` | tool-first precedence | eval-040/eval-042 short answers WRONG |
+| `hidden_answers_investigator_prefix.jsonl` | pre-review-fix | superseded |
+| `benchmark_v2.jsonl` investigator rows | pre-review-fix | the README's 99/100 comes from here |
+
+The corrupted file was moved off the canonical path deliberately:
+`run_benchmark` checkpoints per (qid, pipeline), so leaving it there would make
+the regeneration skip all 50 questions and silently keep the bad rows.
+
+Resume commands (in this order, one at a time — two Gemini processes double the
+request rate and trip 429s):
+```bash
+python -m src.eval.run_benchmark --pipelines investigator --judge-rate 0.2 \
+    --output data/results/benchmark_v3_investigator.jsonl
+python -m src.eval.run_benchmark --pipelines investigator \
+    --questions data/raw_dataset/questions/eval_hidden.jsonl \
+    --output data/results/hidden_answers_investigator.jsonl
+```
+Then update README's results table from `benchmark_v3_investigator.jsonl` (its
+99/100 currently predates every fix in this entry) and re-append investigator
+rows to `benchmark_results.jsonl` for the dashboard.
+
 **Still unknown (blocked on the user):** the official rules text, exactly what
 Round 1 requires (repo only, or also a DEV article / demo video / hidden-set
 answers file), and the required format for hidden-set answers.
