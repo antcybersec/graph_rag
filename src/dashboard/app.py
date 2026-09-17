@@ -718,6 +718,24 @@ for col, name in zip(cols, ORDER):
         if isinstance(short, str) and short:
             st.caption(f"short answer: **{short}**")
 
+        # How this investigation ended: which path answered, and whether the agent
+        # stopped because it was satisfied or because it ran out of iterations.
+        # Same isinstance guard as above -- missing values arrive as NaN, which is
+        # truthy and would render "route: nan".
+        ending = [f"{label}: {value}" for label, value in
+                  (("route", row.get("route")), ("stop", row.get("stop_reason")))
+                  if isinstance(value, str) and value]
+        # The agent has no single "route" -- its analogue is which tools it chose,
+        # which is the most informative part of how it answered.
+        tools = row.get("tools_used")
+        if isinstance(tools, list) and tools:
+            ending.insert(0, "tools: " + ", ".join(t for t in tools if t != "answer"))
+        steps = row.get("num_steps")
+        if isinstance(steps, (int, float)) and steps == steps:  # NaN != NaN
+            ending.append(f"{steps:.0f} steps")
+        if ending:
+            st.caption(" &middot; ".join(ending), unsafe_allow_html=True)
+
         # How the answer was reached, and what it rests on. Only the agentic
         # pipelines record these; the fixed pipelines show nothing here.
         steps = list(row.get("trace") or [])
