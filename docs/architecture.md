@@ -128,6 +128,16 @@ agent chose `query_events` on every question and added `search_chunks` on 3.
 Given "Who directed the film Jab We Met?" — outside the event layer entirely — it
 goes straight to `search_chunks` and answers from the film article.
 
+**Robustness to phrasing.** A structured pipeline that scores 99/100 on a
+templated eval set invites the question of whether it generalises past those
+templates. `data/results/paraphrase_test.log` answers it: ten questions written
+in wording the eval set never uses — host cities instead of Games years, "biggest
+field" instead of "highest number of competitors" — score 10/10. The mapping from
+"Calgary 1988" to the 1988 Winter Games is the planner's work, not a regex's;
+nothing in the corpus title or the query plan contains the host city. This is
+also why the planner is an LLM call rather than the regex that first proved the
+questions were answerable.
+
 **Evidence is provenance, not just citations.** Every evidence item carries
 `doc_id`, `doc_title`, `source_url` and the `provenance` of the call that
 produced it (tool, GSQL query name, parameters). The dashboard's drill-down

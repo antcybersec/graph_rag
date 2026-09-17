@@ -1,0 +1,26 @@
+Direct use of automatic function calling (AFC) in Models.generate_content is not recommended. Instead, we recommend to use AFC in Chat.send_message. Similarly, direct use of AFC in Models.generate_content_stream is not recommended. Instead, we recommend to use AFC in Chat.send_message_stream.
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+OK  | '5' vs ['5'] | steps=2 tools=['answer', 'query_events']
+     Q: In the 2018 Winter Games, how many biathlon events drew a field larger than 73 athletes?
+OK  | 'Sailing at the 2000 Summer Olympics – Soling' vs ['Sailing at the 2000 Summer Olympics – Soling'] | steps=2 tools=['answer', 'query_events']
+     Q: Which sailing event at Sydney 2000 had the biggest field?
+OK  | '26' vs ['26'] | steps=2 tools=['answer', 'query_events']
+     Q: How many different countries took part in the women's RS:X sailing at Rio 2016?
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 8733.01it/s]
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 8626.90it/s]
+OK  | 'Chen Ding' vs ['Chen Ding'] | steps=3 tools=['answer', 'query_events', 'search_chunks']
+     Q: At the Summer Games right before 2016, who took gold in the men's 20 km walk?
+OK  | 'Naim Süleymanoğlu' vs ['Naim Süleymanoğlu'] | steps=2 tools=['answer', 'query_events']
+     Q: Who took the gold medal at the Olympic Weightlifting Gymnasium on 20 September 1988?
+OK  | 'Martina Sáblíková' vs ['Martina Sáblíková'] | steps=2 tools=['answer', 'query_events']
+     Q: Which athlete won gold at Richmond Olympic Oval on 14 February 2010?
+OK  | '23' vs ['23'] | steps=2 tools=['answer', 'query_events']
+     Q: How many nations entered the women's 57 kg judo at the 2016 Rio Olympics?
+OK  | "Alpine skiing at the 1988 Winter Olympics – Men's giant slalom" vs ["Alpine skiing at the 1988 Winter Olympics – Men's giant slalom"] | steps=2 tools=['answer', 'query_events']
+     Q: Of the alpine skiing events at Calgary 1988, which one had the most competitors?
+OK  | '3' vs ['3'] | steps=2 tools=['answer', 'query_events']
+     Q: How many fencing events at Seoul 1988 had more than 68 competitors?
+OK  | 'Allison Schmitt' vs ['Allison Schmitt'] | steps=2 tools=['answer', 'query_events']
+     Q: Who won the women's 200 m freestyle swimming gold at the Games immediately preceding Rio 2016?
+
+PARAPHRASE ROBUSTNESS: 10/10

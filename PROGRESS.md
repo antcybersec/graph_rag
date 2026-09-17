@@ -42,6 +42,14 @@ not conflicts. Two earlier versions of the detector reported fake conflicts
 fixed. Conflict *handling* is implemented, but demoing it needs a labelled
 fixture, not a claim that the corpus disagrees with itself.
 
+**Robustness proven, not assumed:** 10 questions rewritten away from the eval
+templates (host cities — "Sydney 2000", "Calgary 1988", "Seoul 1988", "Rio 2016"
+— plus different vocabulary) score **10/10** (`data/results/paraphrase_test.log`).
+One needed 3 steps: `query_events` fell short, the agent switched to
+`search_chunks` and recovered. Host-city → Games-year mapping is done by the
+planner; no regex or corpus field contains it. Use this against any
+"it only works on the five templates" objection.
+
 **Still unknown (blocked on the user):** the official rules text, exactly what
 Round 1 requires (repo only, or also a DEV article / demo video / hidden-set
 answers file), and the required format for hidden-set answers.

@@ -67,6 +67,17 @@ than plain RAG. Its lower judge score is phrasing, not correctness: it enumerate
 the qualifying events before giving the count, and the same 21-question sample
 scores the terser event-graph answers higher.
 
+**It is not template-matching.** The obvious objection to a 99/100 on a
+templated eval set is that the system only works on those five phrasings. Tested
+directly (`data/results/paraphrase_test.log`): ten questions rewritten to avoid
+the eval wording entirely — Games named by host city ("Sydney 2000", "Calgary
+1988", "Seoul 1988", "Rio 2016", which appear nowhere in the eval set), and
+different vocabulary ("biggest field", "drew a field larger than 73 athletes",
+"how many different countries took part") — score **10/10**. The agent has to map
+host city to Games year itself before it can query anything. One of the ten took
+three steps: the structured query came back short, so the agent switched to
+`search_chunks` and recovered the answer.
+
 **The three chunk-based pipelines are separated by 3 points; the graph-aware
 pipelines are 29 ahead of the best of them.** The gap is almost entirely `aggregation` (0-3/21
 versus 21/21) and `superlative` (4/10 versus 10/10) — the two types that need
