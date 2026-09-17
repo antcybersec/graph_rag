@@ -16,7 +16,9 @@ venues at different Games ("Olympic Tennis Centre" in Athens and in Rio)
 share one vertex. Queries that start from a venue therefore also filter by
 date and, when known, by Games.
 
-Usage (safe to re-run; schema is only created if missing, upserts overwrite):
+Usage (safe to re-run; schema is only created if missing, upserts overwrite,
+and queries use CREATE OR REPLACE -- a plain CREATE fails on re-run and leaves
+the old body installed, so an edited query would silently never take effect):
   python -m src.ingestion.build_event_graph [--queries-only]
 """
 import argparse
@@ -71,7 +73,7 @@ QUERIES = {
     "events_by_games_sport": f"""
 USE GRAPH {GRAPH_NAME}
 
-CREATE QUERY events_by_games_sport(VERTEX<Games> games, VERTEX<Sport> sport, INT min_competitors = -1) FOR GRAPH {GRAPH_NAME} SYNTAX v3 {{
+CREATE OR REPLACE QUERY events_by_games_sport(VERTEX<Games> games, VERTEX<Sport> sport, INT min_competitors = -1) FOR GRAPH {GRAPH_NAME} SYNTAX v3 {{
   G = {{games}};
   S = {{sport}};
   InGames = SELECT e FROM OlympicEvent:e -(IN_GAMES)- G:g;
@@ -87,7 +89,7 @@ INSTALL QUERY events_by_games_sport
     "events_at_venue": f"""
 USE GRAPH {GRAPH_NAME}
 
-CREATE QUERY events_at_venue(VERTEX<Venue> venue) FOR GRAPH {GRAPH_NAME} SYNTAX v3 {{
+CREATE OR REPLACE QUERY events_at_venue(VERTEX<Venue> venue) FOR GRAPH {GRAPH_NAME} SYNTAX v3 {{
   V = {{venue}};
   AtVenue = SELECT e FROM OlympicEvent:e -(HELD_AT)- V:v;
   PRINT AtVenue;
@@ -98,7 +100,7 @@ INSTALL QUERY events_at_venue
     "events_in_previous_games": f"""
 USE GRAPH {GRAPH_NAME}
 
-CREATE QUERY events_in_previous_games(VERTEX<Games> games, VERTEX<Sport> sport) FOR GRAPH {GRAPH_NAME} SYNTAX v3 {{
+CREATE OR REPLACE QUERY events_in_previous_games(VERTEX<Games> games, VERTEX<Sport> sport) FOR GRAPH {GRAPH_NAME} SYNTAX v3 {{
   G = {{games}};
   S = {{sport}};
   Prev = SELECT p FROM G:g -(PREV_GAMES>)- Games:p;

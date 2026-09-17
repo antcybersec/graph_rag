@@ -81,7 +81,7 @@ QUERIES = {
     "facts_as_of": f"""
 USE GRAPH {GRAPH_NAME}
 
-CREATE QUERY facts_as_of(STRING predicate, STRING subject_key, STRING object_key, INT as_of) FOR GRAPH {GRAPH_NAME} SYNTAX v3 {{
+CREATE OR REPLACE QUERY facts_as_of(STRING predicate, STRING subject_key, STRING object_key, INT as_of) FOR GRAPH {GRAPH_NAME} SYNTAX v3 {{
   // Any of subject_key/object_key may be empty, meaning "don't filter on it":
   // the same query answers "what did X hold then" and "who held Y then".
   Facts = SELECT f FROM TemporalFact:f
@@ -98,7 +98,7 @@ INSTALL QUERY facts_as_of
     "fact_timeline": f"""
 USE GRAPH {GRAPH_NAME}
 
-CREATE QUERY fact_timeline(STRING predicate, STRING subject_key, STRING object_key) FOR GRAPH {GRAPH_NAME} SYNTAX v3 {{
+CREATE OR REPLACE QUERY fact_timeline(STRING predicate, STRING subject_key, STRING object_key) FOR GRAPH {GRAPH_NAME} SYNTAX v3 {{
   Facts = SELECT f FROM TemporalFact:f
           WHERE (predicate == "" OR f.predicate == predicate)
             AND (subject_key == "" OR f.subject_key == subject_key)
@@ -304,6 +304,15 @@ def load(conn, facts: list):
     if "TemporalFact" not in conn.getVertexTypes():
         print(conn.gsql(SCHEMA_JOB))
         conn = get_connection()
+    else:
+        # Replace the layer rather than adding to it. `fact_id` embeds
+        # `valid_from`, so re-running after an interval correction mints NEW ids
+        # and a plain upsert leaves the previous generation in place: queries
+        # then return one champion twice, once per generation (observed
+        # 2026-09-17 -- 2,603 vertices where 2,316 were expected). Deleting
+        # first also drops the incident FACT_SOURCE edges.
+        deleted = conn.delVertices("TemporalFact")
+        print(f"replaced existing temporal layer: deleted {deleted} stale facts")
     attrs = ("subject", "subject_key", "predicate", "object", "object_key", "slot_key", "value_key",
              "valid_from", "valid_to", "source_doc_id", "source_url", "authority_score", "observed_at")
     vertices = [(f["fact_id"], {k: f[k] for k in attrs}) for f in facts]
@@ -316,6 +325,9 @@ def load(conn, facts: list):
 
 
 def install_queries(conn):
+    # CREATE OR REPLACE, not CREATE: a plain CREATE fails on re-run with
+    # "the query name is used by another object" and leaves the OLD body
+    # installed, so an edited query would silently never take effect.
     for name, gsql in QUERIES.items():
         print(f"\n=== installing {name} ===")
         result = conn.gsql(gsql)

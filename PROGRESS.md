@@ -50,6 +50,59 @@ One needed 3 steps: `query_events` fell short, the agent switched to
 planner; no regex or corpus field contains it. Use this against any
 "it only works on the five templates" objection.
 
+**Independent review + fixes (same day).** A code-reviewer pass reproduced every
+headline number independently (2,316 facts = 129 + 2,187, zero fact_id
+collisions, EM 99/100, 2.06 steps, 2.11 calls, per-qtype breakdown, conflicts
+0/0/227) and found 2 HIGH bugs, both latent but aimed straight at the hidden set:
+- `tool_short_answer` persisted across strategy changes, and `is_correct`
+  short-circuits on `short_answer` — so a rejected structured result could score
+  a correct prose answer **wrong**. Now cleared whenever a later tool adds evidence.
+- 3 of 5 tool dispatches were unguarded: one malformed plan raised out of
+  `answer_question` and lost the question as an error row. All dispatches now
+  share one guard.
+Also fixed: `entity:`-prefixed ids were filtered against bare ids (so traversal
+silently fanned out to every known entity); silent `graph_traverse` failures;
+`fact_query` missing from the action history; the forced-stop synthesis was
+unrecorded and logged 0 context tokens; `query_facts` with no date matched only
+still-open facts; dashboard printed `short answer: nan`; README claimed 2.2x
+fewer tokens than RAG when the true figure is 1.3x (2.2x is vs the agentic baseline).
+
+**Temporal interval bug (would have broken the Round 2 story).** Reigns started
+31 December of the Games year, so for ~10 months after each Games the "reigning
+champion" was the *previous* one. Reigns now start on the event's own date.
+Two follow-on data bugs surfaced and were fixed: dates are validated per month
+(`31 February` no longer becomes 20120231), and a parsed year more than one year
+from the Games year is rejected as a typo — which keeps Tokyo 2020's legitimate
+2021 dates (45 event articles) while dropping a badminton infobox that reads
+"2012" for a 2008 event. That single typo had manufactured a phantom "rival
+claim". Conflicts are now **0 cross-source, 0 rival claims**, 274 concurrent
+holdings, 0 non-positive intervals.
+
+**Two idempotency bugs in the ingestion scripts (found by re-running them).**
+Both would bite anyone who clones the repo and re-runs, which is exactly what
+"repository review" in the rubric means:
+- `build_temporal_facts.load()` only upserted. `fact_id` embeds `valid_from`, so
+  re-running after the interval correction minted *new* ids and left the previous
+  generation in place — the graph held 2,603 facts and `facts_as_of` returned the
+  same champion twice, once per generation. It now deletes the layer first.
+- Both ingestion scripts used `CREATE QUERY`, which fails on re-run
+  ("the query name is used by another object") and **leaves the old body
+  installed** — an edited query would silently never take effect. Both now use
+  `CREATE OR REPLACE QUERY`. `build_event_graph`'s docstring had claimed
+  re-running was safe; it wasn't.
+A scare along the way: `getVertexCount` read 2,305 right after the reload and I
+took it for 11 lost facts. Diffing extracted ids against the graph showed
+2,316/2,316 with nothing missing — the count was just stale. Verified the real
+way (id set diff), not by trusting the counter.
+Also confirmed, closing a reviewer's open question: GSQL `ORDER BY` **does**
+survive `PRINT` of a vertex set — `fact_timeline` returns its 8 rows ascending.
+
+**Hidden set answered by the Investigator** (`hidden_answers_investigator.jsonl`):
+50/50, 0 errors, 2.04 steps, 2.06 calls, 3,089 tokens, all `answer_found`, every
+row carrying a `short_answer` — and **0 disagreements** with the earlier
+event_graph answers. Regenerate after the corrected temporal reload so the
+submission artifact comes from final code.
+
 **Still unknown (blocked on the user):** the official rules text, exactly what
 Round 1 requires (repo only, or also a DEV article / demo video / hidden-set
 answers file), and the required format for hidden-set answers.
