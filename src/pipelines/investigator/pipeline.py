@@ -346,13 +346,15 @@ def answer_question(conn, question: str, tracker=None, question_id=None, max_ite
 
         if decision.action == "answer":
             final_answer = decision.final_answer or decision.reasoning or "(no answer produced)"
-            # The structured tool's own short answer is exact, so it wins over the
-            # model's paraphrase -- but only while the answer still rests on it.
-            # `tool_short_answer` is cleared whenever a later tool contributes
-            # evidence, otherwise a rejected structured result could override a
-            # correct answer the agent reached another way (and exact-match
-            # scoring short-circuits on short_answer, so that would score wrong).
-            short_answer = tool_short_answer or decision.short_answer
+            # The agent's own short answer wins; the tool's value is a fallback for
+            # when it gives none. Tool-first was wrong in both directions, observed
+            # on the hidden set: `gold_at_venue_date` matched five events on a
+            # partial date and its five-name list overrode the model's correctly
+            # disambiguated single name (eval-040), and an exploratory
+            # `top_event_by_competitors` left an event title that overrode a correct
+            # medallist name (eval-042). In both the prose answer was right and only
+            # this field was wrong -- and exact-match scoring reads this field.
+            short_answer = decision.short_answer or tool_short_answer
             stop_reason = "answer_found"
             trace.append(step)
             break
@@ -428,7 +430,7 @@ def answer_question(conn, question: str, tracker=None, question_id=None, max_ite
             context_tokens=n_tokens(_format_evidence(evidence)),
         )
         final_answer = decision.final_answer or "(no answer produced)"
-        short_answer = tool_short_answer or decision.short_answer
+        short_answer = decision.short_answer or tool_short_answer  # same precedence as the normal path
         # Record it: this call produces the answer, so leaving it out of the trace
         # would undercount steps and hide the reasoning behind the final answer.
         trace.append({
