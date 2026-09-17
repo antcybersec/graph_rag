@@ -116,8 +116,8 @@ but it is a fixed route: it cannot do anything the event layer does not model.
 `src/pipelines/investigator/` keeps its accuracy while remaining an agent,
 because the structured query is *a tool the agent may choose*, not a fixed path.
 
-Each step the agent: plans an action over {`query_events`, `link_entities`,
-`graph_traverse`, `search_chunks`, `answer`}; runs it; and states an
+Each step the agent: plans an action over {`query_events`, `query_facts`,
+`link_entities`, `graph_traverse`, `search_chunks`, `answer`}; runs it; and states an
 `evidence_check` — what the evidence does and does not establish — in the *same*
 structured call, so self-evaluation costs no extra LLM call. It answers only when
 that check passes, or changes strategy, up to `MAX_ITERATIONS`.
@@ -144,6 +144,15 @@ championship reigns (`olympic_champion`), each with `valid_from`/`valid_to`,
 `source_doc_id`, `source_url` and an `authority_score`, plus a `FACT_SOURCE` edge
 to the source `Document`. `facts_as_of` and `fact_timeline` answer "who held X on
 date D" and "how did X change over time".
+
+The agent reaches this layer through its `query_facts` tool, so time-scoped
+reasoning is part of the investigation rather than a separate script: asked "Who
+was the President of Russia on 1 January 2013?" it issues
+`facts_as_of(predicate=held_office, object_key=president of russia,
+as_of=20130101)` and answers "Vladimir Putin", citing the fact's validity
+interval and the source article. If the temporal queries are not installed, the
+tool reports itself unavailable and the agent falls back to another tool rather
+than failing the question.
 
 **A fact needs a slot, not just a subject and object.** Which side can hold only
 one value at a time differs per predicate: an office has one holder at a time

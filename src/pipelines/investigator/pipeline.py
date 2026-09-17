@@ -33,9 +33,11 @@ from typing import Literal, Optional
 from pydantic import BaseModel
 
 from src.common.chunking import n_tokens
+from src.common.infobox import norm_key
 from src.common.llm import embed, generate
 from src.common.rerank import rerank
 from src.common.tg_conn import get_connection
+from src.ingestion.build_temporal_facts import DATE_OPEN, parse_date
 from src.pipelines.event_graph.pipeline import QueryPlan, execute_plan
 
 MAX_ITERATIONS = 5
@@ -66,6 +68,13 @@ Available actions:
         `year` (`year` is the year named in the question, not the earlier Games)
     Keep any "Men's"/"Women's"/"Mixed" in `event_name`, and copy `sport` from the article title
     wording (Athletics, Cross-country skiing, Short-track speed skating, ...).
+  - query_facts(fact_query): query time-scoped facts that have a validity interval and a source.
+    Use it whenever the question is about a point in time or a change over time -- "who held OFFICE
+    on DATE", "who was the reigning champion of EVENT in YEAR", "how did X change over time".
+    `fact_query.mode` is "as_of" (state at one date; give `as_of_date`) or "timeline" (full
+    history). `predicate` is "held_office" (subject = person, object = office) or
+    "olympic_champion" (subject = "<Sport> – <Event>", object = the champion). Give whichever side
+    you know and leave the other null; facts come back with their validity interval and source.
   - link_entities(query): semantic search for entities in the graph. Use it to identify a subject
     that is not an Olympic event, or before graph_traverse.
   - graph_traverse(entity_ids): expand 1 hop from linked entities, returning related entities, the
@@ -91,11 +100,20 @@ Rules:
   - After {max_iterations} actions you must answer with your best effort, noting what is missing."""
 
 
+class FactQuery(BaseModel):
+    mode: Literal["as_of", "timeline"]
+    predicate: Optional[Literal["held_office", "olympic_champion"]] = None
+    subject: Optional[str] = None
+    object: Optional[str] = None
+    as_of_date: Optional[str] = None  # any readable form: "2013-01-01", "7 May 2012", "2013"
+
+
 class InvestigatorDecision(BaseModel):
     reasoning: str
     evidence_check: str  # self-evaluation, folded into the routing call (no extra LLM call)
-    action: Literal["query_events", "link_entities", "graph_traverse", "search_chunks", "answer"]
+    action: Literal["query_events", "query_facts", "link_entities", "graph_traverse", "search_chunks", "answer"]
     event_query: Optional[QueryPlan] = None
+    fact_query: Optional[FactQuery] = None
     query: Optional[str] = None
     entity_ids: Optional[list[str]] = None
     final_answer: Optional[str] = None
@@ -199,6 +217,45 @@ def _run_query_events(conn, plan: QueryPlan, question: str) -> tuple:
     return evidence, result["short_answer"], summary
 
 
+def _run_query_facts(conn, fq: FactQuery) -> tuple:
+    """Time-scoped facts from the temporal layer. Returns (evidence, summary)."""
+    params = {
+        "predicate": fq.predicate or "",
+        "subject_key": norm_key(fq.subject) if fq.subject else "",
+        "object_key": norm_key(fq.object) if fq.object else "",
+    }
+    if fq.mode == "as_of":
+        as_of, _precision = parse_date(fq.as_of_date or "")
+        # No date given means "now" as far as the corpus is concerned.
+        params["as_of"] = as_of or DATE_OPEN
+        rows = conn.runInstalledQuery("facts_as_of", params=params)[0]["Facts"]
+    else:
+        rows = conn.runInstalledQuery("fact_timeline", params=params)[0]["Facts"]
+
+    provenance = {"tool": "query_facts", "query": "facts_as_of" if fq.mode == "as_of" else "fact_timeline",
+                  "params": params}
+
+    def window(a):
+        start = str(a["valid_from"])
+        end = "present" if a["valid_to"] >= DATE_OPEN else str(a["valid_to"])
+        return f"{start} to {end}"
+
+    evidence = []
+    for r in rows[:MAX_EVENT_EVIDENCE]:
+        a = r["attributes"]
+        evidence.append({
+            "citation_id": r["v_id"],
+            "source": "temporal_fact",
+            "text": f"{a['subject']} --[{a['predicate']}]--> {a['object']} (valid {window(a)}; {a['observed_at']})",
+            "doc_id": a.get("source_doc_id", ""),
+            "doc_title": "",
+            "source_url": a.get("source_url", ""),
+            "provenance": provenance,
+        })
+    summary = f"{len(rows)} time-scoped fact(s)" + ("" if len(rows) <= MAX_EVENT_EVIDENCE else f", showing {MAX_EVENT_EVIDENCE}")
+    return evidence, summary
+
+
 def _run_link_entities(conn, query: str, tracker, question_id) -> tuple:
     vec, _ = embed([query], task_type="RETRIEVAL_QUERY", pipeline="investigator", tracker=tracker, question_id=question_id)
     seeds = conn.runInstalledQuery("vector_search_entities", params={"query_vector": vec[0], "k": TOP_K_ENTITIES})[0]["Result"]
@@ -298,6 +355,21 @@ def answer_question(conn, question: str, tracker=None, question_id=None, max_ite
             else:
                 new_evidence, tool_answer, summary = _run_query_events(conn, decision.event_query, question)
                 tool_short_answer = tool_answer or tool_short_answer
+                step["tool_result"] = summary
+                step["new_evidence"] = _add_evidence(evidence, new_evidence)
+
+        elif decision.action == "query_facts":
+            if decision.fact_query is None:
+                step["error"] = "query_facts chosen without a fact_query"
+                step["new_evidence"] = 0
+            else:
+                step["fact_query"] = {k: v for k, v in decision.fact_query.model_dump().items() if v is not None}
+                try:
+                    new_evidence, summary = _run_query_facts(conn, decision.fact_query)
+                except Exception as exc:
+                    # The temporal layer is optional: if its queries aren't installed,
+                    # the agent should try another tool rather than fail the question.
+                    new_evidence, summary = [], f"temporal layer unavailable ({type(exc).__name__})"
                 step["tool_result"] = summary
                 step["new_evidence"] = _add_evidence(evidence, new_evidence)
 
