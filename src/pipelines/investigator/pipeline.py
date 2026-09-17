@@ -133,7 +133,7 @@ def _format_history(trace: list) -> str:
         return "(none yet)"
     lines = []
     for i, t in enumerate(trace):
-        args = t.get("query") or t.get("entity_ids") or t.get("event_query") or ""
+        args = t.get("query") or t.get("entity_ids") or t.get("event_query") or t.get("fact_query") or ""
         line = f"{i+1}. {t['action']}({args})"
         if "new_evidence" in t:
             line += f" -> {t['new_evidence']} new evidence items"
@@ -226,8 +226,10 @@ def _run_query_facts(conn, fq: FactQuery) -> tuple:
     }
     if fq.mode == "as_of":
         as_of, _precision = parse_date(fq.as_of_date or "")
-        # No date given means "now" as far as the corpus is concerned.
-        params["as_of"] = as_of or DATE_OPEN
+        # No date given means today. DATE_OPEN would be wrong: the query requires
+        # valid_to >= as_of, so 9999-12-31 matches only still-open facts (536 of
+        # 2,316, and 1 of 129 office terms) -- a near-empty result, silently.
+        params["as_of"] = as_of or int(time.strftime("%Y%m%d"))
         rows = conn.runInstalledQuery("facts_as_of", params=params)[0]["Facts"]
     else:
         rows = conn.runInstalledQuery("fact_timeline", params=params)[0]["Facts"]
@@ -270,8 +272,11 @@ def _run_link_entities(conn, query: str, tracker, question_id) -> tuple:
 
 
 def _run_graph_traverse(conn, entity_ids: list, question: str) -> tuple:
+    """Returns (new_entity_ids, evidence, error). `error` is surfaced in the trace:
+    a failed traversal and an empty one both yield no evidence, and a reader of
+    the audit trail must be able to tell them apart."""
     if not entity_ids:
-        return [], []
+        return [], [], None
     try:
         result = conn.runInstalledQuery("entity_neighbors_1hop", params={"seeds": entity_ids})
         neighbors = result[0]["Neighbors"]
@@ -279,9 +284,9 @@ def _run_graph_traverse(conn, entity_ids: list, question: str) -> tuple:
         chunks = result[2]["ChunksOfNeighbors"]
         all_ids = list({e["v_id"] for e in neighbors} | set(entity_ids))
         ent_lookup = {e["v_id"]: e["attributes"] for e in conn.getVerticesById("Entity", all_ids)} if all_ids else {}
-    except Exception:
+    except Exception as exc:
         # One bad action (e.g. a hallucinated entity id) must not end the investigation.
-        return [], []
+        return [], [], f"{type(exc).__name__}: {exc}"[:200]
 
     def fact_line(e):
         a = ent_lookup.get(e["from_id"], {}).get("name", e["from_id"])
@@ -300,7 +305,7 @@ def _run_graph_traverse(conn, entity_ids: list, question: str) -> tuple:
             "source_url": attrs.get("source_url", ""), "provenance": provenance,
         })
     evidence.extend(_chunk_evidence(conn, rerank(question, chunks, text_of=_chunk_text, top_n=TOP_K_CHUNKS), provenance))
-    return [n["v_id"] for n in neighbors], evidence
+    return [n["v_id"] for n in neighbors], evidence, None
 
 
 def _run_search_chunks(conn, query: str, tracker, question_id) -> list:
@@ -341,53 +346,72 @@ def answer_question(conn, question: str, tracker=None, question_id=None, max_ite
 
         if decision.action == "answer":
             final_answer = decision.final_answer or decision.reasoning or "(no answer produced)"
-            # The structured tool's own short answer is exact; prefer it over the
-            # model's paraphrase, which may re-wrap a number in a sentence.
+            # The structured tool's own short answer is exact, so it wins over the
+            # model's paraphrase -- but only while the answer still rests on it.
+            # `tool_short_answer` is cleared whenever a later tool contributes
+            # evidence, otherwise a rejected structured result could override a
+            # correct answer the agent reached another way (and exact-match
+            # scoring short-circuits on short_answer, so that would score wrong).
             short_answer = tool_short_answer or decision.short_answer
             stop_reason = "answer_found"
             trace.append(step)
             break
 
-        if decision.action == "query_events":
-            if decision.event_query is None:
-                step["error"] = "query_events chosen without an event_query"
-                step["new_evidence"] = 0
-            else:
-                new_evidence, tool_answer, summary = _run_query_events(conn, decision.event_query, question)
-                tool_short_answer = tool_answer or tool_short_answer
-                step["tool_result"] = summary
-                step["new_evidence"] = _add_evidence(evidence, new_evidence)
+        try:
+            if decision.action == "query_events":
+                if decision.event_query is None:
+                    step["error"] = "query_events chosen without an event_query"
+                    step["new_evidence"] = 0
+                else:
+                    new_evidence, tool_answer, summary = _run_query_events(conn, decision.event_query, question)
+                    tool_short_answer = tool_answer  # not sticky: a later miss must clear it
+                    step["tool_result"] = summary
+                    step["new_evidence"] = _add_evidence(evidence, new_evidence)
 
-        elif decision.action == "query_facts":
-            if decision.fact_query is None:
-                step["error"] = "query_facts chosen without a fact_query"
-                step["new_evidence"] = 0
-            else:
-                step["fact_query"] = {k: v for k, v in decision.fact_query.model_dump().items() if v is not None}
-                try:
+            elif decision.action == "query_facts":
+                if decision.fact_query is None:
+                    step["error"] = "query_facts chosen without a fact_query"
+                    step["new_evidence"] = 0
+                else:
+                    step["fact_query"] = {k: v for k, v in decision.fact_query.model_dump().items() if v is not None}
                     new_evidence, summary = _run_query_facts(conn, decision.fact_query)
-                except Exception as exc:
-                    # The temporal layer is optional: if its queries aren't installed,
-                    # the agent should try another tool rather than fail the question.
-                    new_evidence, summary = [], f"temporal layer unavailable ({type(exc).__name__})"
-                step["tool_result"] = summary
+                    step["tool_result"] = summary
+                    step["new_evidence"] = _add_evidence(evidence, new_evidence)
+                    if step["new_evidence"]:
+                        tool_short_answer = None
+
+            elif decision.action == "link_entities":
+                new_ids, new_evidence = _run_link_entities(conn, decision.query or question, tracker, question_id)
+                known_entity_ids = list(set(known_entity_ids) | set(new_ids))
                 step["new_evidence"] = _add_evidence(evidence, new_evidence)
 
-        elif decision.action == "link_entities":
-            new_ids, new_evidence = _run_link_entities(conn, decision.query or question, tracker, question_id)
-            known_entity_ids = list(set(known_entity_ids) | set(new_ids))
-            step["new_evidence"] = _add_evidence(evidence, new_evidence)
+            elif decision.action == "graph_traverse":
+                # entity_ids is free-form model output: keep only ids we have actually
+                # seen. Evidence shows entities as "entity:<id>" and the prompt says to
+                # cite tags exactly, so the model passes the prefixed form -- strip it,
+                # or every well-formed request would be filtered out as hallucinated.
+                requested = [e.removeprefix("entity:") for e in (decision.entity_ids or [])]
+                requested = [e for e in requested if e in known_entity_ids]
+                new_ids, new_evidence, traverse_error = _run_graph_traverse(conn, requested or known_entity_ids, question)
+                known_entity_ids = list(set(known_entity_ids) | set(new_ids))
+                step["new_evidence"] = _add_evidence(evidence, new_evidence)
+                if traverse_error:
+                    step["error"] = traverse_error
+                if step["new_evidence"]:
+                    tool_short_answer = None
 
-        elif decision.action == "graph_traverse":
-            # entity_ids is free-form model output: keep only ids we have actually seen.
-            requested = [e for e in (decision.entity_ids or []) if e in known_entity_ids]
-            new_ids, new_evidence = _run_graph_traverse(conn, requested or known_entity_ids, question)
-            known_entity_ids = list(set(known_entity_ids) | set(new_ids))
-            step["new_evidence"] = _add_evidence(evidence, new_evidence)
+            elif decision.action == "search_chunks":
+                new_evidence = _run_search_chunks(conn, decision.query or question, tracker, question_id)
+                step["new_evidence"] = _add_evidence(evidence, new_evidence)
+                if step["new_evidence"]:
+                    tool_short_answer = None
 
-        elif decision.action == "search_chunks":
-            new_evidence = _run_search_chunks(conn, decision.query or question, tracker, question_id)
-            step["new_evidence"] = _add_evidence(evidence, new_evidence)
+        except Exception as exc:
+            # Uniform guard: a malformed plan, an unknown vertex id or a transient
+            # database error costs this action, not the whole investigation. The
+            # agent sees the failure in its history and picks another tool.
+            step["error"] = f"{type(exc).__name__}: {exc}"[:200]
+            step["new_evidence"] = 0
 
         step["tool_latency_sec"] = round(time.time() - t0, 3)
         trace.append(step)
@@ -401,9 +425,16 @@ def answer_question(conn, question: str, tracker=None, question_id=None, max_ite
             call_type="orchestrator_forced_stop",
             tracker=tracker,
             question_id=question_id,
+            context_tokens=n_tokens(_format_evidence(evidence)),
         )
         final_answer = decision.final_answer or "(no answer produced)"
         short_answer = tool_short_answer or decision.short_answer
+        # Record it: this call produces the answer, so leaving it out of the trace
+        # would undercount steps and hide the reasoning behind the final answer.
+        trace.append({
+            "iteration": max_iterations, "action": "answer", "forced": True,
+            "reasoning": decision.reasoning, "evidence_check": decision.evidence_check,
+        })
 
     tools_used = {t["action"] for t in trace}
     return {

@@ -176,7 +176,11 @@ and one athlete winning two distances looked like "rival claims". With explicit
 |---|---|
 | Cross-source disagreements | 0 |
 | Rival claims on one slot | 0 |
-| Concurrent roles held by one person (not a conflict) | 227 |
+| Concurrent holdings by one person (not a conflict) | 227 |
+
+Of those 227, 186 are one athlete reigning as champion in two events at once and
+41 are one person holding several offices at once — both normal, neither a
+contradiction.
 
 So this corpus has **no contradictions to resolve** — the evolving half of Round
 2 is well supported here, the conflicting half is not. The detector exists and is

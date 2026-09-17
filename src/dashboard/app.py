@@ -712,8 +712,11 @@ for col, name in zip(cols, ORDER):
         )
         st.markdown("**Answer**")
         st.write(str(row["answer"]) or "_(empty)_")
-        if row.get("short_answer"):
-            st.caption(f"short answer: **{row['short_answer']}**")
+        # Missing values arrive as float NaN, which is truthy -- a bare check
+        # would print "short answer: nan" for every pipeline that has none.
+        short = row.get("short_answer")
+        if isinstance(short, str) and short:
+            st.caption(f"short answer: **{short}**")
 
         # How the answer was reached, and what it rests on. Only the agentic
         # pipelines record these; the fixed pipelines show nothing here.

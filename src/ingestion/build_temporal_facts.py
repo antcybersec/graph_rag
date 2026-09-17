@@ -12,10 +12,10 @@ first-class, interval-stamped, sourced facts:
     TemporalFact -FACT_SOURCE-> Document          (provenance, auditable)
 
 Two real sources of evolving facts in this corpus (measured, not assumed):
-  * 127 office terms from `officeholder`/`person` infoboxes, each with
+  * 129 office terms from `officeholder`/`person` infoboxes, each with
     term_start/term_end -- so "who held office X on date D" is a genuine
     interval query, and consecutive holders of one office form a timeline.
-  * 344 Olympic event series that span three or more Games -- the reigning
+  * 340 Olympic event series that span three or more Games -- the reigning
     champion of an event is valid from one Games until the next, so
     "who was the reigning champion of E as of D" changes over time.
 
@@ -123,13 +123,23 @@ def parse_date(text: str) -> tuple:
         return DATE_UNKNOWN, "none"
     if "present" in t or "incumbent" in t:
         return DATE_OPEN, "open"
+    # Day counts per month; February is given 29 because resolving leap years
+    # would buy nothing here -- these values only have to order correctly.
+    _DAYS_IN_MONTH = (31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+
+    def valid(month: int, day: int) -> bool:
+        # Wikipedia infoboxes carry typos ("31 February 2012", "2012-13-45");
+        # storing them as if real would put impossible dates in the fact layer.
+        return 1 <= month <= 12 and 1 <= day <= _DAYS_IN_MONTH[month - 1]
+
     if m := re.search(r"(\d{4})-(\d{2})-(\d{2})", t):
-        return int(f"{m[1]}{m[2]}{m[3]}"), "day"
+        if valid(int(m[2]), int(m[3])):
+            return int(f"{m[1]}{m[2]}{m[3]}"), "day"
     if m := re.search(r"(\d{1,2})\s+([a-z]+)\s+(\d{4})", t):
-        if m[2] in _MONTHS:
+        if m[2] in _MONTHS and valid(_MONTHS[m[2]], int(m[1])):
             return int(f"{m[3]}{_MONTHS[m[2]]:02d}{int(m[1]):02d}"), "day"
     if m := re.search(r"([a-z]+)\s+(\d{1,2}),?\s*(\d{4})", t):
-        if m[1] in _MONTHS:
+        if m[1] in _MONTHS and valid(_MONTHS[m[1]], int(m[2])):
             return int(f"{m[3]}{_MONTHS[m[1]]:02d}{int(m[2]):02d}"), "day"
     if m := re.search(r"([a-z]+)\s+(\d{4})", t):
         if m[1] in _MONTHS:
@@ -201,15 +211,36 @@ def extract_facts(corpus_path: str = CORPUS_PATH) -> list:
         sport, year, season, event = t.groups()
         box = parse_infobox(d["text"])
         if box.get("gold"):
-            series[(sport, event, season)].append((int(year), box["gold"], d))
+            # A reign starts when the event was actually contested, not at year end:
+            # the 2018 Winter Games finished in February, so a 31-December start
+            # would report the 2014 champion for the first ten months of 2018.
+            date_text = box.get("date") or box.get("dates") or ""
+            if date_text and not re.search(r"\d{4}", date_text):
+                date_text = f"{date_text} {year}"  # infobox dates often omit the year
+            starts, _precision = parse_date(date_text)
+            # Trust the date only if it lands on (or next to) the Games year. The
+            # tolerance of one year is real: Tokyo 2020 was held in 2021, and 45
+            # event articles correctly carry 2021 dates. Beyond that it is a typo
+            # -- Badminton 2008 women's doubles reads "10 August to 15 August
+            # 2012", which otherwise gives the 2008 champions a reign overlapping
+            # the 2012 champions', i.e. a contradiction invented by a bad parse.
+            if starts and starts != DATE_OPEN and abs(int(str(starts)[:4]) - int(year)) > 1:
+                starts = 0
+            if not starts or starts == DATE_OPEN:
+                # No usable date: fall back to roughly when those Games are held.
+                starts = int(f"{year}0801") if season == "Summer" else int(f"{year}0201")
+            series[(sport, event, season)].append((int(year), starts, box["gold"], d))
     for (sport, event, season), editions in series.items():
         editions.sort()
-        for i, (year, gold, d) in enumerate(editions):
-            next_year = editions[i + 1][0] if i + 1 < len(editions) else None
+        for i, (year, starts, gold, d) in enumerate(editions):
+            next_starts = editions[i + 1][1] if i + 1 < len(editions) else None
+            # next_starts - 1 can read like 20180200; that is deliberate, and sorts
+            # exactly between 20180131 and 20180201 -- "the instant before the next
+            # Games" -- which is all these integer comparisons need.
+            valid_to = (next_starts - 1) if next_starts else DATE_OPEN
             # One event series has one reigning champion at a time -> the series is the slot.
             facts.append(_fact(
-                f"{sport} – {event}", "olympic_champion", gold,
-                int(f"{year}1231"), int(f"{next_year}1230") if next_year else DATE_OPEN,
+                f"{sport} – {event}", "olympic_champion", gold, starts, valid_to,
                 d, 1.0, f"{season} {year} Games; reigning champion until the next Games in the corpus",
                 slot="subject",
             ))

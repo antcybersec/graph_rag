@@ -41,7 +41,8 @@ deterministically against the gold answer (no LLM). A pipeline that lists
 several candidate answers is scored wrong.
 
 All four pipelines share the corpus, the questions, the generation model and the
-local reranker (2026-09-16 run, `data/results/benchmark_v2.jsonl`, 400/400 pairs).
+local reranker (`data/results/benchmark_v2.jsonl`, 500/500 scored pairs; the four
+comparison pipelines ran 2026-09-16, the Investigator 2026-09-17).
 
 | Pipeline | Exact match | Aggregation | Superlative | Multi-hop | Temporal | Lookup | LLM calls/q ¹ | Tokens/q ² | Latency (s) | Doc P / R | Judge acc ³ |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -62,8 +63,8 @@ planner calls plus the single RAG fallback (pub-049, one embedding + one generat
 questions and added `search_chunks` on 3 where the graph alone fell short, 97 of
 100 investigations finished in 2 steps, and all 100 stopped on `answer_found`
 rather than exhausting their iteration budget. It costs one extra LLM call per
-question over the fixed route (2.11 vs 1.02) and is still 2.2x cheaper in tokens
-than plain RAG. Its lower judge score is phrasing, not correctness: it enumerates
+question over the fixed route (2.11 vs 1.02) and is still 1.3x cheaper in tokens
+than plain RAG, and 2.2x cheaper than the agentic baseline. Its lower judge score is phrasing, not correctness: it enumerates
 the qualifying events before giving the count, and the same 21-question sample
 scores the terser event-graph answers higher.
 
@@ -81,8 +82,8 @@ three steps: the structured query came back short, so the agent switched to
 **The three chunk-based pipelines are separated by 3 points; the graph-aware
 pipelines are 29 ahead of the best of them.** The gap is almost entirely `aggregation` (0-3/21
 versus 21/21) and `superlative` (4/10 versus 10/10) — the two types that need
-every matching document at once rather than the top few. On `lookup` all four
-are perfect, and on `temporal` all four are near-perfect.
+every matching document at once rather than the top few. On `lookup` all five
+are perfect, and on `temporal` all five are near-perfect.
 
 Event-graph's single miss, pub-099, is a genuinely ambiguous question: two
 events were held at Laura Biathlon & Ski Complex on 22 February 2014. The
