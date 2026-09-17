@@ -7,6 +7,47 @@ them here.
 
 ---
 
+## 2026-09-17 — Found the actual rubric; built the Investigator agent + temporal layer
+
+**The rubric changes the priorities.** Found the hackathon listing (TigerGraph
+"Agentic GraphRAG Hackathon", Unstop): investigation accuracy **30%**, evidence
+quality + explainability 15%, agentic effectiveness + efficiency 15%, agentic
+design + code quality 15%, innovation 15%, final presentation 10%. Round 1 due
+**2026-09-24**; top 15 go to Round 2 (due Oct 1, live demo), whose stated
+challenge is "reasoning over evolving, conflicting, and uncertain facts".
+So 30% of the score is explicitly about *agentic* design — and `event_graph`,
+our 99/100 pipeline, is a fixed route, not an agent. That is the gap this entry closes.
+
+**Built `src/pipelines/investigator/`** — one agent, four tools (`query_events`
+= structured GSQL over the event layer, `link_entities`, `graph_traverse`,
+`search_chunks`), with a required `evidence_check` self-evaluation folded into
+the same structured call (no extra LLM call), and provenance on every evidence
+item (doc id, title, source_url, originating query + params).
+Result on the 100 public questions: **99/100 exact match, 2.06 steps, 2.11 LLM
+calls, 2,695 tokens, 16.5s, doc P/R 0.97/0.85, judge 4.33**, all 100 stopping on
+`answer_found`. Tool mix: `query_events` on 100, `search_chunks` on 3. Off-domain
+check ("Who directed Jab We Met?") routes to `search_chunks` and answers correctly.
+
+**Dashboard** now has 5 pipelines (validated 5-colour palette, light + dark) and
+an investigation drill-down: every step with its self-check and timing, every
+evidence item with source link and the query that produced it.
+
+**Temporal layer** (`src/ingestion/build_temporal_facts.py`): 2,316
+interval-stamped facts (129 office terms + 2,187 championship reigns) with
+provenance, plus `facts_as_of` / `fact_timeline` GSQL.
+**Honest finding:** with correct slot/value semantics the corpus contains
+**0 cross-source disagreements and 0 rival claims** — 227 "concurrent roles" are
+not conflicts. Two earlier versions of the detector reported fake conflicts
+(repeat champions; one athlete winning two events); both were wrong and were
+fixed. Conflict *handling* is implemented, but demoing it needs a labelled
+fixture, not a claim that the corpus disagrees with itself.
+
+**Still unknown (blocked on the user):** the official rules text, exactly what
+Round 1 requires (repo only, or also a DEV article / demo video / hidden-set
+answers file), and the required format for hidden-set answers.
+
+---
+
 ## 2026-09-16 — Event-graph pipeline built: 99/100 exact match at ~1 LLM call/question
 
 Acted on the root cause below (user chose: LLM planner + graph tools; exact

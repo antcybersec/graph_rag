@@ -32,6 +32,7 @@ from src.pipelines.rag import pipeline as rag_pipeline
 from src.pipelines.graphrag import pipeline as graphrag_pipeline
 from src.pipelines.agentic import pipeline as agentic_pipeline
 from src.pipelines.event_graph import pipeline as event_graph_pipeline
+from src.pipelines.investigator import pipeline as investigator_pipeline
 
 EVAL_PUBLIC_PATH = "data/raw_dataset/questions/eval_public.jsonl"
 OUTPUT_PATH = "data/results/benchmark_results.jsonl"
@@ -41,6 +42,7 @@ PIPELINES = {
     "graphrag": graphrag_pipeline,
     "agentic": agentic_pipeline,
     "event_graph": event_graph_pipeline,
+    "investigator": investigator_pipeline,
 }
 
 
@@ -172,6 +174,13 @@ def main():
             "judge_tokens": totals["total_tokens"] - pipeline_totals["total_tokens"],
             "judge_calls": totals["num_llm_calls"] - pipeline_totals["num_llm_calls"],
         }
+        if pname == "investigator":
+            row["num_steps"] = result.get("num_steps")
+            row["stop_reason"] = result.get("stop_reason")
+            row["tools_used"] = result.get("tools_used")
+            row["strategy_changed"] = result.get("strategy_changed")
+            row["trace"] = result.get("trace")
+            row["evidence"] = result.get("evidence")
         if pname == "agentic":
             row["num_steps"] = result.get("num_steps")
             row["stop_reason"] = result.get("stop_reason")

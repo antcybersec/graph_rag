@@ -109,6 +109,61 @@ the pipeline costs one call per question. `EVENT_PLAN_CACHE=true` reuses
 earlier plans during development; rows record `plan_cached`, so cached runs
 are never mistaken for cold-run costs.
 
+### The Investigator: one agent, four tools (added 2026-09-17)
+
+`src/pipelines/event_graph/` proves the structured layer answers these questions,
+but it is a fixed route: it cannot do anything the event layer does not model.
+`src/pipelines/investigator/` keeps its accuracy while remaining an agent,
+because the structured query is *a tool the agent may choose*, not a fixed path.
+
+Each step the agent: plans an action over {`query_events`, `link_entities`,
+`graph_traverse`, `search_chunks`, `answer`}; runs it; and states an
+`evidence_check` — what the evidence does and does not establish — in the *same*
+structured call, so self-evaluation costs no extra LLM call. It answers only when
+that check passes, or changes strategy, up to `MAX_ITERATIONS`.
+
+Measured over the 100 public questions: 99/100 exact match, 2.06 steps and 2.11
+LLM calls per question, 2,695 tokens, all 100 stopping on `answer_found`. The
+agent chose `query_events` on every question and added `search_chunks` on 3.
+Given "Who directed the film Jab We Met?" — outside the event layer entirely — it
+goes straight to `search_chunks` and answers from the film article.
+
+**Evidence is provenance, not just citations.** Every evidence item carries
+`doc_id`, `doc_title`, `source_url` and the `provenance` of the call that
+produced it (tool, GSQL query name, parameters). The dashboard's drill-down
+renders the investigation: each step with its self-check and timing, then each
+evidence item with its source link and originating query. An answer can be
+audited back to the article, which is the difference between a system that cites
+and one that can be checked.
+
+### Time-scoped facts with provenance (Round 2 groundwork)
+
+`src/ingestion/build_temporal_facts.py` extracts 2,316 interval-stamped facts
+from the corpus with no LLM calls: 129 office terms (`held_office`) and 2,187
+championship reigns (`olympic_champion`), each with `valid_from`/`valid_to`,
+`source_doc_id`, `source_url` and an `authority_score`, plus a `FACT_SOURCE` edge
+to the source `Document`. `facts_as_of` and `fact_timeline` answer "who held X on
+date D" and "how did X change over time".
+
+**A fact needs a slot, not just a subject and object.** Which side can hold only
+one value at a time differs per predicate: an office has one holder at a time
+(the slot is the object), while an event series has one reigning champion (the
+slot is the subject). Two earlier versions of the conflict detector ignored this
+and reported nonsense — a repeat champion looked like a "source disagreement",
+and one athlete winning two distances looked like "rival claims". With explicit
+`slot_key`/`value_key`, the corpus's real numbers are:
+
+| Bucket | Count |
+|---|---|
+| Cross-source disagreements | 0 |
+| Rival claims on one slot | 0 |
+| Concurrent roles held by one person (not a conflict) | 227 |
+
+So this corpus has **no contradictions to resolve** — the evolving half of Round
+2 is well supported here, the conflicting half is not. The detector exists and is
+tested, but any conflict demo must run on a labelled fixture rather than implying
+the corpus contains disagreements it does not.
+
 ### Scoring: exact match first, judge on a sample
 
 `src/eval/exact_match.py` scores against the gold strings with no LLM. If a

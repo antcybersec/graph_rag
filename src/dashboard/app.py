@@ -130,7 +130,8 @@ def section_header(title: str) -> None:
 THEMES = {
     "light": {
         "surface": "#ffffff",
-        "series": {"RAG": "#2a78d6", "GraphRAG": "#eb6834", "Agentic GraphRAG": "#1baf7a", "Event-graph GraphRAG": "#eda100"},
+        "series": {"RAG": "#2a78d6", "GraphRAG": "#eb6834", "Agentic GraphRAG": "#1baf7a",
+                   "Event-graph GraphRAG": "#eda100", "Investigator (agent)": "#e87ba4"},
         "text_primary": "#0b0b0b",
         "text_secondary": "#52514e",
         "muted": "#898781",
@@ -142,7 +143,8 @@ THEMES = {
         # Kept in sync with .streamlit/config.toml's backgroundColor -- ring_markers()
         # strokes markers in this exact color so overlapping points separate cleanly.
         "surface": "#0b0d10",
-        "series": {"RAG": "#3987e5", "GraphRAG": "#d95926", "Agentic GraphRAG": "#199e70", "Event-graph GraphRAG": "#c98500"},
+        "series": {"RAG": "#3987e5", "GraphRAG": "#d95926", "Agentic GraphRAG": "#199e70",
+                   "Event-graph GraphRAG": "#c98500", "Investigator (agent)": "#d55181"},
         "text_primary": "#ffffff",
         "text_secondary": "#c3c2b7",
         "muted": "#898781",
@@ -710,6 +712,45 @@ for col, name in zip(cols, ORDER):
         )
         st.markdown("**Answer**")
         st.write(str(row["answer"]) or "_(empty)_")
+        if row.get("short_answer"):
+            st.caption(f"short answer: **{row['short_answer']}**")
+
+        # How the answer was reached, and what it rests on. Only the agentic
+        # pipelines record these; the fixed pipelines show nothing here.
+        steps = list(row.get("trace") or [])
+        if steps:
+            with st.expander(f"Investigation ({len(steps)} steps)"):
+                for i, step in enumerate(steps, 1):
+                    args = step.get("event_query") or step.get("query") or step.get("entity_ids") or ""
+                    st.markdown(f"**{i}. `{step.get('action')}`** {f'`{args}`' if args else ''}")
+                    if step.get("evidence_check"):
+                        st.caption(f"self-check: {step['evidence_check']}")
+                    elif step.get("reasoning"):
+                        st.caption(str(step["reasoning"])[:300])
+                    bits = []
+                    if step.get("new_evidence") is not None:
+                        bits.append(f"+{step['new_evidence']} evidence")
+                    if step.get("tool_latency_sec") is not None:
+                        bits.append(f"{step['tool_latency_sec']:.2f}s")
+                    if step.get("tool_result"):
+                        bits.append(str(step["tool_result"])[:120])
+                    if bits:
+                        st.caption(" - ".join(bits))
+
+        items = list(row.get("evidence") or [])
+        if items:
+            with st.expander(f"Evidence & provenance ({len(items)} items)"):
+                for e in items[:12]:
+                    prov = e.get("provenance") or {}
+                    title = e.get("doc_title") or e.get("doc_id") or ""
+                    source = f"[{title}]({e['source_url']})" if e.get("source_url") else title
+                    st.markdown(f"`{e.get('citation_id')}` {source}")
+                    query = prov.get("query") or prov.get("operation") or ""
+                    st.caption(f"{prov.get('tool', '?')} - {query} {prov.get('params', '')}")
+                    st.write(str(e.get("text", ""))[:300])
+                if len(items) > 12:
+                    st.caption(f"... and {len(items) - 12} more evidence items")
+
         with st.expander("Judge reasoning"):
             st.write(str(row["judge_reasoning"]) or "_(none)_")
 

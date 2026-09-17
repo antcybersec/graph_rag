@@ -25,12 +25,13 @@ import pandas as pd
 
 from src.eval.exact_match import is_correct
 
-PIPELINES = ["rag", "graphrag", "agentic", "event_graph"]
+PIPELINES = ["rag", "graphrag", "agentic", "event_graph", "investigator"]
 PIPELINE_LABELS = {
     "rag": "RAG",
     "graphrag": "GraphRAG",
     "agentic": "Agentic GraphRAG",
     "event_graph": "Event-graph GraphRAG",
+    "investigator": "Investigator (agent)",
 }
 PIPELINE_ORDER = [PIPELINE_LABELS[p] for p in PIPELINES]
 
@@ -152,6 +153,16 @@ def _flatten(row: dict) -> dict:
         em = is_correct(row.get("answer") or "", row["reference_answer"].split("; "),
                         row.get("question") or "", row.get("short_answer"))
     flat["exact_match"] = float(em) if isinstance(em, bool) else math.nan
+
+    # Agent introspection, carried through as objects rather than flattened: the
+    # dashboard renders the investigation itself (steps, self-checks, evidence
+    # provenance), which is what makes an answer auditable instead of merely cited.
+    for field in ("short_answer", "route", "stop_reason"):
+        flat[field] = row.get(field)
+    flat["num_steps"] = _number(row.get("num_steps"))
+    flat["tools_used"] = row.get("tools_used") or []
+    flat["trace"] = row.get("trace") or []
+    flat["evidence"] = row.get("evidence") or []
     return flat
 
 
