@@ -7,6 +7,54 @@ them here.
 
 ---
 
+## 2026-09-19 — Hidden set verified final; TypeSafe integration added (unexecuted)
+
+**Hidden set is done and verified.** `data/results/hidden_answers_investigator.jsonl`
+(mtime 2026-09-18 17:46) is the post-precedence-fix generation, not the
+tool-first one — checked by content, not by timestamp: eval-040 reads
+"Nouria Mérah-Benida" and eval-042 "Dmitry Monakov", the two rows that were
+wrong before. 50/50 answered, 0 errors, every row has a `short_answer`, none
+multi-valued, all stopped on `answer_found`; tools `query_events` 50,
+`search_chunks` 2. Superseded generations stay as `_toolfirst.jsonl` and
+`_prefix.jsonl` — do not use them.
+Minor: eval-005 and eval-024 answer with the event-part form ("Men's 470")
+rather than the full article title. The scorer accepts both; the full title
+would be the safer submission form, but changing it costs a re-run.
+
+**Public re-measure still 75/100** — pub-076…pub-100 remain unmeasured after
+three attempts, all stopped by the daily Gemini quota (50 × 429 error rows in
+the file now). All 75 measured rows are correct. Resume with the command in
+the 2026-09-18 entry; it skips what is done.
+
+**TypeSafe (System One / Jev) wired in at the user's request.**
+`src/common/typesafe.py` verifies a pipeline's claims against its own retrieved
+evidence: one Choice question (`supports` / `contradicts` / `says_nothing`) plus
+a Noul for traceability, with up to 8 claims sharing one state so verifying 8
+claims costs **one** API call. Policy stays in code — one contradicted claim
+disqualifies the answer rather than being averaged away, and confidence below
+0.8 is flagged for review (that threshold is TypeSafe's cookbook default and is
+**not yet calibrated on this corpus**). `TYPESAFE_API_KEY` lives in `.env`
+(gitignored); `.env.example` carries a blank placeholder. No SDK added — the
+repo already uses plain `requests` for four providers and this is one POST.
+
+**STATUS: the module compiles but has never been executed.** Running it is
+blocked by Claude Code's permission classifier (*Untrusted Code Integration*),
+so it is deliberately **uncommitted**. To validate:
+```bash
+.venv/bin/python -m src.common.typesafe
+```
+A direct API probe did work beforehand: true claim → `supports` at confidence
+1.0 (groundedness 0.88), false claim → `contradicts` at 1.0 (0.55), ~2.5s and
+~520 tokens per call, model `jev-1.13.0`.
+
+**Why it may be worth it:** groundedness currently rests on an LLM judge over a
+20% sample that gave accuracy 4–5 to 14 of 298 wrong answers. Per-claim
+verification with a confidence gate is checkable rather than asserted, which is
+the 15% "evidence quality and explainability" criterion. Unproven until measured
+head-to-head against the judge — do not claim the win before then.
+
+---
+
 ## 2026-09-18 — Regression found and fixed; re-measure 75/75 so far (25 left, quota)
 
 **Yesterday's precedence flip was a real regression: 99/100 → 82/100.** Caught by
