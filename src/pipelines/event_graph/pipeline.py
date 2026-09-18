@@ -111,6 +111,32 @@ def _snap(value: Optional[str], keys) -> Optional[str]:
     return k if k in keys else _fuzzy_unique(k, keys)
 
 
+MAX_VENUE_VARIANTS = 3
+
+
+def _venue_candidates(value: Optional[str], keys) -> list:
+    """Every spelling of this venue, not just the first exact hit.
+
+    Venue vertices are keyed by normalized name, so a corpus typo makes one real
+    place two nodes: "Beijing Science and TechnologyUniversity Gymnasium" (which
+    holds the 2008 women's 63 kg judo final) and "... Technology University
+    Gymnasium" (which holds other events). A model that silently corrects the
+    typo lands an EXACT match on the wrong node, and an exact hit would otherwise
+    stop the search -- the event is then reported as not existing. Matching on
+    the spelling with whitespace removed catches that whole class.
+    """
+    k = norm_key(value)
+    if not k:
+        return []
+    squashed = k.replace(" ", "")
+    candidates = [c for c in keys if c.replace(" ", "") == squashed]
+    if not candidates and (fuzzy := _fuzzy_unique(k, keys)):
+        candidates = [fuzzy]
+    # Exact spelling first, so the common case costs one query.
+    candidates.sort(key=lambda c: c != k)
+    return candidates[:MAX_VENUE_VARIANTS]
+
+
 def _load_cached_plan(question: str, model: str) -> Optional[QueryPlan]:
     if not os.path.exists(PLAN_CACHE_PATH):
         return None
@@ -278,10 +304,15 @@ def execute_plan(conn, plan: QueryPlan, question: str = "") -> Optional[dict]:
         }
 
     if plan.operation == "gold_at_venue_date":
-        venue_key = _snap(plan.venue, catalog["venues"])
-        if not venue_key:
+        venue_keys = _venue_candidates(plan.venue, catalog["venues"])
+        if not venue_keys:
             return None
-        at_venue = _vertices(conn.runInstalledQuery("events_at_venue", params={"venue": (venue_key,)}), "AtVenue")
+        at_venue, seen = [], set()
+        for venue_key in venue_keys:
+            for event in _vertices(conn.runInstalledQuery("events_at_venue", params={"venue": (venue_key,)}), "AtVenue"):
+                if event["event_id"] not in seen:
+                    seen.add(event["event_id"])
+                    at_venue.append(event)
         hits = [e for e in _match_date(at_venue, plan.date, plan.year, plan.season) if e["gold"]]
         if not hits:
             return None
