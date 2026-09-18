@@ -7,6 +7,57 @@ them here.
 
 ---
 
+## 2026-09-18 — Regression found and fixed; re-measure 75/75 so far (25 left, quota)
+
+**Yesterday's precedence flip was a real regression: 99/100 → 82/100.** Caught by
+re-measuring rather than assuming. Root cause: the tool's computed result went
+into `step['tool_result']` but `_format_history` never showed it, so at answer
+time the model could not see the count the tool had computed and recounted the
+evidence instead — which is capped at `MAX_EVENT_EVIDENCE=12`. Seven counting
+questions were literally answered "12"; superlatives picked a visible event
+rather than the tool's argmax. Fixes (commit `3ab06cd`):
+- `_format_history` now carries each step's tool result and error;
+- the prompt says to copy a tool-computed value verbatim, never recount capped
+  evidence, and to give the full article title for "which event" questions;
+- `exact_match`'s short-answer path gained the formatting tolerances the
+  free-text path already had (concatenated team names, title given as its event
+  part). Re-scoring the existing rows with that alone: 82 → 86, no new calls.
+
+**Venue typo bug (commit `ba6c769`).** pub-022 answered "no event was held
+there that day" when the answer is Ayumi Tanimoto. One real place is two Venue
+vertices — the corpus has "Beijing Science and TechnologyUniversity Gymnasium"
+(holding the 2008 women's 63 kg judo final) beside "... Technology University
+Gymnasium". The model silently corrected the typo, hit an **exact** match on the
+wrong vertex, and the exact hit stopped the search. Venue lookup now unions
+spellings that match with whitespace removed (capped at 3 queries). Distinct
+venues are unaffected: "Pavilion 4" vs "Pavilion 6" differ by a digit.
+
+**Re-measure on final code (`data/results/benchmark_v4_investigator.jsonl`):
+75/75 correct** — aggregation 15/15, superlative 7/7, multi_hop 18/18, temporal
+18/18, lookup 17/17. 2.05 steps, 2.11 LLM calls, 3,444 tokens, 13.4s per
+question; doc P/R 0.96/0.84; judge 5.00 on the 14 sampled; all 75 stopped on
+`answer_found`; tools `query_events` 75, `search_chunks` 4.
+
+**STATE: 25 questions unmeasured — daily Gemini quota exhausted (25 × 429).**
+The run checkpoints per (qid, pipeline), so resume with the same command:
+```bash
+python -m src.eval.run_benchmark --pipelines investigator --judge-rate 0.2 \
+    --output data/results/benchmark_v4_investigator.jsonl
+python -m src.eval.run_benchmark --pipelines investigator \
+    --questions data/raw_dataset/questions/eval_hidden.jsonl \
+    --output data/results/hidden_answers_investigator.jsonl
+```
+Then update README's table from v4 (its current 99/100 predates every fix above)
+and re-append investigator rows to `benchmark_results.jsonl` for the dashboard.
+Note: the hidden-set file at the canonical path is still absent on purpose —
+`_toolfirst.jsonl` holds the superseded generation with two wrong short answers.
+
+Three background runs were killed by the macOS low-memory watchdog (the top
+consumers were a system Vision process and `gopls`, not the benchmark). A
+foreground run survives longer; the checkpoint makes either failure harmless.
+
+---
+
 ## 2026-09-17 — Found the actual rubric; built the Investigator agent + temporal layer
 
 **The rubric changes the priorities.** Found the hackathon listing (TigerGraph
