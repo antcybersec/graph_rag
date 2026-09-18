@@ -95,6 +95,14 @@ Rules:
     (e.g. [Q26233801], [Q123_c0], [edge:a--b--c]), and `short_answer` must hold ONLY the bare answer
     (a number, a name, an event title) with no sentence around it. For how-many/which-ones questions,
     enumerate the qualifying items with citations first, then give the count.
+  - When a tool has already COMPUTED the answer -- a count from count_events_over, the winner from
+    top_event_by_competitors -- copy that computed value exactly. Do NOT recount the evidence items:
+    they are capped at a fixed number and are usually only a subset of what the tool examined, so
+    counting them yields the cap instead of the answer. The tool's result line in the action history
+    is authoritative.
+  - For "which event" questions, `short_answer` is the event's FULL article title exactly as the
+    evidence shows it (e.g. "Sailing at the 2008 Summer Olympics – Men's 470"), not the short event
+    name. For a person, give the name exactly as the evidence writes it.
   - If the evidence genuinely does not answer the question, say so in `final_answer` rather than
     guessing, and leave `short_answer` null.
   - After {max_iterations} actions you must answer with your best effort, noting what is missing."""
@@ -137,6 +145,14 @@ def _format_history(trace: list) -> str:
         line = f"{i+1}. {t['action']}({args})"
         if "new_evidence" in t:
             line += f" -> {t['new_evidence']} new evidence items"
+        # The tool's computed result (a count, an argmax) MUST reach the model:
+        # evidence items are capped at MAX_EVENT_EVIDENCE, so without this the
+        # model recounts what it can see and answers "12" -- the cap itself --
+        # to counting questions whose real answer is 8, 17 or 20.
+        if t.get("tool_result"):
+            line += f"\n     result: {str(t['tool_result'])[:400]}"
+        if t.get("error"):
+            line += f"\n     error: {t['error']}"
         lines.append(line)
     return "\n".join(lines)
 

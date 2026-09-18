@@ -66,7 +66,23 @@ def is_correct(answer: str, gold: list, question: str = "", short_answer: str = 
     gold_keys = {norm_key(g) for g in gold}
     if short_answer is not None:
         parts = short_answer.split(" | ")
-        return len(parts) == 1 and norm_key(parts[0]) in gold_keys
+        if len(parts) != 1:
+            return False  # listing several candidates is an ambiguous answer, not a correct one
+        candidate = parts[0]
+        if norm_key(candidate) in gold_keys:
+            return True
+        # Same formatting tolerances the free-text path already allows, so a
+        # pipeline is not penalised for punctuation: infobox golds concatenate
+        # team members ("Dani KingLaura TrottJoanna Rowsell") where an answer
+        # writes a list, and a title gold may be given as its event part alone.
+        squashed = _squash(candidate)
+        for g in gold:
+            if _squash(g) == squashed:
+                return True
+            title = _TITLE_GOLD_RE.match(g)
+            if title and norm_key(candidate) == norm_key(title.group(1)):
+                return True
+        return False
     if all(re.fullmatch(r"\d+", g) for g in gold_keys):
         return _stated_number(answer or "", question) in gold_keys
     answer_tokens = f" {norm_key(answer)} "
