@@ -101,6 +101,30 @@ queryable properties. Modeling them as a graph turns counting, argmax,
 venue+date lookup and "the previous Games" into traversals. See
 `docs/architecture.md`, "Structured event layer".
 
+### Evidence verification: checking the checker
+
+The LLM judge is the weakest link in this evaluation. On the first benchmark it
+gave accuracy 4–5 to **14 answers that are wrong**, most of them answers that
+said "the corpus does not contain this" — the judge rewarded fluent refusals.
+
+`src/eval/verify_evidence.py` asks a narrower question instead, using a
+TypeSafe System One judgment: *does this evidence support this claim?* Evidence
+is rebuilt from each question's own gold documents; the answer is the claim.
+
+| Bucket | Rows | Result |
+|---|---|---|
+| Judge said 4–5, answer is wrong | 14 | **14/14 flagged** |
+| Judge said 4–5, answer is right | 180 | **176/180 supported** (2.2% false alarms) |
+
+It catches every judge error, at ~25 API calls for 194 claims (8 claims share
+one request). All four false alarms scored 0.33–0.52 confidence — below the 0.8
+gate — so none would be asserted; they are routed to review. That gate costs
+over-referral: 20 of 180 controls fall below it, 16 of which were right.
+
+```bash
+python -m src.eval.verify_evidence          # needs TYPESAFE_API_KEY, see .env.example
+```
+
 ### First run: LLM-judge scores (2026-09-11, before the reranker)
 
 Judged by a separate LLM (`JUDGE_MODEL`, see `.env`) on a 1-5 scale for

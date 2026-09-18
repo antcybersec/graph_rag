@@ -47,11 +47,33 @@ A direct API probe did work beforehand: true claim → `supports` at confidence
 1.0 (groundedness 0.88), false claim → `contradicts` at 1.0 (0.55), ~2.5s and
 ~520 tokens per call, model `jev-1.13.0`.
 
-**Why it may be worth it:** groundedness currently rests on an LLM judge over a
-20% sample that gave accuracy 4–5 to 14 of 298 wrong answers. Per-claim
-verification with a confidence gate is checkable rather than asserted, which is
-the 15% "evidence quality and explainability" criterion. Unproven until measured
-head-to-head against the judge — do not claim the win before then.
+**Measured head-to-head against the judge** (`src/eval/verify_evidence.py`,
+results in `data/results/evidence_verification.json`, 194 claims / ~25 API
+calls, evidence rebuilt from each question's gold documents):
+
+| Bucket | Rows | Result |
+|---|---|---|
+| Judge said 4–5, answer is wrong | 14 | **14/14 flagged** (12 contradicts, 2 says_nothing) |
+| Judge said 4–5, answer is right | 180 | **176/180 supported** (4 false alarms, 2.2%) |
+
+So the check catches **every** answer the judge scored 4–5 that is actually
+wrong — mostly answers that said "the corpus does not contain this" — and
+disagrees with a correct answer 2.2% of the time.
+
+Honest detail, because the confidence gate is doing real work here:
+- All 4 false alarms (pub-028 rag+agentic, pub-044 rag+agentic) scored
+  0.33–0.52, **below** the 0.8 gate, so none would be asserted; they go to
+  review. **Truncation does not explain them** — pub-028 has 1 gold document
+  and pub-044 has 10, both under the cap. An earlier 6-doc-cap experiment did
+  show truncation causing false alarms, but that is a different failure.
+- The gate's cost is over-referral: 20 of 180 controls fall below it and 16 of
+  those were right (~9% of correct answers sent to review).
+- 3 of the 14 catches are also below the gate (0.25–0.66), so they surface as
+  "review this" rather than "this is wrong" — still better than the judge,
+  which asserted all 14 as correct at 4–5.
+- 0.8 is TypeSafe's cookbook default. On this data the flagged-but-correct rows
+  sit at 0.33–0.52 and correct supports at 160/176 ≥ 0.8, so the default
+  separates them, but it has not been tuned here.
 
 ---
 

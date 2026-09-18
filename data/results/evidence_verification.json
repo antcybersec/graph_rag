@@ -1,0 +1,1985 @@
+{
+  "confidence_threshold": 0.8,
+  "max_gold_docs": 20,
+  "buckets": {
+    "judge_wrong": {
+      "rows": 14,
+      "flagged": 14,
+      "supported": 0,
+      "needs_review": 3,
+      "verdicts": {
+        "contradicts": 12,
+        "says_nothing": 2
+      },
+      "rollup": {
+        "status": "contradicted",
+        "verified": 0,
+        "contradicted": 12,
+        "unsupported": 2,
+        "needs_review": 3
+      },
+      "detail": [
+        {
+          "qid": "pub-022",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "contradicts",
+          "confidence": 0.97,
+          "grounded": 0.13,
+          "needs_review": false,
+          "reference_answer": "Ayumi Tanimoto"
+        },
+        {
+          "qid": "pub-030",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "contradicts",
+          "confidence": 0.98,
+          "grounded": 0.06,
+          "needs_review": false,
+          "reference_answer": "Emese Sz\u00e1sz"
+        },
+        {
+          "qid": "pub-044",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "contradicts",
+          "confidence": 1.0,
+          "grounded": 0.1,
+          "needs_review": false,
+          "reference_answer": "Fencing at the 2008 Summer Olympics \u2013 Men's \u00e9p\u00e9e"
+        },
+        {
+          "qid": "pub-053",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "contradicts",
+          "confidence": 0.99,
+          "grounded": 0.13,
+          "needs_review": false,
+          "reference_answer": "Shooting at the 2016 Summer Olympics \u2013 Women's 10 metre air rifle"
+        },
+        {
+          "qid": "pub-054",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "contradicts",
+          "confidence": 0.25,
+          "grounded": 0.21,
+          "needs_review": true,
+          "reference_answer": "24"
+        },
+        {
+          "qid": "pub-055",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "says_nothing",
+          "confidence": 0.89,
+          "grounded": 0.62,
+          "needs_review": false,
+          "reference_answer": "Sebasti\u00e1n Crismanich"
+        },
+        {
+          "qid": "pub-055",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "says_nothing",
+          "confidence": 0.9,
+          "grounded": 0.02,
+          "needs_review": false,
+          "reference_answer": "Sebasti\u00e1n Crismanich"
+        },
+        {
+          "qid": "pub-056",
+          "pipeline": "graphrag",
+          "judge_accuracy": 4,
+          "verdict": "contradicts",
+          "confidence": 0.99,
+          "grounded": 0.12,
+          "needs_review": false,
+          "reference_answer": "Yevgeny Dementyev"
+        },
+        {
+          "qid": "pub-056",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "contradicts",
+          "confidence": 1.0,
+          "grounded": 0.29,
+          "needs_review": false,
+          "reference_answer": "Yevgeny Dementyev"
+        },
+        {
+          "qid": "pub-065",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "contradicts",
+          "confidence": 1.0,
+          "grounded": 0.26,
+          "needs_review": false,
+          "reference_answer": "5"
+        },
+        {
+          "qid": "pub-066",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "contradicts",
+          "confidence": 0.92,
+          "grounded": 0.44,
+          "needs_review": false,
+          "reference_answer": "Weightlifting at the 1992 Summer Olympics \u2013 Men's 75 kg"
+        },
+        {
+          "qid": "pub-091",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "contradicts",
+          "confidence": 1.0,
+          "grounded": 0.22,
+          "needs_review": false,
+          "reference_answer": "18"
+        },
+        {
+          "qid": "pub-092",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "contradicts",
+          "confidence": 0.36,
+          "grounded": 0.89,
+          "needs_review": true,
+          "reference_answer": "6"
+        },
+        {
+          "qid": "pub-093",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "contradicts",
+          "confidence": 0.66,
+          "grounded": 0.19,
+          "needs_review": true,
+          "reference_answer": "4"
+        }
+      ]
+    },
+    "agreed_right": {
+      "rows": 180,
+      "flagged": 4,
+      "supported": 176,
+      "needs_review": 20,
+      "verdicts": {
+        "supports": 176,
+        "says_nothing": 2,
+        "contradicts": 2
+      },
+      "rollup": {
+        "status": "contradicted",
+        "verified": 176,
+        "contradicted": 2,
+        "unsupported": 2,
+        "needs_review": 20
+      },
+      "detail": [
+        {
+          "qid": "pub-001",
+          "pipeline": "event_graph",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.64,
+          "grounded": 0.52,
+          "needs_review": true,
+          "reference_answer": "5"
+        },
+        {
+          "qid": "pub-001",
+          "pipeline": "investigator",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.99,
+          "grounded": 0.79,
+          "needs_review": false,
+          "reference_answer": "5"
+        },
+        {
+          "qid": "pub-002",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.86,
+          "grounded": 0.57,
+          "needs_review": false,
+          "reference_answer": "Chen Ding"
+        },
+        {
+          "qid": "pub-002",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.81,
+          "grounded": 0.53,
+          "needs_review": false,
+          "reference_answer": "Chen Ding"
+        },
+        {
+          "qid": "pub-002",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.95,
+          "grounded": 0.55,
+          "needs_review": false,
+          "reference_answer": "Chen Ding"
+        },
+        {
+          "qid": "pub-004",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.99,
+          "grounded": 0.67,
+          "needs_review": false,
+          "reference_answer": "Athletics at the 2008 Summer Olympics \u2013 Men's marathon"
+        },
+        {
+          "qid": "pub-004",
+          "pipeline": "event_graph",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.89,
+          "grounded": 0.43,
+          "needs_review": false,
+          "reference_answer": "Athletics at the 2008 Summer Olympics \u2013 Men's marathon"
+        },
+        {
+          "qid": "pub-005",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.95,
+          "grounded": 0.35,
+          "needs_review": false,
+          "reference_answer": "Naim S\u00fcleymano\u011flu"
+        },
+        {
+          "qid": "pub-005",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.94,
+          "needs_review": false,
+          "reference_answer": "Naim S\u00fcleymano\u011flu"
+        },
+        {
+          "qid": "pub-006",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.82,
+          "needs_review": false,
+          "reference_answer": "Rafaela Silva"
+        },
+        {
+          "qid": "pub-006",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.92,
+          "needs_review": false,
+          "reference_answer": "Rafaela Silva"
+        },
+        {
+          "qid": "pub-006",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.92,
+          "needs_review": false,
+          "reference_answer": "Rafaela Silva"
+        },
+        {
+          "qid": "pub-007",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.88,
+          "needs_review": false,
+          "reference_answer": "Renaud Lavillenie"
+        },
+        {
+          "qid": "pub-007",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.92,
+          "needs_review": false,
+          "reference_answer": "Renaud Lavillenie"
+        },
+        {
+          "qid": "pub-008",
+          "pipeline": "event_graph",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.99,
+          "grounded": 0.8,
+          "needs_review": false,
+          "reference_answer": "Sailing at the 2000 Summer Olympics \u2013 Soling"
+        },
+        {
+          "qid": "pub-008",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.92,
+          "grounded": 0.88,
+          "needs_review": false,
+          "reference_answer": "Sailing at the 2000 Summer Olympics \u2013 Soling"
+        },
+        {
+          "qid": "pub-008",
+          "pipeline": "investigator",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.99,
+          "grounded": 0.88,
+          "needs_review": false,
+          "reference_answer": "Sailing at the 2000 Summer Olympics \u2013 Soling"
+        },
+        {
+          "qid": "pub-008",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.97,
+          "grounded": 0.66,
+          "needs_review": false,
+          "reference_answer": "Sailing at the 2000 Summer Olympics \u2013 Soling"
+        },
+        {
+          "qid": "pub-009",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.94,
+          "needs_review": false,
+          "reference_answer": "26"
+        },
+        {
+          "qid": "pub-009",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.98,
+          "needs_review": false,
+          "reference_answer": "26"
+        },
+        {
+          "qid": "pub-011",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.94,
+          "needs_review": false,
+          "reference_answer": "Martina S\u00e1bl\u00edkov\u00e1"
+        },
+        {
+          "qid": "pub-011",
+          "pipeline": "event_graph",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.95,
+          "needs_review": false,
+          "reference_answer": "Martina S\u00e1bl\u00edkov\u00e1"
+        },
+        {
+          "qid": "pub-011",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.89,
+          "needs_review": false,
+          "reference_answer": "Martina S\u00e1bl\u00edkov\u00e1"
+        },
+        {
+          "qid": "pub-011",
+          "pipeline": "investigator",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.99,
+          "grounded": 0.72,
+          "needs_review": false,
+          "reference_answer": "Martina S\u00e1bl\u00edkov\u00e1"
+        },
+        {
+          "qid": "pub-011",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.96,
+          "needs_review": false,
+          "reference_answer": "Martina S\u00e1bl\u00edkov\u00e1"
+        },
+        {
+          "qid": "pub-012",
+          "pipeline": "event_graph",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.31,
+          "grounded": 0.24,
+          "needs_review": true,
+          "reference_answer": "6"
+        },
+        {
+          "qid": "pub-013",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.93,
+          "grounded": 0.26,
+          "needs_review": false,
+          "reference_answer": "Allison Schmitt"
+        },
+        {
+          "qid": "pub-013",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.59,
+          "grounded": 0.21,
+          "needs_review": true,
+          "reference_answer": "Allison Schmitt"
+        },
+        {
+          "qid": "pub-013",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.64,
+          "grounded": 0.16,
+          "needs_review": true,
+          "reference_answer": "Allison Schmitt"
+        },
+        {
+          "qid": "pub-015",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.64,
+          "needs_review": false,
+          "reference_answer": "Dani KingLaura TrottJoanna Rowsell"
+        },
+        {
+          "qid": "pub-015",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.86,
+          "needs_review": false,
+          "reference_answer": "Dani KingLaura TrottJoanna Rowsell"
+        },
+        {
+          "qid": "pub-016",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.9,
+          "grounded": 0.51,
+          "needs_review": false,
+          "reference_answer": "Arnd Peiffer"
+        },
+        {
+          "qid": "pub-016",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.93,
+          "grounded": 0.51,
+          "needs_review": false,
+          "reference_answer": "Arnd Peiffer"
+        },
+        {
+          "qid": "pub-017",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.86,
+          "needs_review": false,
+          "reference_answer": "Yi Siling"
+        },
+        {
+          "qid": "pub-017",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.91,
+          "grounded": 0.46,
+          "needs_review": false,
+          "reference_answer": "Yi Siling"
+        },
+        {
+          "qid": "pub-018",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.98,
+          "grounded": 0.61,
+          "needs_review": false,
+          "reference_answer": "Kevin Jackson"
+        },
+        {
+          "qid": "pub-018",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.9,
+          "grounded": 0.58,
+          "needs_review": false,
+          "reference_answer": "Kevin Jackson"
+        },
+        {
+          "qid": "pub-021",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.99,
+          "grounded": 0.94,
+          "needs_review": false,
+          "reference_answer": "Alpine skiing at the 1988 Winter Olympics \u2013 Men's giant slalom"
+        },
+        {
+          "qid": "pub-021",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.94,
+          "needs_review": false,
+          "reference_answer": "Alpine skiing at the 1988 Winter Olympics \u2013 Men's giant slalom"
+        },
+        {
+          "qid": "pub-022",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.83,
+          "needs_review": false,
+          "reference_answer": "Ayumi Tanimoto"
+        },
+        {
+          "qid": "pub-022",
+          "pipeline": "event_graph",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.91,
+          "needs_review": false,
+          "reference_answer": "Ayumi Tanimoto"
+        },
+        {
+          "qid": "pub-022",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.96,
+          "needs_review": false,
+          "reference_answer": "Ayumi Tanimoto"
+        },
+        {
+          "qid": "pub-022",
+          "pipeline": "investigator",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.96,
+          "needs_review": false,
+          "reference_answer": "Ayumi Tanimoto"
+        },
+        {
+          "qid": "pub-023",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.74,
+          "needs_review": false,
+          "reference_answer": "Hwang Young-Cho"
+        },
+        {
+          "qid": "pub-024",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.86,
+          "grounded": 0.55,
+          "needs_review": false,
+          "reference_answer": "3"
+        },
+        {
+          "qid": "pub-025",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.96,
+          "needs_review": false,
+          "reference_answer": "23"
+        },
+        {
+          "qid": "pub-025",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.97,
+          "needs_review": false,
+          "reference_answer": "23"
+        },
+        {
+          "qid": "pub-026",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.98,
+          "grounded": 0.28,
+          "needs_review": false,
+          "reference_answer": "Jaroslav Kulhav\u00fd"
+        },
+        {
+          "qid": "pub-026",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.78,
+          "grounded": 0.23,
+          "needs_review": true,
+          "reference_answer": "Jaroslav Kulhav\u00fd"
+        },
+        {
+          "qid": "pub-028",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "says_nothing",
+          "confidence": 0.48,
+          "grounded": 0.07,
+          "needs_review": true,
+          "reference_answer": "Michael Phelps"
+        },
+        {
+          "qid": "pub-028",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "says_nothing",
+          "confidence": 0.42,
+          "grounded": 0.05,
+          "needs_review": true,
+          "reference_answer": "Michael Phelps"
+        },
+        {
+          "qid": "pub-029",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.96,
+          "needs_review": false,
+          "reference_answer": "28"
+        },
+        {
+          "qid": "pub-029",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.97,
+          "needs_review": false,
+          "reference_answer": "28"
+        },
+        {
+          "qid": "pub-032",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.94,
+          "needs_review": false,
+          "reference_answer": "34"
+        },
+        {
+          "qid": "pub-032",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.96,
+          "needs_review": false,
+          "reference_answer": "34"
+        },
+        {
+          "qid": "pub-032",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.95,
+          "needs_review": false,
+          "reference_answer": "34"
+        },
+        {
+          "qid": "pub-033",
+          "pipeline": "event_graph",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.82,
+          "needs_review": false,
+          "reference_answer": "4"
+        },
+        {
+          "qid": "pub-033",
+          "pipeline": "investigator",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.87,
+          "needs_review": false,
+          "reference_answer": "4"
+        },
+        {
+          "qid": "pub-034",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.94,
+          "needs_review": false,
+          "reference_answer": "23"
+        },
+        {
+          "qid": "pub-034",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.9,
+          "needs_review": false,
+          "reference_answer": "23"
+        },
+        {
+          "qid": "pub-035",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.93,
+          "needs_review": false,
+          "reference_answer": "30"
+        },
+        {
+          "qid": "pub-035",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.95,
+          "needs_review": false,
+          "reference_answer": "30"
+        },
+        {
+          "qid": "pub-036",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.99,
+          "grounded": 0.67,
+          "needs_review": false,
+          "reference_answer": "Zou Shiming"
+        },
+        {
+          "qid": "pub-036",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.94,
+          "grounded": 0.64,
+          "needs_review": false,
+          "reference_answer": "Zou Shiming"
+        },
+        {
+          "qid": "pub-039",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.65,
+          "needs_review": false,
+          "reference_answer": "Sandra Perkovi\u0107"
+        },
+        {
+          "qid": "pub-039",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.99,
+          "grounded": 0.75,
+          "needs_review": false,
+          "reference_answer": "Sandra Perkovi\u0107"
+        },
+        {
+          "qid": "pub-040",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.8,
+          "grounded": 0.42,
+          "needs_review": false,
+          "reference_answer": "Jason Lamy Chappuis"
+        },
+        {
+          "qid": "pub-040",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.44,
+          "needs_review": false,
+          "reference_answer": "Jason Lamy Chappuis"
+        },
+        {
+          "qid": "pub-041",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.88,
+          "needs_review": false,
+          "reference_answer": "Nino Schurter"
+        },
+        {
+          "qid": "pub-041",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.96,
+          "needs_review": false,
+          "reference_answer": "Nino Schurter"
+        },
+        {
+          "qid": "pub-042",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.95,
+          "needs_review": false,
+          "reference_answer": "47"
+        },
+        {
+          "qid": "pub-042",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.94,
+          "needs_review": false,
+          "reference_answer": "47"
+        },
+        {
+          "qid": "pub-042",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.97,
+          "needs_review": false,
+          "reference_answer": "47"
+        },
+        {
+          "qid": "pub-043",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.91,
+          "needs_review": false,
+          "reference_answer": "Kjetil Andr\u00e9 Aamodt"
+        },
+        {
+          "qid": "pub-043",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.97,
+          "needs_review": false,
+          "reference_answer": "Kjetil Andr\u00e9 Aamodt"
+        },
+        {
+          "qid": "pub-044",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "contradicts",
+          "confidence": 0.52,
+          "grounded": 0.33,
+          "needs_review": true,
+          "reference_answer": "Fencing at the 2008 Summer Olympics \u2013 Men's \u00e9p\u00e9e"
+        },
+        {
+          "qid": "pub-044",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "contradicts",
+          "confidence": 0.33,
+          "grounded": 0.32,
+          "needs_review": true,
+          "reference_answer": "Fencing at the 2008 Summer Olympics \u2013 Men's \u00e9p\u00e9e"
+        },
+        {
+          "qid": "pub-046",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.91,
+          "needs_review": false,
+          "reference_answer": "50"
+        },
+        {
+          "qid": "pub-046",
+          "pipeline": "event_graph",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.98,
+          "needs_review": false,
+          "reference_answer": "50"
+        },
+        {
+          "qid": "pub-046",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.97,
+          "needs_review": false,
+          "reference_answer": "50"
+        },
+        {
+          "qid": "pub-046",
+          "pipeline": "investigator",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.96,
+          "needs_review": false,
+          "reference_answer": "50"
+        },
+        {
+          "qid": "pub-046",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.97,
+          "needs_review": false,
+          "reference_answer": "50"
+        },
+        {
+          "qid": "pub-047",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.92,
+          "needs_review": false,
+          "reference_answer": "24"
+        },
+        {
+          "qid": "pub-047",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.95,
+          "needs_review": false,
+          "reference_answer": "24"
+        },
+        {
+          "qid": "pub-047",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.96,
+          "needs_review": false,
+          "reference_answer": "24"
+        },
+        {
+          "qid": "pub-048",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.99,
+          "grounded": 0.7,
+          "needs_review": false,
+          "reference_answer": "Servet Tazeg\u00fcl"
+        },
+        {
+          "qid": "pub-048",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.99,
+          "grounded": 0.85,
+          "needs_review": false,
+          "reference_answer": "Servet Tazeg\u00fcl"
+        },
+        {
+          "qid": "pub-049",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.99,
+          "grounded": 0.84,
+          "needs_review": false,
+          "reference_answer": "Martin Fourcade"
+        },
+        {
+          "qid": "pub-049",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.98,
+          "grounded": 0.38,
+          "needs_review": false,
+          "reference_answer": "Martin Fourcade"
+        },
+        {
+          "qid": "pub-049",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.99,
+          "grounded": 0.62,
+          "needs_review": false,
+          "reference_answer": "Martin Fourcade"
+        },
+        {
+          "qid": "pub-052",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.96,
+          "needs_review": false,
+          "reference_answer": "20"
+        },
+        {
+          "qid": "pub-052",
+          "pipeline": "event_graph",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.97,
+          "needs_review": false,
+          "reference_answer": "20"
+        },
+        {
+          "qid": "pub-052",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.93,
+          "needs_review": false,
+          "reference_answer": "20"
+        },
+        {
+          "qid": "pub-052",
+          "pipeline": "investigator",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.95,
+          "needs_review": false,
+          "reference_answer": "20"
+        },
+        {
+          "qid": "pub-052",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.96,
+          "needs_review": false,
+          "reference_answer": "20"
+        },
+        {
+          "qid": "pub-055",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.65,
+          "needs_review": false,
+          "reference_answer": "Sebasti\u00e1n Crismanich"
+        },
+        {
+          "qid": "pub-058",
+          "pipeline": "event_graph",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.29,
+          "grounded": 0.29,
+          "needs_review": true,
+          "reference_answer": "5"
+        },
+        {
+          "qid": "pub-059",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.64,
+          "needs_review": false,
+          "reference_answer": "Laura Dahlmeier"
+        },
+        {
+          "qid": "pub-059",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.83,
+          "grounded": 0.1,
+          "needs_review": false,
+          "reference_answer": "Laura Dahlmeier"
+        },
+        {
+          "qid": "pub-059",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.89,
+          "needs_review": false,
+          "reference_answer": "Laura Dahlmeier"
+        },
+        {
+          "qid": "pub-060",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.8,
+          "needs_review": false,
+          "reference_answer": "Yana Shemyakina"
+        },
+        {
+          "qid": "pub-060",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.51,
+          "needs_review": false,
+          "reference_answer": "Yana Shemyakina"
+        },
+        {
+          "qid": "pub-061",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.86,
+          "needs_review": false,
+          "reference_answer": "34"
+        },
+        {
+          "qid": "pub-061",
+          "pipeline": "event_graph",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.97,
+          "needs_review": false,
+          "reference_answer": "34"
+        },
+        {
+          "qid": "pub-061",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.95,
+          "needs_review": false,
+          "reference_answer": "34"
+        },
+        {
+          "qid": "pub-061",
+          "pipeline": "investigator",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.94,
+          "needs_review": false,
+          "reference_answer": "34"
+        },
+        {
+          "qid": "pub-061",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.97,
+          "needs_review": false,
+          "reference_answer": "34"
+        },
+        {
+          "qid": "pub-062",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.61,
+          "grounded": 0.4,
+          "needs_review": true,
+          "reference_answer": "Tirunesh Dibaba"
+        },
+        {
+          "qid": "pub-062",
+          "pipeline": "event_graph",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.95,
+          "needs_review": false,
+          "reference_answer": "Tirunesh Dibaba"
+        },
+        {
+          "qid": "pub-062",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.69,
+          "grounded": 0.37,
+          "needs_review": true,
+          "reference_answer": "Tirunesh Dibaba"
+        },
+        {
+          "qid": "pub-062",
+          "pipeline": "investigator",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.95,
+          "needs_review": false,
+          "reference_answer": "Tirunesh Dibaba"
+        },
+        {
+          "qid": "pub-062",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.65,
+          "grounded": 0.41,
+          "needs_review": true,
+          "reference_answer": "Tirunesh Dibaba"
+        },
+        {
+          "qid": "pub-063",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.96,
+          "needs_review": false,
+          "reference_answer": "41"
+        },
+        {
+          "qid": "pub-063",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.96,
+          "needs_review": false,
+          "reference_answer": "41"
+        },
+        {
+          "qid": "pub-067",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.89,
+          "needs_review": false,
+          "reference_answer": "Rosannagh MacLennan"
+        },
+        {
+          "qid": "pub-067",
+          "pipeline": "event_graph",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.9,
+          "needs_review": false,
+          "reference_answer": "Rosannagh MacLennan"
+        },
+        {
+          "qid": "pub-067",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.85,
+          "needs_review": false,
+          "reference_answer": "Rosannagh MacLennan"
+        },
+        {
+          "qid": "pub-067",
+          "pipeline": "investigator",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.99,
+          "grounded": 0.65,
+          "needs_review": false,
+          "reference_answer": "Rosannagh MacLennan"
+        },
+        {
+          "qid": "pub-067",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.99,
+          "grounded": 0.8,
+          "needs_review": false,
+          "reference_answer": "Rosannagh MacLennan"
+        },
+        {
+          "qid": "pub-068",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.93,
+          "needs_review": false,
+          "reference_answer": "24"
+        },
+        {
+          "qid": "pub-068",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.94,
+          "needs_review": false,
+          "reference_answer": "24"
+        },
+        {
+          "qid": "pub-071",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.99,
+          "grounded": 0.78,
+          "needs_review": false,
+          "reference_answer": "24"
+        },
+        {
+          "qid": "pub-071",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.84,
+          "needs_review": false,
+          "reference_answer": "24"
+        },
+        {
+          "qid": "pub-072",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.97,
+          "grounded": 0.86,
+          "needs_review": false,
+          "reference_answer": "Lee Sang-hwa"
+        },
+        {
+          "qid": "pub-073",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.79,
+          "needs_review": false,
+          "reference_answer": "Yang Ling"
+        },
+        {
+          "qid": "pub-073",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.99,
+          "grounded": 0.59,
+          "needs_review": false,
+          "reference_answer": "Yang Ling"
+        },
+        {
+          "qid": "pub-074",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.96,
+          "needs_review": false,
+          "reference_answer": "17"
+        },
+        {
+          "qid": "pub-074",
+          "pipeline": "event_graph",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.98,
+          "needs_review": false,
+          "reference_answer": "17"
+        },
+        {
+          "qid": "pub-074",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.97,
+          "needs_review": false,
+          "reference_answer": "17"
+        },
+        {
+          "qid": "pub-074",
+          "pipeline": "investigator",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.97,
+          "needs_review": false,
+          "reference_answer": "17"
+        },
+        {
+          "qid": "pub-074",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.93,
+          "needs_review": false,
+          "reference_answer": "17"
+        },
+        {
+          "qid": "pub-075",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.84,
+          "needs_review": false,
+          "reference_answer": "32"
+        },
+        {
+          "qid": "pub-075",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.95,
+          "needs_review": false,
+          "reference_answer": "32"
+        },
+        {
+          "qid": "pub-077",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.9,
+          "grounded": 0.41,
+          "needs_review": false,
+          "reference_answer": "Kaillie Humphries"
+        },
+        {
+          "qid": "pub-077",
+          "pipeline": "event_graph",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.86,
+          "needs_review": false,
+          "reference_answer": "Kaillie Humphries"
+        },
+        {
+          "qid": "pub-077",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.98,
+          "grounded": 0.83,
+          "needs_review": false,
+          "reference_answer": "Kaillie Humphries"
+        },
+        {
+          "qid": "pub-077",
+          "pipeline": "investigator",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.94,
+          "needs_review": false,
+          "reference_answer": "Kaillie Humphries"
+        },
+        {
+          "qid": "pub-077",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.92,
+          "needs_review": false,
+          "reference_answer": "Kaillie Humphries"
+        },
+        {
+          "qid": "pub-079",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.71,
+          "needs_review": false,
+          "reference_answer": "Leontien Zijlaard"
+        },
+        {
+          "qid": "pub-079",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.62,
+          "needs_review": false,
+          "reference_answer": "Leontien Zijlaard"
+        },
+        {
+          "qid": "pub-080",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.96,
+          "needs_review": false,
+          "reference_answer": "17"
+        },
+        {
+          "qid": "pub-080",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.98,
+          "needs_review": false,
+          "reference_answer": "17"
+        },
+        {
+          "qid": "pub-081",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.6,
+          "needs_review": false,
+          "reference_answer": "Guo Wenjun"
+        },
+        {
+          "qid": "pub-081",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.99,
+          "grounded": 0.37,
+          "needs_review": false,
+          "reference_answer": "Guo Wenjun"
+        },
+        {
+          "qid": "pub-083",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.97,
+          "needs_review": false,
+          "reference_answer": "Pernilla Wiberg"
+        },
+        {
+          "qid": "pub-083",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.98,
+          "needs_review": false,
+          "reference_answer": "Pernilla Wiberg"
+        },
+        {
+          "qid": "pub-084",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.98,
+          "grounded": 0.79,
+          "needs_review": false,
+          "reference_answer": "Fencing at the 1992 Summer Olympics \u2013 Men's \u00e9p\u00e9e"
+        },
+        {
+          "qid": "pub-084",
+          "pipeline": "event_graph",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.92,
+          "needs_review": false,
+          "reference_answer": "Fencing at the 1992 Summer Olympics \u2013 Men's \u00e9p\u00e9e"
+        },
+        {
+          "qid": "pub-084",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.39,
+          "grounded": 0.34,
+          "needs_review": true,
+          "reference_answer": "Fencing at the 1992 Summer Olympics \u2013 Men's \u00e9p\u00e9e"
+        },
+        {
+          "qid": "pub-084",
+          "pipeline": "investigator",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.87,
+          "needs_review": false,
+          "reference_answer": "Fencing at the 1992 Summer Olympics \u2013 Men's \u00e9p\u00e9e"
+        },
+        {
+          "qid": "pub-084",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.99,
+          "grounded": 0.72,
+          "needs_review": false,
+          "reference_answer": "Fencing at the 1992 Summer Olympics \u2013 Men's \u00e9p\u00e9e"
+        },
+        {
+          "qid": "pub-085",
+          "pipeline": "event_graph",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.84,
+          "needs_review": false,
+          "reference_answer": "Sailing at the 2008 Summer Olympics \u2013 Men's 470"
+        },
+        {
+          "qid": "pub-085",
+          "pipeline": "investigator",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.94,
+          "needs_review": false,
+          "reference_answer": "Sailing at the 2008 Summer Olympics \u2013 Men's 470"
+        },
+        {
+          "qid": "pub-086",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.95,
+          "needs_review": false,
+          "reference_answer": "Shani Davis"
+        },
+        {
+          "qid": "pub-086",
+          "pipeline": "event_graph",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.9,
+          "needs_review": false,
+          "reference_answer": "Shani Davis"
+        },
+        {
+          "qid": "pub-086",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.97,
+          "grounded": 0.87,
+          "needs_review": false,
+          "reference_answer": "Shani Davis"
+        },
+        {
+          "qid": "pub-086",
+          "pipeline": "investigator",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.96,
+          "grounded": 0.75,
+          "needs_review": false,
+          "reference_answer": "Shani Davis"
+        },
+        {
+          "qid": "pub-086",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.99,
+          "grounded": 0.88,
+          "needs_review": false,
+          "reference_answer": "Shani Davis"
+        },
+        {
+          "qid": "pub-088",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.93,
+          "needs_review": false,
+          "reference_answer": "Alpine skiing at the 1992 Winter Olympics \u2013 Men's giant slalom"
+        },
+        {
+          "qid": "pub-088",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.96,
+          "needs_review": false,
+          "reference_answer": "Alpine skiing at the 1992 Winter Olympics \u2013 Men's giant slalom"
+        },
+        {
+          "qid": "pub-090",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.74,
+          "needs_review": false,
+          "reference_answer": "Aslanbek Khushtov"
+        },
+        {
+          "qid": "pub-090",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.96,
+          "grounded": 0.49,
+          "needs_review": false,
+          "reference_answer": "Aslanbek Khushtov"
+        },
+        {
+          "qid": "pub-091",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.95,
+          "needs_review": false,
+          "reference_answer": "18"
+        },
+        {
+          "qid": "pub-091",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.98,
+          "needs_review": false,
+          "reference_answer": "18"
+        },
+        {
+          "qid": "pub-092",
+          "pipeline": "event_graph",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.32,
+          "grounded": 0.42,
+          "needs_review": true,
+          "reference_answer": "6"
+        },
+        {
+          "qid": "pub-094",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.99,
+          "grounded": 0.6,
+          "needs_review": false,
+          "reference_answer": "Oleg Kucherenko"
+        },
+        {
+          "qid": "pub-094",
+          "pipeline": "event_graph",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.95,
+          "needs_review": false,
+          "reference_answer": "Oleg Kucherenko"
+        },
+        {
+          "qid": "pub-094",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.85,
+          "grounded": 0.57,
+          "needs_review": false,
+          "reference_answer": "Oleg Kucherenko"
+        },
+        {
+          "qid": "pub-094",
+          "pipeline": "investigator",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.95,
+          "needs_review": false,
+          "reference_answer": "Oleg Kucherenko"
+        },
+        {
+          "qid": "pub-094",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.77,
+          "grounded": 0.26,
+          "needs_review": true,
+          "reference_answer": "Oleg Kucherenko"
+        },
+        {
+          "qid": "pub-096",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.82,
+          "needs_review": false,
+          "reference_answer": "Fazliddin Gaibnazarov"
+        },
+        {
+          "qid": "pub-097",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.74,
+          "grounded": 0.34,
+          "needs_review": true,
+          "reference_answer": "Yana Shemyakina"
+        },
+        {
+          "qid": "pub-097",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.94,
+          "grounded": 0.66,
+          "needs_review": false,
+          "reference_answer": "Yana Shemyakina"
+        },
+        {
+          "qid": "pub-097",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.77,
+          "grounded": 0.33,
+          "needs_review": true,
+          "reference_answer": "Yana Shemyakina"
+        },
+        {
+          "qid": "pub-099",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.99,
+          "grounded": 0.76,
+          "needs_review": false,
+          "reference_answer": "Erik LesserDaniel B\u00f6hmArnd PeifferSimon Schempp"
+        },
+        {
+          "qid": "pub-100",
+          "pipeline": "agentic",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.99,
+          "grounded": 0.57,
+          "needs_review": false,
+          "reference_answer": "Missy Franklin"
+        },
+        {
+          "qid": "pub-100",
+          "pipeline": "event_graph",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.92,
+          "needs_review": false,
+          "reference_answer": "Missy Franklin"
+        },
+        {
+          "qid": "pub-100",
+          "pipeline": "graphrag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.76,
+          "grounded": 0.35,
+          "needs_review": true,
+          "reference_answer": "Missy Franklin"
+        },
+        {
+          "qid": "pub-100",
+          "pipeline": "investigator",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 1.0,
+          "grounded": 0.96,
+          "needs_review": false,
+          "reference_answer": "Missy Franklin"
+        },
+        {
+          "qid": "pub-100",
+          "pipeline": "rag",
+          "judge_accuracy": 5,
+          "verdict": "supports",
+          "confidence": 0.73,
+          "grounded": 0.36,
+          "needs_review": true,
+          "reference_answer": "Missy Franklin"
+        }
+      ]
+    }
+  }
+}
