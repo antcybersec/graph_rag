@@ -194,6 +194,16 @@ The event layer is built once after the steps above, with no LLM calls:
 python -m src.ingestion.build_event_graph
 ```
 
+Regression tests (no LLM calls, no database — runs in about a second):
+```bash
+python -m tests.test_regressions
+```
+Each check pins a bug that actually cost measured accuracy — the agent
+recounting capped evidence instead of reading the count its tool computed, one
+venue existing as two vertices because of a corpus typo, impossible dates stored
+as real, and a scorer strict enough to mark correct answers wrong over
+punctuation. See `tests/test_regressions.py` for what each one guards.
+
 View the comparison dashboard:
 ```bash
 streamlit run src/dashboard/app.py
