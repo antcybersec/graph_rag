@@ -79,6 +79,39 @@ def _post(body: dict) -> dict:
     return response.json()
 
 
+def ask(state, questions: dict, *, tracker: Optional[TokenTracker] = None,
+        question_id: Optional[str] = None, pipeline: str = "") -> dict:
+    """One System One request: `questions` asked together over one shared `state`.
+
+    Returns the `answers` map as given by the API -- a Choice answer carries
+    `choice`, `probabilities` and `confidence`; a Noul carries `noul`. Callers
+    own the policy (thresholds, fallbacks); this only makes the call and logs it.
+
+    Independent questions belong in ONE request: they run in parallel, so asking
+    three of them here costs one call, not three.
+    """
+    if not is_enabled():
+        raise TypeSafeUnavailable("TYPESAFE_API_KEY is not set")
+
+    t0 = time.time()
+    data = _post({"state": state, "model": MODEL, "questions": questions})
+    latency = time.time() - t0
+
+    usage = data.get("usage", {})
+    (tracker or default_tracker).log(CallRecord(
+        pipeline=pipeline,
+        call_type="systemone",
+        model=data.get("model", MODEL),
+        input_tokens=usage.get("input_tokens", 0) or 0,
+        output_tokens=usage.get("output_tokens", 0) or 0,
+        total_tokens=(usage.get("input_tokens", 0) or 0) + (usage.get("output_tokens", 0) or 0),
+        latency_sec=latency,
+        question_id=question_id,
+        note=f"provider=typesafe questions={len(questions)}",
+    ))
+    return data.get("answers", {})
+
+
 def check_claims(claims: list, *, tracker: Optional[TokenTracker] = None, question_id: Optional[str] = None,
                  pipeline: str = "") -> list:
     """Verify each (claim, evidence) pair. Returns one dict per input pair:

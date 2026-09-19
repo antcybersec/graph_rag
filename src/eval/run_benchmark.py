@@ -33,6 +33,7 @@ from src.pipelines.graphrag import pipeline as graphrag_pipeline
 from src.pipelines.agentic import pipeline as agentic_pipeline
 from src.pipelines.event_graph import pipeline as event_graph_pipeline
 from src.pipelines.investigator import pipeline as investigator_pipeline
+from src.pipelines.jev_planner import pipeline as jev_planner_pipeline
 
 EVAL_PUBLIC_PATH = "data/raw_dataset/questions/eval_public.jsonl"
 OUTPUT_PATH = "data/results/benchmark_results.jsonl"
@@ -43,6 +44,7 @@ PIPELINES = {
     "agentic": agentic_pipeline,
     "event_graph": event_graph_pipeline,
     "investigator": investigator_pipeline,
+    "jev_planner": jev_planner_pipeline,
 }
 
 
@@ -185,6 +187,10 @@ def main():
             row["num_steps"] = result.get("num_steps")
             row["stop_reason"] = result.get("stop_reason")
             row["strategy_changed"] = result.get("strategy_changed")
+            row["trace"] = result.get("trace")
+        if pname == "jev_planner":
+            row["route"] = result.get("route")
+            row["plan"] = result.get("plan")
             row["trace"] = result.get("trace")
         if pname == "event_graph":
             row["route"] = result.get("route")
