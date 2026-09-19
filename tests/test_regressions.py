@@ -121,6 +121,31 @@ def _():
                       "How many nations competed in Shooting – Men's 50 metre rifle three positions?")
 
 
+@check("planner reads season even when it is not next to the year")
+def _():
+    from src.pipelines.jev_planner.pipeline import _extract
+
+    # The bug: the regex only matched an adjacent "YYYY Summer|Winter", so
+    # "the Summer Olympics held immediately before 2016" yielded no season at
+    # all and gold_previous_games bailed -- two questions fell back to Gemini.
+    previous = _extract("Who won the gold medal in the men's cross-country cycling event "
+                        "at the Summer Olympics held immediately before 2016?")
+    assert previous["before_year"] == 2016, previous
+    assert previous["season"] == "Summer", previous
+
+    adjacent = _extract("According to the provided corpus, how many biathlon events at the "
+                        "2018 Winter Olympics had more than 73 competitors?")
+    assert (adjacent["year"], adjacent["season"], adjacent["min_competitors"]) == (2018, "Winter", 73), adjacent
+
+    venue_date = _extract("Who won the gold medal in the event held at Richmond Olympic Oval on 14 February 2010?")
+    assert venue_date["venue"] == "Richmond Olympic Oval", venue_date
+    assert venue_date["date"] == "14 February 2010", venue_date
+    # A host city names no season: inventing one would send the query to the
+    # wrong Games, so the planner must leave it for the model to select.
+    host_city = _extract("Which sailing event at Sydney 2000 had the biggest field?")
+    assert "season" not in host_city, host_city
+
+
 def main() -> int:
     failures = 0
     for name, fn in CHECKS:

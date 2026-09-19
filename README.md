@@ -40,9 +40,11 @@ Scored with `src/eval/exact_match.py`, which compares each answer
 deterministically against the gold answer (no LLM). A pipeline that lists
 several candidate answers is scored wrong.
 
-All four pipelines share the corpus, the questions, the generation model and the
-local reranker (`data/results/benchmark_v2.jsonl`, 500/500 scored pairs; the four
-comparison pipelines ran 2026-09-16, the Investigator 2026-09-17).
+All pipelines share the corpus, the questions and the local reranker. The first
+five also share the generation model (`data/results/benchmark_v2.jsonl`, 500/500
+scored pairs; the four comparison pipelines ran 2026-09-16, the Investigator
+2026-09-17). The Jev planner uses no generation model at all
+(`data/results/benchmark_jev_v2.jsonl`, 100/100, 2026-09-19).
 
 | Pipeline | Exact match | Aggregation | Superlative | Multi-hop | Temporal | Lookup | LLM calls/q ¹ | Tokens/q ² | Latency (s) | Doc P / R | Judge acc ³ |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -50,13 +52,17 @@ comparison pipelines ran 2026-09-16, the Investigator 2026-09-17).
 | GraphRAG | 67/100 | 0/21 | 4/10 | 23/28 | 21/22 | 19/19 | 2.0 | 3,952 | 10.2 | 0.43 / 0.73 | 3.67 |
 | Agentic GraphRAG | 70/100 | 3/21 | 4/10 | 22/28 | 22/22 | 19/19 | 4.1 | 6,065 | 20.2 | 0.46 / 0.70 | 4.05 |
 | Event-graph GraphRAG | 99/100 | 21/21 | 10/10 | 27/28 | 22/22 | 19/19 | 1.02 | 619 | 8.9 | 0.99 / 0.90 | 5.00 |
-| **Investigator (agent)** | **99/100** | **21/21** | **10/10** | **27/28** | **22/22** | **19/19** | **2.11** | **2,695** | **16.5** | **0.97 / 0.85** | **4.33** |
+| Investigator (agent) | 99/100 | 21/21 | 10/10 | 27/28 | 22/22 | 19/19 | 2.11 | 2,695 | 16.5 | 0.97 / 0.85 | 4.33 |
+| **Jev planner (no Gemini)** ⁴ | **99/100** | **21/21** | **10/10** | **27/28** | **22/22** | **19/19** | **1.41** | **2,267** | **1.67** | **0.99 / 0.89** | not judged |
 
 ¹ Every call logged through the shared client, local embedding calls included.
 RAG and GraphRAG are one embedding + one generation; event-graph's 1.02 is 100
 planner calls plus the single RAG fallback (pub-049, one embedding + one generation).
 ² Pipeline only — judge cost is tracked separately in `judge_tokens`/`judge_calls`.
 ³ LLM judge (1-5 accuracy) on the same 21-question 20% sample for every pipeline.
+⁴ Its calls are TypeSafe System One requests, not Gemini — a separate service
+and quota. It was run with `--judge-rate 0`, so it has no judge score: the judge
+is itself a Gemini call, and the point of this pipeline is not needing one.
 
 **The agent matches the hardcoded pipeline.** The Investigator reaches the same
 99/100 while staying a real agent: it *chose* `query_events` on all 100
@@ -67,6 +73,31 @@ question over the fixed route (2.11 vs 1.02) and is still 1.3x cheaper in tokens
 than plain RAG, and 2.2x cheaper than the agentic baseline. Its lower judge score is phrasing, not correctness: it enumerates
 the qualifying events before giving the count, and the same 21-question sample
 scores the terser event-graph answers higher.
+
+**The answer path does not need a generative model.** Everything the planner
+emits already exists as a row in the graph — 47 sports, 20 Games, 316 venues,
+475 event names — so planning is *selection*, not generation. The Jev planner
+makes two TypeSafe System One requests (three independent Choices in the first;
+a narrowed event or venue in the second), lets regex read the exact numbers,
+dates and venue strings, and then runs the same GSQL and the same templated
+answer the event-graph pipeline already used. **Zero Gemini calls per question**,
+and it matches the best pipeline's accuracy at a tenth of the latency.
+
+That is not only elegance. Gemini's free tier is 500 calls a day — one benchmark
+run — and every measurement in this project has died on that wall, some of them
+three times. Round 2 is a live demo, where a 429 is unrecoverable. Taking the
+generative model off the critical path removes that failure mode, and makes the
+repo reproducible for anyone without a paid key.
+
+Confidence is load-bearing rather than decorative: selections below TypeSafe's
+0.6 floor hand the question to the Investigator instead of guessing. Getting
+that right required a correction worth recording — the first version gated
+`gold_previous_games` on the *Games* selection, which for "the Summer Olympics
+held immediately before 2016" is genuinely uncertain (measured 0.52–0.69,
+straddling the floor) because the question names no Games. The code already
+computes the previous Games from the real calendar, so it was gating on a
+judgment it never used; two questions planned fine on one run and bailed on the
+next until that was fixed.
 
 **It is not template-matching.** The obvious objection to a 99/100 on a
 templated eval set is that the system only works on those five phrasings. Tested

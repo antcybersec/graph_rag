@@ -25,13 +25,14 @@ import pandas as pd
 
 from src.eval.exact_match import is_correct
 
-PIPELINES = ["rag", "graphrag", "agentic", "event_graph", "investigator"]
+PIPELINES = ["rag", "graphrag", "agentic", "event_graph", "investigator", "jev_planner"]
 PIPELINE_LABELS = {
     "rag": "RAG",
     "graphrag": "GraphRAG",
     "agentic": "Agentic GraphRAG",
     "event_graph": "Event-graph GraphRAG",
     "investigator": "Investigator (agent)",
+    "jev_planner": "Jev planner (no Gemini)",
 }
 PIPELINE_ORDER = [PIPELINE_LABELS[p] for p in PIPELINES]
 

@@ -91,6 +91,12 @@ def _extract(question: str) -> dict:
         found["date"] = m.group(2).strip()
     if m := re.search(r"\b(\d{4})\s+(Summer|Winter)\b", question, re.I):
         found["year"], found["season"] = int(m.group(1)), m.group(2).capitalize()
+    elif m := re.search(r"\b(Summer|Winter)\b", question, re.I):
+        # Season and year are not always adjacent: "the Summer Olympics held
+        # immediately before 2016" names both, four words apart. Reading only
+        # the pair misses it, which left `gold_previous_games` with no season
+        # and bailed the whole plan.
+        found["season"] = m.group(1).capitalize()
     return found
 
 
@@ -134,11 +140,19 @@ def _plan(conn, question: str, tracker, question_id, trace: list) -> Optional[Qu
     if not op_ok:
         return None
 
-    year, season = None, None
-    if game_ok:
+    # The question's own text wins over the model's Games pick. "...immediately
+    # before 2016" names no Games at all, so the selection is genuinely
+    # uncertain there (measured 0.59-0.66 across attempts) and straddles the
+    # floor -- gating on it made the same question plan fine one run and bail
+    # the next. Code computes the Games from the year it can read; the model is
+    # only consulted when the text gives nothing.
+    year, season = extracted.get("year"), extracted.get("season")
+    if not year and game_ok:
         year, season = int(game.split()[0]), game.split()[1]
-    elif extracted.get("year"):
-        year, season = extracted["year"], extracted.get("season")
+    if not year and extracted.get("before_year"):
+        year = extracted["before_year"]
+    if year and not season and game_ok:
+        season = game.split()[1]
 
     if operation == "gold_at_venue_date":
         # The venue string is in the question verbatim; only fall back to

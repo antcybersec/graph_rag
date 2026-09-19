@@ -131,7 +131,8 @@ THEMES = {
     "light": {
         "surface": "#ffffff",
         "series": {"RAG": "#2a78d6", "GraphRAG": "#eb6834", "Agentic GraphRAG": "#1baf7a",
-                   "Event-graph GraphRAG": "#eda100", "Investigator (agent)": "#e87ba4"},
+                   "Event-graph GraphRAG": "#eda100", "Investigator (agent)": "#e87ba4",
+                   "Jev planner (no Gemini)": "#008300"},
         "text_primary": "#0b0b0b",
         "text_secondary": "#52514e",
         "muted": "#898781",
@@ -144,7 +145,8 @@ THEMES = {
         # strokes markers in this exact color so overlapping points separate cleanly.
         "surface": "#0b0d10",
         "series": {"RAG": "#3987e5", "GraphRAG": "#d95926", "Agentic GraphRAG": "#199e70",
-                   "Event-graph GraphRAG": "#c98500", "Investigator (agent)": "#d55181"},
+                   "Event-graph GraphRAG": "#c98500", "Investigator (agent)": "#d55181",
+                   "Jev planner (no Gemini)": "#008300"},
         "text_primary": "#ffffff",
         "text_secondary": "#c3c2b7",
         "muted": "#898781",

@@ -7,6 +7,50 @@ them here.
 
 ---
 
+## 2026-09-19 (later) — Jev selection planner: 99/100 with ZERO Gemini calls
+
+The quota wall that has killed every measurement for a week is now off the
+answer path. `src/pipelines/jev_planner/` plans by *selection* instead of
+generation, because every value the planner emits already exists as a graph row:
+
+    stage 1 (1 call) : operation (5) + sport (47) + Games (20) as three
+                       independent Choices over one state
+    code             : thresholds, dates, venue strings by regex
+    stage 2 (1 call) : event name (<=43 narrowed) or venue (<=37 within a Games)
+    execute          : existing GSQL + templated answer, 0 LLM calls
+
+Choice accepts 255 options; the raw sets (316 venues, 475 events) do not fit but
+the narrowed ones do — median 5, max 43 events per (sport, Games).
+
+**Measured, `data/results/benchmark_jev_v2.jsonl`, 100/100 rows:**
+EM **99/100** (aggregation 21/21, superlative 10/10, multi_hop 27/28,
+temporal 22/22, lookup 19/19), **1.41 calls**, 2,267 tokens, **1.67s**,
+doc P/R 0.99/0.89, **0 fallbacks**. The one miss is pub-099, ambiguous for
+every pipeline. Against the Investigator: same accuracy, 10x faster, and no
+Gemini. Judge score absent on purpose — the judge is itself a Gemini call.
+
+**Two corrections, both caught by re-measuring rather than assuming:**
+1. First run had 2 fallbacks (pub-026, pub-097). Cause was not the planner
+   bailing: it was gating `gold_previous_games` on the **Games** selection,
+   which is genuinely uncertain (0.52–0.69, straddling the 0.6 floor) because
+   "the Summer Olympics held immediately before 2016" names no Games. The code
+   computes that Games from the real calendar anyway — it was gating on a
+   judgment it never used.
+2. My first fix made pub-026 **worse** (0/3 attempts instead of 2/3): the regex
+   only matched year and season when adjacent, so that phrasing yielded no
+   season at all and the path still bailed. Fixed by extracting season
+   independently; verified 3/3 on both questions at games_conf as low as 0.52,
+   and spot-checked that the new branch does not mis-set season elsewhere.
+
+Dashboard carries a 6th series (validated palette, both modes, 0 AppTest
+exceptions). Superseded first run kept as `benchmark_jev.jsonl`.
+
+**Why this matters for the hackathon, not just the code:** benchmarking cost a
+day of quota and now costs minutes; Round 2 is a live demo where a 429 is
+unrecoverable; and judges can reproduce the numbers without a paid Gemini key.
+
+---
+
 ## 2026-09-19 — Hidden set verified final; TypeSafe integration added (unexecuted)
 
 **Hidden set is done and verified.** `data/results/hidden_answers_investigator.jsonl`
