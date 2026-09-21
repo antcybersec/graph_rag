@@ -16,3 +16,6 @@ data/results/*
 *.log
 .ipynb_checkpoints/
 .omc/
+
+# Working log: useful locally for session continuity, noise in the submission.
+PROGRESS.md
