@@ -39,6 +39,15 @@ so it cannot be submitted by accident. **`data/results/hidden_answers_jev.jsonl`
 is the submission artifact.** Regenerate the investigator's hidden answers on
 fixed code when Gemini quota allows, for a like-for-like comparison.
 
+**Investigator hidden answers regenerated on fixed code**: 36/49 -> **47/49**
+against the oracle by strict string equality, and **49/49** under the project's
+own scorer. The two strict-only misses are format: it writes "Li Ting and Sun
+Tiantian" where gold concatenates "Li TingSun Tiantian". Both pipelines are
+therefore equally correct by our scorer, but the Jev planner emits gold's exact
+string while the Investigator relies on the scorer's tolerance — so for a
+submission graded by an unknown matcher, `hidden_answers_jev.jsonl` stays the
+artifact.
+
 **Investigator finally measured end-to-end on final code** (the run the quota
 killed three times): 100/100 rows, **EM 99/100**, 2.08 calls, 3,412 tokens,
 13.2s, doc P/R 0.96/0.85, judge 4.90 (n=21), 96/100 investigations in 2 steps,
