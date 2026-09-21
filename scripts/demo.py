@@ -66,7 +66,8 @@ def main(questions: list) -> int:
               f"{len(result.get('retrieved_doc_ids', []))} source document(s){RESET}")
 
     mean = sum(latencies) / len(latencies)
-    print(f"\n{BOLD}{len(questions)} questions{RESET} · {system_one} System One calls · "
+    plural = "question" if len(questions) == 1 else "questions"
+    print(f"\n{BOLD}{len(questions)} {plural}{RESET} · {system_one} System One calls · "
           f"{BOLD}{generation} generation-model calls{RESET} · {mean:.2f}s average")
     if generation:
         print(f"{DIM}(generation calls came from a fallback: the graph could not answer alone){RESET}")

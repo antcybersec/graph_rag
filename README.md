@@ -27,6 +27,8 @@ The knowledge graph schema is:
 Document -[PART_OF]- Chunk -[MENTIONS]-> Entity -[RELATED_TO]-> Entity -[IN_COMMUNITY]-> Community
 ```
 
+Architecture diagrams: `docs/architecture-diagram.md` (renders on GitHub).
+
 See `docs/architecture.md` for the full design rationale (entity resolution
 strategy, schema choices, why per-document extraction, why the agentic loop
 is capped, etc.) — most of it is already documented as comments at the top

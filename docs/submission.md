@@ -5,6 +5,8 @@ corpus by choosing between structured graph queries, graph traversal, temporal
 facts and vector search — and a second planner that answers the same questions
 with **no generative model at all**.
 
+Architecture diagrams: [`architecture-diagram.md`](architecture-diagram.md).
+
 ## Results
 
 100 public questions, scored by exact match against gold (`src/eval/exact_match.py`,
