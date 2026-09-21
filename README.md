@@ -288,6 +288,15 @@ venue existing as two vertices because of a corpus typo, impossible dates stored
 as real, and a scorer strict enough to mark correct answers wrong over
 punctuation. See `tests/test_regressions.py` for what each one guards.
 
+Live demo — answers questions with no generative model, so it cannot hit a
+rate limit mid-presentation:
+```bash
+python scripts/demo.py                  # the five question shapes
+python scripts/demo.py "your question"
+```
+
+The Round 1 write-up is `docs/submission.md`.
+
 View the comparison dashboard:
 ```bash
 streamlit run src/dashboard/app.py
