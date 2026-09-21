@@ -7,6 +7,44 @@ them here.
 
 ---
 
+## 2026-09-21 — Caught a stale hidden-answers artifact 3 days before submission
+
+**The hidden answers in the repo were wrong.** `hidden_answers_investigator.jsonl`
+was written 2026-09-18 17:46; the capped-evidence fix (`3ab06cd`) landed 17:48 —
+**two minutes later**. Those answers carried the bug, and that file was the
+submission artifact.
+
+Found by running the hidden set through the Jev planner and diffing: 13
+disagreements. Rather than guess which side was right, scored both against a
+deterministic oracle.
+
+**New: `src/eval/oracle.py`** computes the answer to each template directly from
+the corpus infoboxes — no LLM, no database. Validated against published gold on
+the public set: **99 agree, 0 disagree**, 1 not checkable (pub-099, ambiguous).
+That makes it a trustworthy ruler for the hidden set, which ships without gold.
+
+| Hidden answers | Agrees with oracle |
+|---|---|
+| Jev planner (`hidden_answers_jev.jsonl`) | **49/49** checkable |
+| Investigator, pre-fix (now `_STALE_precapfix.jsonl`) | 36/49 |
+
+The stale file's 13 errors: **5 factually wrong counts** (eval-003 12 vs 8,
+eval-013 4 vs 6, eval-023 4 vs 7, eval-038 12 vs 21, eval-048 12 vs 7 — three
+are the `12` cap artifact), 6 superlatives in the wrong format (bare event name
+instead of the full article title gold uses), and 2 medallist lists
+comma-joined where gold concatenates.
+
+**Actions:** stale file renamed to `hidden_answers_investigator_STALE_precapfix.jsonl`
+so it cannot be submitted by accident. **`data/results/hidden_answers_jev.jsonl`
+is the submission artifact.** Regenerate the investigator's hidden answers on
+fixed code when Gemini quota allows, for a like-for-like comparison.
+
+**Lesson worth keeping:** an artifact is only as current as the code that made
+it. Timestamp every result file against the commit that produced it — a
+two-minute gap was the difference between 49/49 and 36/49.
+
+---
+
 ## 2026-09-19 (later) — Jev selection planner: 99/100 with ZERO Gemini calls
 
 The quota wall that has killed every measurement for a week is now off the

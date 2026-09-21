@@ -132,6 +132,34 @@ queryable properties. Modeling them as a graph turns counting, argmax,
 venue+date lookup and "the previous Games" into traversals. See
 `docs/architecture.md`, "Structured event layer".
 
+### The hidden set, and how we know the answers are current
+
+`data/results/hidden_answers_jev.jsonl` holds the answers to the 50 hidden
+questions, produced by the Jev planner with **no generative model** — so it
+cannot be invalidated by a quota wall, and anyone can regenerate it.
+
+Because the hidden set ships without gold answers, correctness is checked with
+`src/eval/oracle.py`, which computes each template's answer straight from the
+corpus infoboxes. The oracle is itself validated where gold *does* exist: on the
+public set it agrees with the published answers **99/100**, disagreeing on none
+(the remaining question is genuinely ambiguous).
+
+| Hidden answers | Agrees with the oracle |
+|---|---|
+| **Jev planner** (submission artifact) | **49/49** checkable |
+| Investigator, generated before the capped-evidence fix | 36/49 |
+
+That second row is why this section exists. Those answers were written two
+minutes before the fix at `3ab06cd` and carried the bug: five counts were
+factually wrong (three of them answered `12`, the evidence cap itself). The file
+is kept as `hidden_answers_investigator_STALE_precapfix.jsonl` for provenance and
+must not be submitted. An artifact is only as current as the code that produced
+it, and a two-minute gap was the difference between 49/49 and 36/49.
+
+```bash
+python -m src.eval.oracle data/results/hidden_answers_jev.jsonl   # no LLM, no database
+```
+
 ### Evidence verification: checking the checker
 
 The LLM judge is the weakest link in this evaluation. On the first benchmark it
