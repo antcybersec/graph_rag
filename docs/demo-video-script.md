@@ -2,6 +2,20 @@
 
 Target 3:00. Everything below is a real command in this repo; nothing is mocked.
 
+## Recording entirely from the dashboard
+
+The dashboard's **Live investigation** section runs the real pipelines, so the
+whole video can be one browser window: the comparison and per-question traces
+above, then a live question at the bottom with the call counter on screen.
+
+Run it locally for this — `streamlit run src/dashboard/app.py` — because the
+public deploy has no TigerGraph or API credentials and shows the section
+disabled. Use the pipeline radio to show both halves of the argument: the
+**Investigator** picking tools, then the **Jev planner** answering with
+**0 generation-model calls**.
+
+The terminal shots below are an alternative, not a requirement.
+
 ## Before recording
 
 - **Hide secrets.** Never show `.env` or `~/.claude`. If you open the repo in an

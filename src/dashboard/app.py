@@ -800,3 +800,126 @@ with st.expander(f"All rows in scope ({len(view)})"):
         ]
     ].rename(columns={"pipeline_label": "pipeline", **bench.METRIC_LABELS})
     st.dataframe(table, hide_index=True, width="stretch", height=420)
+
+# ------------------------------------------------------------------ live demo
+
+section_header("Live investigation")
+st.markdown(
+    "Everything above is precomputed. This section runs the real pipelines, so "
+    "it needs TigerGraph and API credentials — it works locally and in a demo, "
+    "and stays disabled on the public deploy, which has neither."
+)
+
+LIVE_EXAMPLES = [
+    "According to the provided corpus, how many biathlon events at the 2018 Winter Olympics had more than 73 competitors?",
+    "Which sailing event at Sydney 2000 had the biggest field?",
+    "Who won the gold medal in the event held at Richmond Olympic Oval on 14 February 2010?",
+    "Who was the President of Russia on 1 January 2013?",
+    "Who directed the film Jab We Met?",
+]
+
+LIVE_PIPELINES = {
+    "Jev planner — no generation model": "jev_planner",
+    "Investigator — the agent": "investigator",
+}
+
+
+@st.cache_resource(show_spinner=False)
+def _live_connection():
+    """One TigerGraph connection per server process, reused across runs.
+
+    The candidate catalog is warmed here too: building it is one read of the
+    graph, but on the first question it shows up as a several-second stall,
+    which is exactly the wrong thing to have happen on camera.
+    """
+    from src.common.tg_conn import get_connection
+
+    connection = get_connection()
+    try:
+        from src.pipelines.jev_planner import pipeline as _jev
+
+        _jev._build_catalog(connection)
+    except Exception:
+        pass  # the agent path does not need the catalog; never block on warming
+    return connection
+
+
+picked_example = st.selectbox("Example questions", LIVE_EXAMPLES, key="live_example")
+live_question = st.text_input("Question", value=picked_example, key="live_question")
+live_choice = st.radio("Pipeline", list(LIVE_PIPELINES), horizontal=True, key="live_pipeline")
+
+if st.button("Investigate", type="primary"):
+    try:
+        from src.common.token_tracker import TokenTracker
+
+        module = (
+            __import__("src.pipelines.jev_planner.pipeline", fromlist=["pipeline"])
+            if LIVE_PIPELINES[live_choice] == "jev_planner"
+            else __import__("src.pipelines.investigator.pipeline", fromlist=["pipeline"])
+        )
+        connection = _live_connection()
+    except Exception as exc:  # missing deps on the public deploy, or no credentials
+        st.warning(
+            f"Live mode is unavailable here ({type(exc).__name__}). It needs the full "
+            "project dependencies plus TG_HOST / TG_SECRET and an API key — run the "
+            "dashboard locally to use it."
+        )
+    else:
+        tracker = TokenTracker()
+        import time as _time
+
+        started = _time.time()
+        with st.spinner("Investigating..."):
+            try:
+                live_result = module.answer_question(
+                    connection, live_question, tracker=tracker, question_id="live"
+                )
+            except Exception as exc:
+                live_result = None
+                st.error(f"The investigation failed: {type(exc).__name__}: {exc}")
+        elapsed = _time.time() - started
+
+        if live_result:
+            records = tracker.all_records()
+            system_one = sum(1 for r in records if "typesafe" in r["note"])
+            generation = sum(
+                1 for r in records if "typesafe" not in r["note"] and r["call_type"] != "embedding"
+            )
+
+            st.success(f"**{live_result.get('short_answer') or live_result['answer'][:200]}**")
+
+            a, b, c = st.columns(3)
+            a.metric("Seconds", f"{elapsed:.2f}")
+            b.metric("System One calls", system_one)
+            # The headline of the whole submission: this stays at zero on the
+            # selection path, which is why a rate limit cannot end the demo.
+            c.metric("Generation-model calls", generation)
+
+            for step in live_result.get("trace", []):
+                if step.get("stage") == "select_operation_sport_games":
+                    st.caption(
+                        f"plan · {step['operation']} · {step['sport']} · {step['games']} "
+                        f"(confidence {step['operation_confidence']:.2f})"
+                    )
+                elif str(step.get("stage", "")).startswith("select_"):
+                    st.caption(
+                        f"select · {step.get('event') or step.get('venue')} "
+                        f"({step.get('confidence', 0):.2f} of {step.get('options', '?')} candidates)"
+                    )
+                elif step.get("action"):
+                    st.caption(f"{step['action']} · {str(step.get('evidence_check') or '')[:140]}")
+
+            st.markdown("**Answer**")
+            st.write(live_result["answer"])
+
+            evidence = live_result.get("evidence") or []
+            if evidence:
+                with st.expander(f"Evidence & provenance ({len(evidence)} items)"):
+                    for item in evidence[:12]:
+                        prov = item.get("provenance") or {}
+                        title = item.get("doc_title") or item.get("doc_id") or ""
+                        link = f"[{title}]({item['source_url']})" if item.get("source_url") else title
+                        st.markdown(f"`{item.get('citation_id')}` {link}")
+                        st.caption(f"{prov.get('tool', '?')} · {prov.get('query') or prov.get('operation', '')}")
+            elif live_result.get("retrieved_doc_ids"):
+                st.caption("Sources: " + ", ".join(live_result["retrieved_doc_ids"][:12]))
