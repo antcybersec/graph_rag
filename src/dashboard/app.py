@@ -308,7 +308,7 @@ ORDER = bench.pipeline_order(df)
 QTYPES = bench.qtype_order(df)
 
 st.markdown('<div class="kicker">GRAPH_RAG BENCHMARK</div>', unsafe_allow_html=True)
-st.title("RAG vs GraphRAG vs Agentic vs Event-graph GraphRAG")
+st.title("Agentic GraphRAG — six pipelines, one corpus, one question set")
 st.markdown(
     """
 Three retrieval-augmented pipelines answer the same eval set of
@@ -735,6 +735,9 @@ for col, name in zip(cols, ORDER):
         steps = row.get("num_steps")
         if isinstance(steps, (int, float)) and steps == steps:  # NaN != NaN
             ending.append(f"{steps:.0f} steps")
+        changed = row.get("strategy_changed")
+        if isinstance(changed, bool):
+            ending.append("changed strategy" if changed else "one strategy")
         if ending:
             st.caption(" &middot; ".join(ending), unsafe_allow_html=True)
 

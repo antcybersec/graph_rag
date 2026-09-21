@@ -162,6 +162,7 @@ def _flatten(row: dict) -> dict:
         flat[field] = row.get(field)
     flat["num_steps"] = _number(row.get("num_steps"))
     flat["tools_used"] = row.get("tools_used") or []
+    flat["strategy_changed"] = row.get("strategy_changed")
     flat["trace"] = row.get("trace") or []
     flat["evidence"] = row.get("evidence") or []
     return flat
