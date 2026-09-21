@@ -41,9 +41,9 @@ deterministically against the gold answer (no LLM). A pipeline that lists
 several candidate answers is scored wrong.
 
 All pipelines share the corpus, the questions and the local reranker. The first
-five also share the generation model (`data/results/benchmark_v2.jsonl`, 500/500
-scored pairs; the four comparison pipelines ran 2026-09-16, the Investigator
-2026-09-17). The Jev planner uses no generation model at all
+five also share the generation model (`data/results/benchmark_v2.jsonl`, 400/400
+scored pairs, 2026-09-16; the Investigator's row is its final-code re-measure,
+`data/results/benchmark_v4_investigator.jsonl`, 100/100, 2026-09-21). The Jev planner uses no generation model at all
 (`data/results/benchmark_jev_v2.jsonl`, 100/100, 2026-09-19).
 
 | Pipeline | Exact match | Aggregation | Superlative | Multi-hop | Temporal | Lookup | LLM calls/q ¹ | Tokens/q ² | Latency (s) | Doc P / R | Judge acc ³ |
@@ -52,7 +52,7 @@ scored pairs; the four comparison pipelines ran 2026-09-16, the Investigator
 | GraphRAG | 67/100 | 0/21 | 4/10 | 23/28 | 21/22 | 19/19 | 2.0 | 3,952 | 10.2 | 0.43 / 0.73 | 3.67 |
 | Agentic GraphRAG | 70/100 | 3/21 | 4/10 | 22/28 | 22/22 | 19/19 | 4.1 | 6,065 | 20.2 | 0.46 / 0.70 | 4.05 |
 | Event-graph GraphRAG | 99/100 | 21/21 | 10/10 | 27/28 | 22/22 | 19/19 | 1.02 | 619 | 8.9 | 0.99 / 0.90 | 5.00 |
-| Investigator (agent) | 99/100 | 21/21 | 10/10 | 27/28 | 22/22 | 19/19 | 2.11 | 2,695 | 16.5 | 0.97 / 0.85 | 4.33 |
+| Investigator (agent) | 99/100 | 21/21 | 10/10 | 27/28 | 22/22 | 19/19 | 2.08 | 3,412 | 13.2 | 0.96 / 0.85 | 4.90 |
 | **Jev planner (no Gemini)** ⁴ | **99/100** | **21/21** | **10/10** | **27/28** | **22/22** | **19/19** | **1.41** | **2,267** | **1.67** | **0.99 / 0.89** | not judged |
 
 ¹ Every call logged through the shared client, local embedding calls included.
@@ -66,13 +66,14 @@ is itself a Gemini call, and the point of this pipeline is not needing one.
 
 **The agent matches the hardcoded pipeline.** The Investigator reaches the same
 99/100 while staying a real agent: it *chose* `query_events` on all 100
-questions and added `search_chunks` on 3 where the graph alone fell short, 97 of
+questions and added `search_chunks` on 4 where the graph alone fell short, 96 of
 100 investigations finished in 2 steps, and all 100 stopped on `answer_found`
 rather than exhausting their iteration budget. It costs one extra LLM call per
-question over the fixed route (2.11 vs 1.02) and is still 1.3x cheaper in tokens
-than plain RAG, and 2.2x cheaper than the agentic baseline. Its lower judge score is phrasing, not correctness: it enumerates
-the qualifying events before giving the count, and the same 21-question sample
-scores the terser event-graph answers higher.
+question over the fixed route (2.08 vs 1.02) and roughly the same tokens as
+plain RAG (1.05x) while being 1.78x cheaper than the agentic baseline.
+Its judge score (4.90 on the 21-question sample) is level with the fixed route,
+so the earlier reading that its enumerated answers cost it judge points does not
+survive the final-code measurement.
 
 **The answer path does not need a generative model.** Everything the planner
 emits already exists as a row in the graph — 47 sports, 20 Games, 316 venues,

@@ -39,6 +39,20 @@ so it cannot be submitted by accident. **`data/results/hidden_answers_jev.jsonl`
 is the submission artifact.** Regenerate the investigator's hidden answers on
 fixed code when Gemini quota allows, for a like-for-like comparison.
 
+**Investigator finally measured end-to-end on final code** (the run the quota
+killed three times): 100/100 rows, **EM 99/100**, 2.08 calls, 3,412 tokens,
+13.2s, doc P/R 0.96/0.85, judge 4.90 (n=21), 96/100 investigations in 2 steps,
+all stopping on `answer_found`. Accuracy matches the earlier partial run, so the
+99/100 claim holds — but the cost numbers did not, and the README's derived
+claims were wrong:
+- tokens 2,695 -> **3,412**, so it is 1.05x cheaper than RAG, not the published
+  1.3x, and 1.78x cheaper than agentic, not 2.2x;
+- judge 4.33 -> **4.90**, level with the fixed route, which kills the earlier
+  reading that enumerated answers cost it judge points.
+README row, provenance line and narrative corrected from the data rather than
+transcribed by hand. Dashboard now reads the final-code rows (AppTest clean,
+6 pipelines).
+
 **Lesson worth keeping:** an artifact is only as current as the code that made
 it. Timestamp every result file against the commit that produced it — a
 two-minute gap was the difference between 49/49 and 36/49.
