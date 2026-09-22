@@ -826,6 +826,35 @@ LIVE_PIPELINES = {
 }
 
 
+def _load_live_credentials() -> list:
+    """Copy Streamlit secrets into the environment and report what is missing.
+
+    The pipeline modules read os.environ (via python-dotenv locally), so on
+    Streamlit Cloud -- where there is no .env, only st.secrets -- the values
+    have to be bridged across before anything imports them.
+    """
+    import os
+
+    # Load .env explicitly. This check runs BEFORE the pipeline imports, so it
+    # can no longer rely on them calling load_dotenv() as a side effect -- and
+    # the path must not depend on the cwd Streamlit happens to start in.
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv(bench.project_root() / ".env")
+    except Exception:
+        pass  # no python-dotenv (minimal deploy) or no .env; secrets may still supply them
+
+    required = ("TG_HOST", "TG_SECRET", "TYPESAFE_API_KEY")
+    try:
+        for key in (*required, "TG_GRAPHNAME", "GOOGLE_API_KEY"):
+            if key in st.secrets and not os.environ.get(key):
+                os.environ[key] = str(st.secrets[key])
+    except Exception:
+        pass  # no secrets.toml configured; fall through to the env we have
+    return [k for k in required if not os.environ.get(k)]
+
+
 @st.cache_resource(show_spinner=False)
 def _live_connection():
     """One TigerGraph connection per server process, reused across runs.
@@ -851,6 +880,20 @@ live_question = st.text_input("Question", value=picked_example, key="live_questi
 live_choice = st.radio("Pipeline", list(LIVE_PIPELINES), horizontal=True, key="live_pipeline")
 
 if st.button("Investigate", type="primary"):
+    missing = _load_live_credentials()
+    if missing:
+        # Stop here rather than nesting the whole run: with a credential absent
+        # there is nothing useful to attempt, and this section is the last thing
+        # on the page.
+        st.warning(
+            "Live mode needs credentials that are not set here: **"
+            + "**, **".join(missing)
+            + "**. Locally they come from `.env`; on Streamlit Cloud add them under "
+            "Settings → Secrets. Note that doing so lets any visitor spend your API "
+            "quota, so prefer running locally for the demo."
+        )
+        st.stop()
+
     try:
         from src.common.token_tracker import TokenTracker
 
@@ -860,12 +903,15 @@ if st.button("Investigate", type="primary"):
             else __import__("src.pipelines.investigator.pipeline", fromlist=["pipeline"])
         )
         connection = _live_connection()
-    except Exception as exc:  # missing deps on the public deploy, or no credentials
+    except ModuleNotFoundError as exc:
         st.warning(
-            f"Live mode is unavailable here ({type(exc).__name__}). It needs the full "
-            "project dependencies plus TG_HOST / TG_SECRET and an API key — run the "
-            "dashboard locally to use it."
+            f"Live mode needs a dependency this deploy does not have: **{exc.name}**. "
+            "Locally, run the dashboard from the project virtualenv. On Streamlit "
+            "Cloud, it installs `src/dashboard/requirements.txt` — reboot the app so "
+            "it picks up the current one."
         )
+    except Exception as exc:
+        st.warning(f"Live mode could not start: {type(exc).__name__}: {exc}")
     else:
         tracker = TokenTracker()
         import time as _time

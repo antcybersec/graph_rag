@@ -9,3 +9,9 @@
 streamlit>=1.38
 plotly>=5.24
 pandas>=2.0
+# The live-investigation section imports the pipelines, which need these. They
+# are small -- unlike torch/sentence-transformers, which this file still keeps
+# out of a dashboard-only deploy.
+pyTigerGraph>=1.6
+python-dotenv>=1.0
+requests>=2.31
