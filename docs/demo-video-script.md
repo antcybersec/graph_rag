@@ -1,5 +1,8 @@
 # Demo video — script and shot list
 
+**Want a script to read straight out? Use [`demo-narration.md`](demo-narration.md).**
+This file is the longer shot list, including the terminal-based alternative.
+
 Target 3:00. Everything below is a real command in this repo; nothing is mocked.
 
 ## Recording entirely from the dashboard
