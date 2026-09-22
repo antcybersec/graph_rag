@@ -311,17 +311,19 @@ st.markdown('<div class="kicker">GRAPH_RAG BENCHMARK</div>', unsafe_allow_html=T
 st.title("Agentic GraphRAG — six pipelines, one corpus, one question set")
 st.markdown(
     """
-Three retrieval-augmented pipelines answer the same eval set of
-**{n_q} questions**, so the only thing that varies is how each one finds and uses
-evidence. **RAG** does plain vector retrieval over document chunks; **GraphRAG**
-retrieves over an entity graph built from those documents; **Agentic GraphRAG**
-lets an agent plan and issue several graph queries before answering. Every answer
-is scored 1-5 by an LLM judge on accuracy and completeness (against the gold
-answer) and groundedness (against the context the pipeline actually retrieved),
-alongside retrieval quality (doc precision/recall against gold document ids) and
-cost (latency, tokens, LLM calls). Judge scores are model judgments, not ground
-truth, so read the per-question drill-down at the bottom before trusting any
-single gap.
+Six pipelines answer the same eval set of **{n_q} questions**, so the only thing
+that varies is how each one finds and uses evidence. **RAG** does plain vector
+retrieval over document chunks. **GraphRAG** retrieves over an entity graph built
+from those documents. **Agentic GraphRAG** lets an agent plan and issue several
+graph queries before answering. **Event-graph GraphRAG** queries a structured
+event layer built deterministically from the articles' infoboxes. **Investigator**
+is the agent that chooses between all of those tools and judges its own evidence.
+**Jev planner** answers the same questions with no generation model at all.
+The headline metric is **exact match** against the gold answer, computed with no
+LLM in the loop. The 1-5 judge scores beside it are a 20% sample and are model
+judgments, not ground truth — pub-052 below is a question the judge scored 5
+for an answer that says the corpus contains nothing. Read the drill-down before
+trusting any single gap.
 """.format(n_q=stats.get("unique_questions", df["qid"].nunique()))
 )
 
