@@ -423,6 +423,19 @@ st.dataframe(
 )
 st.caption("Every number is a mean over the questions in scope. Latency and tokens are per question.")
 
+# The comparison that matters is relative, not absolute: how much does agentic
+# retrieval add over the RAG baseline on the same model and the same questions?
+_em = view.groupby("pipeline_label", observed=True)["exact_match"].mean()
+if "RAG" in _em.index:
+    _base = _em["RAG"]
+    _best_label = _em.drop(index=[i for i in ("RAG",) if i in _em.index]).idxmax()
+    _best = _em[_best_label]
+    st.caption(
+        f"**Relative improvement over the RAG baseline: {(_best - _base) * 100:+.0f} points "
+        f"({(_best - _base) / _base * 100:+.0f}% relative)** — RAG {_base:.0%} → "
+        f"{_best_label} {_best:.0%}, same corpus, same questions, same generation model."
+    )
+
 # -------------------------------------------------------------- judge scores
 
 section_header("Answer quality")

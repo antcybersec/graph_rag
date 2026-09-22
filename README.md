@@ -1,10 +1,42 @@
 # GraphRAG vs. RAG vs. Agentic GraphRAG
 
-A head-to-head comparison of three retrieval strategies over the same corpus,
+A head-to-head comparison of retrieval strategies over the same corpus,
 questions, and generation model, built for [hackathon eval set — see
 `data/raw_dataset/README.md`]. The question this project answers: **does
 adding graph structure, and then agentic control over retrieval, actually
 improve answer quality — and at what cost in latency and tokens?**
+
+## Headline
+
+**Agentic retrieval takes exact match from 67% to 99% — +32 points, a 48%
+relative improvement over the RAG baseline**, on the same corpus, the same 100
+questions, and the same generation model (`gemini-3.1-flash-lite`) for every
+pipeline in that comparison.
+
+The interesting part is *which* agentic design gets there:
+
+| Pipeline | Exact match | vs RAG |
+|---|---|---|
+| RAG (baseline) | 67% | — |
+| GraphRAG (entity graph, fixed route) | 67% | +0 |
+| Agent over text/entity tools only | 70% | +3 |
+| **Agent + structured graph tools (Investigator)** | **99%** | **+32** |
+
+An agent alone buys 3 points. An agent **with the right graph tools** buys 32.
+The 70% row is the ablation that isolates it: same orchestrator, same model,
+without the structured event-graph tool. That is the finding this repo is
+built to support.
+
+**Model fairness:** every pipeline in the table above uses the same generation
+model through one shared client, with no per-pipeline override, and local BGE
+embeddings throughout. The LLM judge deliberately uses a *different* model to
+reduce self-preference, and is a 20% sample — exact match, computed with no
+model in the loop, is the headline metric.
+
+**One pipeline is outside that comparison and reported separately:** the **Jev
+planner** answers the same questions using TypeSafe System One instead of a
+generation model. It is not part of the like-for-like model comparison; it is
+an efficiency result — same 99%, 1.7s per question, zero generation calls.
 
 All three pipelines share the same corpus (2,951 Wikipedia articles, loaded
 into TigerGraph), the same 100-question public eval set, the same answer-

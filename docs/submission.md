@@ -7,6 +7,21 @@ with **no generative model at all**.
 
 Architecture diagrams: [`architecture-diagram.md`](architecture-diagram.md).
 
+## Headline: what agentic retrieval is worth here
+
+**67% → 99% exact match, +32 points (+48% relative) over the RAG baseline**,
+same corpus, same questions, same generation model (`gemini-3.1-flash-lite`)
+across every pipeline in the comparison.
+
+And the ablation that makes it meaningful: an agent over text and entity tools
+alone reaches only 70% (+3). The same orchestrator *with* structured graph
+tools reaches 99% (+32). The agentic idea is not what pays — agentic control
+over the *right* retrieval surface is.
+
+The Jev planner is reported separately: it uses TypeSafe System One rather
+than a generation model, so it sits outside the like-for-like comparison as an
+efficiency result.
+
 ## Results
 
 100 public questions, scored by exact match against gold (`src/eval/exact_match.py`,
