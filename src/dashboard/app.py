@@ -130,8 +130,8 @@ def section_header(title: str) -> None:
 THEMES = {
     "light": {
         "surface": "#ffffff",
-        "series": {"RAG": "#2a78d6", "GraphRAG": "#eb6834", "Agentic GraphRAG": "#1baf7a",
-                   "Event-graph GraphRAG": "#eda100", "Investigator (agent)": "#e87ba4",
+        "series": {"RAG": "#2a78d6", "GraphRAG": "#eb6834", "Agentic GraphRAG (ablation — no graph tools)": "#1baf7a",
+                   "Event-graph GraphRAG (fixed route)": "#eda100", "Agentic GraphRAG (full)": "#e87ba4",
                    "Jev planner (no Gemini)": "#008300"},
         "text_primary": "#0b0b0b",
         "text_secondary": "#52514e",
@@ -144,8 +144,8 @@ THEMES = {
         # Kept in sync with .streamlit/config.toml's backgroundColor -- ring_markers()
         # strokes markers in this exact color so overlapping points separate cleanly.
         "surface": "#0b0d10",
-        "series": {"RAG": "#3987e5", "GraphRAG": "#d95926", "Agentic GraphRAG": "#199e70",
-                   "Event-graph GraphRAG": "#c98500", "Investigator (agent)": "#d55181",
+        "series": {"RAG": "#3987e5", "GraphRAG": "#d95926", "Agentic GraphRAG (ablation — no graph tools)": "#199e70",
+                   "Event-graph GraphRAG (fixed route)": "#c98500", "Agentic GraphRAG (full)": "#d55181",
                    "Jev planner (no Gemini)": "#008300"},
         "text_primary": "#ffffff",
         "text_secondary": "#c3c2b7",
@@ -308,7 +308,7 @@ ORDER = bench.pipeline_order(df)
 QTYPES = bench.qtype_order(df)
 
 st.markdown('<div class="kicker">GRAPH_RAG BENCHMARK</div>', unsafe_allow_html=True)
-st.title("Agentic GraphRAG — six pipelines, one corpus, one question set")
+st.title("Agentic GraphRAG — 67% to 99% on the same model")
 st.markdown(
     """
 Six pipelines answer the same eval set of **{n_q} questions**, so the only thing

@@ -29,9 +29,13 @@ PIPELINES = ["rag", "graphrag", "agentic", "event_graph", "investigator", "jev_p
 PIPELINE_LABELS = {
     "rag": "RAG",
     "graphrag": "GraphRAG",
-    "agentic": "Agentic GraphRAG",
-    "event_graph": "Event-graph GraphRAG",
-    "investigator": "Investigator (agent)",
+    # The submitted Agentic GraphRAG is the Investigator: an orchestrator over
+    # five tools with evidence evaluation and stopping criteria. The earlier
+    # agent is the same idea WITHOUT the structured graph tools, kept as the
+    # ablation that isolates where the +32 points actually come from.
+    "agentic": "Agentic GraphRAG (ablation — no graph tools)",
+    "event_graph": "Event-graph GraphRAG (fixed route)",
+    "investigator": "Agentic GraphRAG (full)",
     "jev_planner": "Jev planner (no Gemini)",
 }
 PIPELINE_ORDER = [PIPELINE_LABELS[p] for p in PIPELINES]
