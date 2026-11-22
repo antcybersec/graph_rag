@@ -211,6 +211,16 @@ def _generate_local(
     # 32768. Raise this back up only alongside more free RAM.
     OLLAMA_NUM_CTX = int(os.environ.get("OLLAMA_NUM_CTX", 20480))
     body = {"model": model_name, "messages": messages, "stream": False, "options": {"num_ctx": OLLAMA_NUM_CTX}}
+    # Ollama keeps a model resident for five minutes after a call by default.
+    # On a 16GB machine that is five minutes during which TigerGraph is sharing
+    # the host with ~6GB of model weights, and the container is what loses:
+    # observed 2026-11-22 as `Exited (137)` -- an OOM kill -- while an 8B model
+    # sat idle in memory after answering. Setting OLLAMA_KEEP_ALIVE=0 unloads it
+    # the moment the call returns, at the cost of a few seconds' reload on the
+    # next one. Unset, nothing changes for the Round 1 pipelines.
+    _keep = os.environ.get("OLLAMA_KEEP_ALIVE")
+    if _keep:
+        body["keep_alive"] = int(_keep) if _keep.lstrip("-").isdigit() else _keep
     if response_schema is not None:
         # Ollama's structured-output support: pass the target JSON schema directly
         # as `format` and it constrains decoding to match it.

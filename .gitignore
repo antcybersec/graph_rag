@@ -43,3 +43,9 @@ scripts/make_excalidraw.py
 
 # Round 2 working plan: ours, not the submission.
 docs/round2-plan.md
+
+# the freeze gate finish.sh waits on -- local only
+.freeze
+
+# a scratch log from one-off questions, not a deliverable
+data/results/r2/ask_querylog.jsonl

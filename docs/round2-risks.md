@@ -26,7 +26,15 @@ without paying for it twice, and `finish.sh` waits for the quota with one
 cheap probe every ten minutes, then runs both sets, scores, measures and
 validates unattended.
 
-**Open:** run it. ~245 requests, inside one day's 500.
+**Open:** run it. ~260 requests for a clean 50 + 50, inside one day's 500.
+
+**Changed 22 Nov:** the public set is no longer resumed. Both files must come
+from one code version or a judge re-running the command gets answers that do
+not match the submitted ones, and the evidence block has changed since the
+first 25 answers were written. A clean 50 costs ~130 requests and buys a file
+that reproduces, which is the better trade. `finish.sh` also waits on a
+`.freeze` file now, so a run cannot start while the agent is still being
+edited.
 
 ## 2. Answers that cannot be reproduced in the judging call — *fatal*
 
@@ -43,10 +51,29 @@ the container and waits for `gadmin status` to report Online rather than for
 the port. The per-call provider split (risk 9) is a tested fallback if the
 main provider is exhausted on the day.
 
-**Open:** rehearse twice — once asking unseen questions through `./ui.sh`,
-once reproducing two hidden-set answers from the submitted file and showing
-the traces match. **Keep the day's quota in reserve: live questions cost ~40
-requests, a batch run costs 200.**
+**Closed on the quota leg, 22 Nov:** there is now a path with no provider at
+all. `./offline.sh "<question>"` runs planning, selection and composition on a
+local Ollama model; TigerGraph was already local and the embeddings were always
+local BGE, so the whole system runs with no key and no network. Measured on an
+M4/16GB with `qwen3:8b`: **123s and 2 model calls for one question, answered
+correctly with citations**, against 16s on Gemini. RAM is the binding
+constraint, not speed — TigerGraph holds ~5.6GB and the model at 12,288
+context ~5.9GB, which fits; at 20,480 context (the Round 1 default) the run was
+OOM-killed.
+
+Two measured limits keep this as insurance rather than the default, and both
+are worth stating to a judge rather than hiding: on five probe questions
+`qwen3:8b` planned 4 correctly where Gemini planned 5 (it routed "athletes who
+won medals at more than one Games" to the single-athlete route), and it cited
+all 48 retrieved documents where the answer rested on far fewer, which costs
+citation precision. `llama3.2:3b` was tried first and is not good enough — it
+got 2 routes of 5 and dropped the slots the query needs.
+
+**Open:** rehearse twice — once asking unseen questions through `./ui.sh` or
+`python -m src.r2.ask "..."`, once reproducing two hidden-set answers from the
+submitted file and showing the traces match. **Keep the day's quota in
+reserve: live questions cost ~40 requests, a batch run costs 260** — or run the
+live questions through `./offline.sh` and spend none.
 
 ## 3. The build fails on the judges' machine — *up to 15%*
 

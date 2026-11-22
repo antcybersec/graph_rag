@@ -30,6 +30,15 @@ for f in "$Q_DIR/questions_public.jsonl" "$Q_DIR/questions_hidden.jsonl"; do
   [ -f "$f" ] || { echo "missing $f -- set Q_DIR to the folder holding them" >&2; exit 1; }
 done
 
+# Nothing should start while the agent is still being edited: the gate is a
+# file, so clearing it is a one-liner from another terminal.
+FREEZE="${FREEZE:-.freeze}"
+if [ -f "$FREEZE" ]; then
+  say "held: $FREEZE exists (the code is still being changed). Waiting for it to go."
+  until [ ! -f "$FREEZE" ]; do sleep 60; done
+  say "freeze lifted"
+fi
+
 say "waiting for the model quota (one probe every ${PROBE_EVERY}s, giving up after ${MAX_WAIT_HOURS}h)"
 deadline=$(( $(date +%s) + MAX_WAIT_HOURS * 3600 ))
 until python -c '
@@ -67,8 +76,13 @@ if ! docker ps --format '{{.Names}}' | grep -qx "$CONTAINER"; then
 fi
 python -m src.r2.counts >/dev/null && say "graph is up"
 
-say "public set (resuming)"
-python -m src.r2.run "$Q_DIR/questions_public.jsonl" "$OUT/answers_public.jsonl" --resume
+# Both files must come from ONE code version, or a judge re-running the command
+# gets answers that do not match the ones submitted -- and repeatability is 15%
+# of the score. The evidence block has changed since the first 25 public answers
+# were written, so they are discarded rather than resumed: a clean 50 costs
+# ~130 requests and buys a file that reproduces.
+say "public set (clean run -- single configuration)"
+python -m src.r2.run "$Q_DIR/questions_public.jsonl" "$OUT/answers_public.jsonl"
 public_rc=$?
 
 say "hidden set"

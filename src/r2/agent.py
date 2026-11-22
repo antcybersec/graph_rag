@@ -213,6 +213,13 @@ Reading the evidence:
     not fill it in from a report or an estimate. Say what was reported, say
     it is unverified, and say the value is not established.
   - Never present an estimate or a projection as a measurement.
+  - A block headed ARITHMETIC ALREADY DONE FOR YOU was computed by counting
+    the rows, not written by a model. Its MOST, FEWEST and TOTAL are the
+    answer to a "which had the most", "how many in all" or "which is biggest"
+    question -- quote them rather than recounting the rows yourself, and if it
+    reports A TIE, name every holder, because naming one of two level holders
+    is a wrong answer and not a short one. If your own reading of the rows
+    disagrees with it, the block is right and you have misread them.
   - A comparison or a superlative over records where some lack the figure is
     still answerable: compare the records that state it, give the answer, and
     say which records could not be included. Incomplete data is a caveat to
@@ -298,6 +305,51 @@ def _within_a_day(published_at: str, date: str) -> bool:
     except ValueError:
         return False
     return abs((got - day).days) <= 1
+
+
+def _tally(what: str, unit: str, pairs: list) -> Optional[dict]:
+    """Do the arithmetic over a counted column in code instead of leaving it to
+    the composer.
+
+    Round 1 measured exactly this gap. On the aggregation and superlative
+    questions -- "how many events had more than N competitors", "which had the
+    most" -- retrieval feeding a model scored 1 of 21, while the same graph rows
+    run through code scored 21 of 21 (`docs/round1-results.md`). The rows were
+    never the problem; the step after them was. So the rows still go to the
+    composer, and so does the answer the rows imply, computed here.
+
+    A tie is the sharpest case and the reason this returns every holder rather
+    than one: asked for "the most", a model names a single holder and does not
+    mention that two are level, which is a wrong answer rather than an
+    incomplete one.
+
+    Values of -1 mean "the article does not state this" in the event fields and
+    are dropped, because counting them as zero would invent a smallest.
+    """
+    clean = []
+    for k, v in pairs:
+        if v is None or isinstance(v, bool):
+            continue
+        try:
+            n = float(v)
+        except (TypeError, ValueError):
+            continue
+        if n < 0:                      # -1 is the corpus's "not stated"
+            continue
+        clean.append((str(k), int(n) if float(n).is_integer() else round(n, 3)))
+    if not clean:
+        return None
+    ranked = sorted(clean, key=lambda kv: (-kv[1], kv[0]))
+    hi, lo = ranked[0][1], ranked[-1][1]
+    return {
+        "what": what, "unit": unit,
+        "highest": {"value": hi, "holders": [k for k, v in ranked if v == hi]},
+        "lowest": {"value": lo, "holders": [k for k, v in ranked if v == lo]},
+        "total": round(sum(v for _, v in ranked), 3),
+        "entries": len(ranked),
+        "ranked": ranked[:12],
+        "dropped": len(pairs) - len(clean),
+    }
 
 
 def _medal_rows(result, block: str = "medals") -> list[dict]:
@@ -473,6 +525,11 @@ class Agent:
         fn(tr, question, plan, ev)
         return ev
 
+    def _add_tally(self, ev: dict, what: str, unit: str, pairs: list) -> None:
+        t = _tally(what, unit, pairs)
+        if t:
+            ev.setdefault("tallies", []).append(t)
+
     def _cite(self, ev: dict, doc_id: str, label: str) -> None:
         """Offer a document as a citation candidate.
 
@@ -499,6 +556,12 @@ class Agent:
         medals = _medal_rows(res)
         ev["editions"] = editions
         ev["medals"] = medals
+        self._add_tally(ev, "competitors per edition of this contest", "competitors",
+                        [(f"{e.get('games_year')} {e.get('season')}", e.get("competitors"))
+                         for e in editions])
+        self._add_tally(ev, "nations per edition of this contest", "nations",
+                        [(f"{e.get('games_year')} {e.get('season')}", e.get("nations"))
+                         for e in editions])
         for e in editions:
             self._cite(ev, e["event_id"], e.get("title", ""))
 
@@ -553,6 +616,12 @@ class Agent:
         ev["events"] = events
         for e in events:
             self._cite(ev, e["event_id"], e.get("title", ""))
+        self._add_tally(ev, f"nations per event, {plan.sport_key} at {year} "
+                            f"{plan.season or 'Summer'}", "nations",
+                        [(e.get("event_name", ""), e.get("nations")) for e in events])
+        self._add_tally(ev, f"competitors per event, {plan.sport_key} at {year} "
+                            f"{plan.season or 'Summer'}", "competitors",
+                        [(e.get("event_name", ""), e.get("competitors")) for e in events])
         medal_res = tr.run_query("medals_by_nation",
                                  {"sport_key": plan.sport_key, "games_year": year,
                                   "season": plan.season or "Summer",
@@ -560,6 +629,10 @@ class Agent:
         counts = scalar(medal_res, "counts_by_noc", {}) or {}
         ev["medals_by_nation"] = {"medal": plan.medal or "", "counts": counts,
                                   "by_medal": scalar(medal_res, "counts_by_noc_and_medal", {}) or {}}
+        self._add_tally(ev, f"{plan.medal or 'all'} medals by nation, {plan.sport_key} at "
+                            f"{year} {plan.season or 'Summer'}",
+                        f"{plan.medal or 'medals (gold+silver+bronze)'}",
+                        sorted(counts.items()))
         if plan.nation:
             # The NOC is chosen from the codes that actually won something
             # here, not derived from the country name. Truncating the name to
@@ -620,6 +693,9 @@ class Agent:
         grouped = scalar(res, "years_by_athlete_event", {}) or {}
         repeats = {k: sorted(v) for k, v in grouped.items() if len(v) > 1}
         ev["repeat_champions"] = repeats
+        self._add_tally(ev, "Games at which each athlete won the same event "
+                            "(repeat champions only)", "Games",
+                        [(label, len(years)) for label, years in repeats.items()])
         ev["notes"].append(f"{len(grouped)} athlete+event gold groups in this sport; "
                            f"{len(repeats)} won the same event at more than one Games")
         # Citations: the editions in which each repeated win happened. The
@@ -657,6 +733,9 @@ class Agent:
             "athletes_with_exactly_one": len(ranked) - len(multi),
             "top": ranked[:5],
         }
+        self._add_tally(ev, f"individual {plan.medal or 'medals'} per athlete, "
+                            f"{year} {plan.season or 'Summer'}",
+                        f"{plan.medal or 'medals'}", ranked)
         ev["notes"].append(
             f"{len(ranked)} athletes hold an individual {plan.medal or 'medal'} at these "
             f"Games; the {len(multi)} with more than one are listed in full.")
@@ -673,6 +752,7 @@ class Agent:
 
     def _route_film(self, tr, question, plan, ev):
         found = []
+        comparison_set = False
         # A question like "which Spielberg film ..." names a director and no
         # film; the planner may put that name in `person`, or only in
         # `entities`. Rather than depend on which field it chose, every name
@@ -696,6 +776,19 @@ class Agent:
                     # known by construction -- it is simply not a column.
                     row.setdefault("@dirs", []).append(name)
                     found.append(row)
+        if not found:
+            # No film name and no director: the question is about the films as a
+            # set -- "which earned the most on its budget", "which was the most
+            # expensive". Comparing them needs the rows, so fetch the ones that
+            # state both figures and let the arithmetic below decide. This is
+            # the gap that sent such a question to a vector search over prose.
+            comparison_set = True
+            found = rows(tr.run_query("films_with_figures", {"currency": ""}), "Res")
+            ev["notes"].append(
+                f"the question named no film and no director, so every film whose "
+                f"article states both a budget and a gross in one currency was "
+                f"loaded for comparison: all {len(found)} of the 546 films in the "
+                f"corpus that state both.")
         films, seen_films = [], set()
         for f in found:
             if f.get("film_id") in seen_films:
@@ -715,6 +808,40 @@ class Agent:
                 row["gross_over_budget"] = round(gross / budget, 3)
             films.append(row)
             self._cite(ev, f.get("film_id", ""), f.get("name", ""))
+        # "Which film made the most on its budget" is a comparison over rows the
+        # query already returned, so it is arithmetic and not retrieval. The
+        # arithmetic runs over every film loaded; only the films it puts on the
+        # board are then shown and cited, because 200 film rows is ~8,700
+        # tokens and 200 citations say nothing about which document carries the
+        # answer.
+        self._add_tally(ev, "gross divided by budget, films where both figures are "
+                            "stated in the same currency", "times its budget",
+                        [(f["name"], f.get("gross_over_budget")) for f in films])
+        # Gross is grouped by currency and never pooled: 714,000,000 rupees
+        # above 678,000,000 dollars is not a bigger film, and a label asking
+        # the reader to be careful is no substitute for not mixing them.
+        by_ccy: dict[str, list] = {}
+        for f in films:
+            if f["gross_stated"]:
+                by_ccy.setdefault(f.get("gross_currency") or "currency not stated",
+                                  []).append((f["name"], f["gross"]))
+        for ccy, pairs in sorted(by_ccy.items(), key=lambda kv: -len(kv[1])):
+            if len(pairs) > 1:
+                self._add_tally(ev, f"box-office gross in {ccy}", ccy, pairs)
+        if comparison_set:
+            on_the_board = {name for t in ev.get("tallies", [])
+                            for name, _ in t["ranked"]}
+            on_the_board |= {n for t in ev.get("tallies", [])
+                             for n in t["highest"]["holders"] + t["lowest"]["holders"]}
+            kept = [f for f in films if f["name"] in on_the_board]
+            ev["notes"].append(
+                f"the arithmetic above covers all {len(films)} films; the "
+                f"{len(kept)} that it names are shown and cited in full, and the "
+                f"rest are not, because a citation list of every film compared "
+                f"says nothing about which document carries the answer.")
+            films = kept
+            ev["citable"] = {k: v for k, v in ev["citable"].items()
+                             if k in {f["film_id"] for f in kept}}
         ev["films"] = films
         if not films:
             ev["notes"].append("no film article in the corpus matches that title or director; "
@@ -1114,6 +1241,31 @@ class Agent:
     def render(self, ev: dict) -> str:
         """The evidence block, as compact text. Only what was retrieved."""
         parts = [f"ROUTE: {ev['route']}"]
+        for t in ev.get("tallies", []) or []:
+            hi, lo = t["highest"], t["lowest"]
+            parts.append(f"ARITHMETIC ALREADY DONE FOR YOU -- {t['what']}, in {t['unit']}. "
+                         f"These figures come from counting the rows below, not from a "
+                         f"model; use them as they stand.")
+            parts.append(f"  MOST: {hi['value']} -- "
+                         + (f"{hi['holders'][0]}" if len(hi["holders"]) == 1
+                            else f"A TIE between {len(hi['holders'])}: "
+                                 + ", ".join(hi["holders"])))
+            # The floor of a long tail is usually a tie between hundreds -- 598
+            # athletes won exactly one medal in 2024 -- and listing them costs
+            # tokens for nothing. Say how many are level and name them only
+            # while the list is short enough to be the answer to something.
+            if len(lo["holders"]) == 1:
+                parts.append(f"  FEWEST: {lo['value']} -- {lo['holders'][0]}")
+            elif len(lo["holders"]) <= 6:
+                parts.append(f"  FEWEST: {lo['value']} -- a tie between "
+                             f"{len(lo['holders'])}: " + ", ".join(lo["holders"]))
+            else:
+                parts.append(f"  FEWEST: {lo['value']}, held by {len(lo['holders'])} "
+                             f"entries level at the bottom (not listed)")
+            parts.append(f"  TOTAL: {t['total']} across {t['entries']} entries"
+                         + (f"; {t['dropped']} further entries do not state a figure "
+                            f"and were left out of the arithmetic" if t["dropped"] else ""))
+            parts.append("  RANKED: " + ", ".join(f"{k}={v}" for k, v in t["ranked"]))
         if ev.get("series"):
             s = ev["series"]
             parts.append(f"EVENT SERIES: {s.get('event_name')} ({s.get('sport_key')}) "

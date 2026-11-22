@@ -390,6 +390,43 @@ CREATE OR REPLACE QUERY film_search(STRING fragment) FOR GRAPH {GRAPH} SYNTAX v3
 }}
 """)
 
+FILMS_WITH_FIGURES = _q(f"""
+CREATE OR REPLACE QUERY films_with_figures(STRING currency) FOR GRAPH {GRAPH} SYNTAX v3 {{
+  /* Every film whose article states BOTH a budget and a gross, so that
+     "which film earned the most relative to its budget" is a comparison over
+     rows rather than a guess from prose.
+
+     Round 1 measured this exact shape: superlatives answered from retrieved
+     text scored 1 of 21, while the same figures compared in code scored 21 of
+     21. Without this query the film route needs a film name or a director to
+     start from, so a question that names neither and asks about all of them
+     fell through to a vector search over article text -- which found a
+     plausible film and a ratio the model worked out from prose.
+
+     -1 is the corpus's "not stated"; both figures must be present and in the
+     same currency, because a ratio across currencies is not a ratio. Passing
+     currency = "" takes whatever currency each film states and leaves the
+     comparison to the caller, which is what the agent does when the question
+     names no currency. */
+  SetAccum<STRING> @dirs;
+  Res = SELECT f FROM Film:f
+        WHERE f.budget > 0 AND f.gross > 0
+          AND f.budget_currency == f.gross_currency
+          AND (currency == "" OR f.gross_currency == currency);
+  /* No LIMIT, deliberately. With `LIMIT 200` over the ~250 films that qualify,
+     two runs of the same question put different films in the set -- one run
+     made Primer the answer at 120x its budget, the next made Napoleon Dynamite
+     at 115x, because Primer was not in the second sample. An answer that
+     changes between runs fails the one thing a judge checks by hand. The
+     corpus holds 546 films in total, so the complete set is small enough to
+     return and the caller shows only the films the arithmetic names. */
+  X   = SELECT f FROM Res:f -(<DIRECTED_FILM:d)- Person:p
+        ACCUM f.@dirs += p.name;
+  PRINT Res[Res.film_id, Res.name, Res.year, Res.released, Res.budget, Res.gross,
+            Res.budget_currency, Res.gross_currency, Res.@dirs];
+}}
+""")
+
 CLAIMS_BY_SLOT = _q(f"""
 CREATE OR REPLACE QUERY claims_by_slot(STRING slot_subject) FOR GRAPH {GRAPH} SYNTAX v3 {{
   /* Slot completion -- the step that decides the conflict questions.
@@ -525,6 +562,7 @@ ALL_QUERIES = [
     ("athlete_search", ATHLETE_SEARCH),
     ("person_search", PERSON_SEARCH),
     ("film_search", FILM_SEARCH),
+    ("films_with_figures", FILMS_WITH_FIGURES),
     ("claims_by_slot", CLAIMS_BY_SLOT),
     ("claims_search", CLAIMS_SEARCH),
     ("sources_for_event", SOURCES_FOR_EVENT),
