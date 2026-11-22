@@ -16,14 +16,26 @@ assembled by hand.
 
 ```bash
 cp .env.example .env            # fill in GOOGLE_API_KEY; the rest has working defaults
-./build.sh corpus.jsonl         # Docker, schema, 31 queries, 3,530 documents, 16,377 vectors
+./build.sh corpus.jsonl         # Docker, schema, 32 queries, 3,530 documents, 16,377 vectors
+                                # ends by running tests/test_r2.py and src.r2.smoke
 ./run.sh questions_public.jsonl data/results/r2/answers_public.jsonl
 ./run.sh questions_hidden.jsonl data/results/r2/answers_hidden.jsonl
 python -m src.r2.score questions_public.jsonl data/results/r2/answers_public.jsonl
 python -m src.r2.metrics
+python -m src.r2.audit data/results/r2/answers_public.jsonl
+python -m src.r2.audit data/results/r2/answers_hidden.jsonl
 python -m src.r2.check questions_public.jsonl data/results/r2/answers_public.jsonl
 python -m src.r2.check questions_hidden.jsonl data/results/r2/answers_hidden.jsonl
 ```
+
+Or `./finish.sh`, which does all of it unattended and waits for the quota
+first.
+
+Three of those need neither a model nor a key, which is why they are worth
+running often: `tests/test_r2.py` (21 pure-function checks), `src.r2.smoke`
+(all ten route cases against the live graph) and `src.r2.audit` (each answer
+held against the arithmetic its own record carries). The audit is the only
+check the hidden set gets, because it ships with no answers.
 
 `check` is the gate: it verifies every trace against the brief's constraints,
 that each question has exactly one real answer, that every TigerGraph step has
@@ -34,9 +46,13 @@ fails, so it can be run before submitting and believed.
 ## Free-tier quota, and how a run survives it
 
 The free Gemini tier allows **500 generate_content requests per day per
-model**. A 50-question run makes roughly 200, so one day's quota covers both
-runs with room to spare — but it does not cover both runs *plus* several
-rehearsals, and when it runs out it runs out mid-run.
+model**. Per *model* matters: the answering model is `gemini-3.1-flash-lite`
+and the judge is `gemini-3.1-flash-lite-preview`, a different id and so a
+different pool, so scoring the public set costs nothing from the budget the
+runs need. A 50-question run makes roughly 120, so one day covers both runs
+with room to spare — but it does not cover both runs *plus* several rehearsals,
+and when it runs out it runs out mid-run. The 429 body says exactly when it
+comes back (`retryDelay`, in seconds), which is better than guessing.
 
 `run.py` handles this rather than thrashing against it:
 
@@ -46,6 +62,10 @@ rehearsals, and when it runs out it runs out mid-run.
 - `--resume` keeps the answers already in the output file and answers only
   what is missing, so a reset day is not spent redoing work. A record counts
   as done only if it has a trace, so a failed question is always retried.
+  **It is for recovering a run, not for producing a submission**: the two
+  submitted files are each written by one process on one code version, because
+  a judge re-running the command on a file assembled across two versions gets
+  answers that do not match it.
 - A resumed run **appends** to the same query log, because the lines for the
   answers it is keeping are already in it.
 
@@ -70,8 +90,24 @@ python -m src.r2.run questions_public.jsonl data/results/r2/answers_public.jsonl
 - [ ] `.env` is not committed; `.env.example` lists every key
 - [ ] the git tag points at the commit that produced both answer files
 
+## Before submitting, also
+
+- [ ] `python -m src.r2.audit` read on both files, and every line of its
+      worklist either explained or fixed
+- [ ] `python -m src.r2.smoke` green on all ten routes
+- [ ] `python -m tests.test_r2` green
+
 ## For the judging call
 
+- `python -m src.r2.ask "<their question>"` answers one question and prints the
+  route, every step, the installed query behind each one and the token counts.
+  It takes the question as an argument, so there is no id and nothing to look
+  up — the same code path answers an unseen question and a submitted one.
+- `./offline.sh "<their question>"` does the same with **no API key and no
+  network**: planning, selection and composition on a local Ollama model, the
+  local graph and the local embedder. 123s a question on an M4/16GB against 16s
+  on Gemini. It is the answer to a quota wall on the day, and it is worth
+  showing for its own sake.
 - `./ui.sh` opens the demo page. It reads the graph live, so it cannot show a
   stale number.
 - The container keeps its data in the named volume `tg_r2_data`, so the graph

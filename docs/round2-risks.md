@@ -28,6 +28,16 @@ validates unattended.
 
 **Open:** run it. ~260 requests for a clean 50 + 50, inside one day's 500.
 
+**Measured 22 Nov:** the daily cap is **per model**, not per key. The answering
+model is `gemini-3.1-flash-lite` and the judge is
+`gemini-3.1-flash-lite-preview`, which is a different id and therefore a
+different 500/day pool -- so scoring the public set does not spend any of the
+budget the two runs need. The run plan for the day is ~240 requests on the
+answering model (both sets, now that `event_series` costs one model call fewer)
+and ~50 on the judge, against 500 each. The exhausted quota returns at **13:36
+IST on 23 Nov**, which is not a guess: the 429 body carries
+`retryDelay: 56168s`.
+
 **Changed 22 Nov:** the public set is no longer resumed. Both files must come
 from one code version or a judge re-running the command gets answers that do
 not match the submitted ones, and the evidence block has changed since the
@@ -150,6 +160,17 @@ retrieved evidence, so the failure mode left is over- or under-citing real
 documents.
 
 ## 7. Hidden-set question families handled worse than the public ones — *40%*
+
+**Partly closed 22 Nov:** the hidden set now gets two checks that need no gold
+answers and no quota. `python -m src.r2.audit` holds each answer against the
+arithmetic its own record carries and prints a worklist worst-first — a figure
+the query never computed, a tie reported as one holder, a status contradicting
+its own text, a route whose queries all returned nothing. `python -m
+src.r2.smoke` proves all ten route cases still return evidence from the graph
+before a run is paid for; it caught `event_series` returning 758 rows and
+citing none of them. Neither replaces reading the answers, and the three
+filters below still apply.
+
 
 **Cost:** the hidden set is what is actually scored, and we cannot measure
 against it.
