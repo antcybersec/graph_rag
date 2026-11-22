@@ -11,3 +11,5 @@
 # Locally, use requirements.lock.txt instead: the live page needs the database
 # client and the embedding model.
 streamlit==1.63.0
+plotly==7.0.0
+narwhals==2.25.0

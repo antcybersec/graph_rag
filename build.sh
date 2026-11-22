@@ -21,11 +21,24 @@ say() { printf '\n== %s\n' "$*"; }
 [ -f "$CORPUS" ] || { echo "corpus not found: $CORPUS" >&2; exit 1; }
 
 say "python environment"
-if [ ! -d .venv ]; then python3 -m venv .venv; fi
+# Name the interpreter requirement rather than inheriting whatever `python3`
+# happens to be. The pinned tree needs 3.10+ (aiohappyeyeballs, a transitive
+# dependency of the Google client, requires it) and was built and run on 3.12;
+# on a machine whose `python3` is 3.9 the install fails deep in dependency
+# resolution with a message about a version of a package nobody has heard of.
+PY="${PYTHON:-python3}"
+PY_OK=$("$PY" -c 'import sys; print(1 if sys.version_info[:2] >= (3, 10) else 0)' 2>/dev/null || echo 0)
+if [ "$PY_OK" != "1" ]; then
+  echo "need Python 3.10 or newer (3.12 is what this was built and run on)." >&2
+  echo "found: $("$PY" --version 2>&1 || echo "no $PY on PATH")" >&2
+  echo "point PYTHON at a newer interpreter, e.g. PYTHON=python3.12 ./build.sh $CORPUS" >&2
+  exit 1
+fi
+if [ ! -d .venv ]; then "$PY" -m venv .venv; fi
 # shellcheck disable=SC1091
 source .venv/bin/activate
 pip install --quiet --upgrade pip
-pip install --quiet -r requirements.lock.txt
+pip install --quiet -r requirements-r2.txt
 export TOKENIZERS_PARALLELISM=false
 
 say "TigerGraph container ($IMAGE)"
