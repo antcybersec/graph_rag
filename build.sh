@@ -80,4 +80,11 @@ python -m src.r2.load "$CORPUS"
 say "graph counts (submission deliverable 6)"
 python -m src.r2.counts
 
+# Pure functions first, then the graph. Both are free: no model and no quota.
+# A build that loaded cleanly and a route that has quietly stopped matching
+# look identical until a run costs 130 requests to tell you apart.
+say "checks (no model, no quota)"
+python -m tests.test_r2
+python -m src.r2.smoke || echo "  one or more routes returned nothing -- read the lines above"
+
 say "done"

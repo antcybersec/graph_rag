@@ -467,6 +467,20 @@ class Agent:
         """
         cands = rows(tr.run_query("series_by_sport", {"sport_key": plan.sport_key}), "Res")
         narrowed = _narrow(plan.event_phrase, cands, "event_name", limit=30)
+        # If the phrase the planner extracted already *is* a contest the graph
+        # holds, there is nothing to choose: a second model call can only agree
+        # or be wrong, and it was wrong -- on "Men's 100 metres", with
+        # `athletics|men s 100 metres` sitting in the candidate list, a weaker
+        # model rejected every candidate and the route reported the corpus does
+        # not hold the contest. This compares the model's own phrase against
+        # graph keys, never the question, which is the same thing the nation
+        # lookup in `_route_sport_games` does.
+        want = (plan.event_phrase or "").strip().lower()
+        exact = [c for c in narrowed
+                 if want and (str(c.get("event_name", "")).strip().lower() == want
+                              or norm_key(str(c.get("event_name", ""))) == norm_key(want))]
+        if exact:
+            return exact[0]
         picked = self._select(tr, question, "event series", narrowed,
                               "series_key", ["sport_key", "event_name"])
         if not picked and plan.sport_key:
@@ -501,6 +515,10 @@ class Agent:
             return None
         if len(found) == 1:
             return found[0]["athlete_key"]
+        # Same shortcut as the event series: an exact key match is not a choice.
+        exact = [r for r in found if r.get("athlete_key") == key]
+        if exact:
+            return exact[0]["athlete_key"]
         picked = self._select(tr, question, "athlete", found[:40], "athlete_key", ["name"])
         return picked[0] if picked else None
 
