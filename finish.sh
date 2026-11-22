@@ -33,11 +33,13 @@ done
 # Nothing should start while the agent is still being edited: the gate is a
 # file, so clearing it is a one-liner from another terminal.
 FREEZE="${FREEZE:-.freeze}"
-if [ -f "$FREEZE" ]; then
+hold() {
+  [ -f "$FREEZE" ] || return 0
   say "held: $FREEZE exists (the code is still being changed). Waiting for it to go."
   until [ ! -f "$FREEZE" ]; do sleep 60; done
   say "freeze lifted"
-fi
+}
+hold
 
 say "waiting for the model quota (one probe every ${PROBE_EVERY}s, giving up after ${MAX_WAIT_HOURS}h)"
 deadline=$(( $(date +%s) + MAX_WAIT_HOURS * 3600 ))
@@ -62,6 +64,10 @@ except Exception as e:
   sleep "$PROBE_EVERY"
 done
 say "quota is back"
+# Checked again here, not only at startup. The wait is hours long and the
+# first check happened before the night's editing: a quota reset arriving
+# mid-edit would otherwise have started a submission run on half-changed code.
+hold
 
 if ! docker ps --format '{{.Names}}' | grep -qx "$CONTAINER"; then
   say "starting TigerGraph"

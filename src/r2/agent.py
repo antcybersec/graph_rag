@@ -131,6 +131,11 @@ Guidance that is about the data, not about any particular question:
   which nation won the most *silver* medals is not a question about medals.
 - `as_of` is set only when the question pins a moment ("as of 2 July 2028"),
   as a full ISO date.
+- `years` holds every year the question names, as integers: "the 2004, 2008,
+  2012 and 2016 Olympics" is `years: [2004, 2008, 2012, 2016]`. A bare year
+  belongs here and **never** in `dates`, and never as a made-up day: writing
+  2004 as "2004-08-15" invents a date the question did not give and leaves
+  `years` empty, so the editions the question asks about are never checked.
 - `dates` holds every date the question mentions in full ISO form
   (YYYY-MM-DD), including dates it attributes to a document ("a blog
   published on July 24", "the July 27 directory entry"). When a question
@@ -197,6 +202,34 @@ status:
                  sources say, and the unconfirmed value is the missing part.
   not_in_corpus  the corpus does not contain the answer
 
+  The status turns on **how much of what the question asked for you can
+  state** -- not on how much you found out, and not on how good your
+  explanation is.
+
+    answered       you can state all of it
+    partial        you can state some of it and not the rest
+    not_in_corpus  you can state none of it
+
+  Explaining *why* something is missing is not stating it. These four are the
+  calibration, and three of them look partial until you ask what was
+  requested:
+
+  - "Who won the men's +100 kg judo at the 2004, 2008, 2012 and 2016 Games?"
+    The corpus holds three of the four editions. Four things were asked and
+    you can state three -> **partial**.
+  - "What do the accounts say about an equipment stoppage, and what is
+    confirmed?" Two things were asked. You can say what the accounts claim;
+    nothing is confirmed -> **partial**.
+  - "Which two athletes registered but did not start?" One thing was asked:
+    the names. The entry list gives anonymous reserve slots, so you can state
+    none of it -> **not_in_corpus**, even though you can say that two of
+    forty-two did not start and cite the document that shows it. That
+    sentence is the reason, not the answer.
+  - "Exactly how long was the officially confirmed stoppage?" One thing was
+    asked: a confirmed duration. There is none -> **not_in_corpus**, even
+    though two unverified figures exist and the official record says neither
+    was logged. Say all of that, cite it, and keep the status honest.
+
 answer:
   Plain text, complete and compact. Give every fact the question asks for.
   When the question asks for a list, give every item in the evidence and
@@ -241,6 +274,21 @@ Reading the evidence:
 citations: the doc_ids from CITABLE DOCUMENTS that actually support your
 answer. Only ids from that list. An answered or partial answer needs at
 least one.
+
+  **not_in_corpus needs them too, whenever a document is what establishes the
+  gap** -- the entry list that names only anonymous reserve slots, the official
+  record stating that no duration was logged. Cite a document only if that
+  document *itself* demonstrates the gap. A document that merely failed to
+  contain the answer is not evidence of anything: forty event articles that do
+  not mention a relay are not why the relay is missing, and citing them says
+  you do not know which document carries the finding. When the corpus holds
+  nothing on the subject at all, cite nothing.
+
+  **When the answer is that sources disagree, cite every source in the
+  disagreement.** The disagreement is the answer, so a reader checking it needs
+  all of them -- the account claiming eleven minutes, the account claiming
+  fourteen, and the record saying neither was logged. Citing one of the three
+  is a third of an answer.
 
   Cite what a reader would have to check to confirm the answer -- no more and
   no less. For a count or a total, that is the records counted, not every
@@ -1512,13 +1560,28 @@ class Agent:
             status = "not_in_corpus"
             note = (note + "; " if note else "") + "the composer returned no answer text"
         if status in ("answered", "partial") and not citations:
-            # Nothing retrieved supports it. Either the evidence was empty, in
-            # which case the corpus does not hold it, or the model answered
-            # from somewhere other than the evidence -- and that is exactly
-            # the invented answer the brief scores zero.
-            status = "not_in_corpus"
-            note = (note + "; " if note else "") + \
-                "no retrieved document supported the answer, so it cannot stand as answered"
+            # Two very different situations, and treating them alike cost a
+            # correct answer. When nothing was retrieved, an answer has
+            # nothing behind it and the corpus does not hold it -- that is the
+            # invented answer the brief scores zero, so it becomes
+            # not_in_corpus. But when documents *were* retrieved and the
+            # composer simply named none of them, the answer is not invented;
+            # the citation step failed. r2-pub-029 is the case: a correct
+            # account of which editions of the men's +100 kg judo the corpus
+            # holds, with Teddy Riner named twice from retrieved passages, and
+            # no citations. Discarding it lost the accuracy mark, the honesty
+            # mark and the citation mark together, where keeping it loses only
+            # the citation mark. So it is kept and demoted, and it says so.
+            if not ev["citable"]:
+                status = "not_in_corpus"
+                note = (note + "; " if note else "") + \
+                    "nothing was retrieved, so the answer has no support in the corpus"
+            else:
+                status = "partial"
+                note = (note + "; " if note else "") + \
+                    (f"the answer stands but no citation does: {len(ev['citable'])} "
+                     f"document(s) were retrieved and the composer identified none of "
+                     f"them as supporting it")
         return status, citations, note
 
     # -- one question -------------------------------------------------------

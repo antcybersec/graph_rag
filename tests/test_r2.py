@@ -89,12 +89,28 @@ def test_gate_drops_a_citation_that_was_never_in_the_evidence():
     assert "Q999" in note, note
 
 
-def test_gate_refuses_an_answer_with_no_surviving_citation():
+def test_gate_refuses_an_answer_when_nothing_at_all_was_retrieved():
+    """No evidence and a confident answer is the invented answer the brief
+    scores zero."""
     status, cites, note = _gate(
-        Composed(status="answered", explanation="", answer="USA", citations=["Q999"]), {"Q1": "t"})
+        Composed(status="answered", explanation="", answer="USA", citations=["Q999"]), {})
     assert status == "not_in_corpus", status
     assert cites == []
-    assert "cannot stand as answered" in note, note
+    assert "no support in the corpus" in note, note
+
+
+def test_gate_keeps_an_uncited_answer_when_documents_were_retrieved():
+    """r2-pub-029: a correct account of which editions of the men's +100 kg
+    judo the corpus holds, Teddy Riner named twice from retrieved passages,
+    and no citations. Discarding it lost the accuracy, honesty and citation
+    marks together; demoting it loses only the citation mark."""
+    status, cites, note = _gate(
+        Composed(status="partial", explanation="",
+                 answer="Teddy Riner won in 2012 and 2016; 2004 and 2008 are missing.",
+                 citations=["Q999"]), {"Q1005663": "Judo at the 2012 Games"})
+    assert status == "partial", status
+    assert cites == []
+    assert "no citation does" in note, note
 
 
 def test_gate_refuses_an_empty_answer():
@@ -195,8 +211,18 @@ def test_audit_accepts_a_tie_that_is_named_as_one():
 def test_audit_catches_a_status_that_contradicts_its_own_text():
     assert any("refusal" in f for f in
                audit_one(_rec(answer="The corpus does not state this.")))
-    assert any("not_in_corpus with citations" in f for f in
-               audit_one(_rec(status="not_in_corpus", answer="")))
+
+
+def test_audit_accepts_not_in_corpus_that_cites_the_documents_showing_the_gap():
+    """The public set's own key gives gold documents for two of its four
+    not_in_corpus questions: the entry list naming only anonymous reserve
+    slots, and the three accounts each reporting a different unverified
+    duration. The documents are what establish the gap, so citing them is
+    right -- and a check that called it a defect would push the system toward
+    citing nothing on the questions where citations are worth most."""
+    assert audit_one(_rec(status="not_in_corpus",
+                          answer="The corpus does not establish a duration.",
+                          citations=["SYN-LA28-S003", "SYN-LA28-S027"])) == []
 
 
 def test_audit_catches_a_route_that_retrieved_nothing():

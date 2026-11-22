@@ -137,6 +137,20 @@ country name truncated to `JAP`, a grounding rule that read `10 m` and
 **Done:** all seven defects fixed; each affected question retested
 individually and 12 of 15 now answer correctly.
 
+**Corrected 22 Nov:** the 40/50 figure was wrong. It counted 25 placeholder
+records, written before `run.py` learned to stop dead on a quota error, as
+wrong statuses. Measured against the public set's own `status` field on the 25
+real answers, status was **25 of 25 correct**. Over-abstention is therefore not
+the demonstrated problem it was recorded as -- but it is also untested, because
+all six public questions that are not plain `answered` (four `not_in_corpus`,
+two `partial`) fall in the half that has not been run.
+
+Two of those four `not_in_corpus` questions carry **gold documents**
+(r2-pub-046, r2-pub-049): the correct answer cites the documents that establish
+the gap. The composer is now told so explicitly, and the audit no longer treats
+`not_in_corpus` with citations as a defect -- a check that would have pushed the
+system toward citing nothing on the questions where citations are worth most.
+
 **Open:** re-measure on a complete run. The number to watch is `status_correct`,
 which was 40/50.
 

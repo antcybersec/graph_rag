@@ -128,8 +128,14 @@ def audit_one(record: dict) -> list[str]:
                          f"({sorted(known)[:8]})")
 
     # 4. status against the text
-    if status == "not_in_corpus" and record.get("citations"):
-        flags.append("not_in_corpus with citations attached")
+    #
+    # Note what is NOT flagged here. `not_in_corpus` with citations attached is
+    # correct, not a defect: the public set's own key gives gold documents for
+    # two of its four not_in_corpus questions (r2-pub-046, r2-pub-049), because
+    # the documents are what establish that the corpus does not settle it. An
+    # earlier version of this check called that a problem, which would have
+    # pushed the system toward citing nothing on exactly the questions where
+    # citations are worth most.
     if status == "answered" and any(p in answer.lower() for p in _REFUSAL):
         flags.append("status is answered but the answer reads like a refusal")
     if status in ("answered", "partial") and not answer.strip():
