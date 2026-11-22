@@ -116,7 +116,19 @@ Guidance that is about the data, not about any particular question:
   date. The LA 2028 material (2028 and later) is where this lives.
 - `entities` lists the proper names and distinctive phrases the question
   mentions -- people, nations, documents, anything that could be searched
-  for. Include surnames on their own as well as full names.
+  for. Include surnames on their own as well as full names. **At most eight,
+  each one different.** Repeating a phrase in another word order adds nothing
+  and crowds out the search.
+- `extreme` is "most" or "fewest" when the question asks which record is
+  highest or lowest on some figure, and "" otherwise. Set it even when you
+  have also named the thing being compared: it is what tells the system to
+  compare the whole set rather than look one record up.
+- `metric` names the figure being compared, in the question's own words --
+  "gold medals", "nations", "competitors", "gross", "gross over budget" --
+  and is "" when nothing is being compared.
+- `medal` is "gold", "silver" or "bronze" when the question is about one
+  colour, and "" when it is about medals of any colour. A question asking
+  which nation won the most *silver* medals is not a question about medals.
 - `as_of` is set only when the question pins a moment ("as of 2 July 2028"),
   as a full ISO date.
 - `dates` holds every date the question mentions in full ISO form
@@ -454,6 +466,27 @@ class Agent:
             plan.sport_key = ""      # the planner may only use real keys
         if plan.season not in ("Summer", "Winter"):
             plan.season = ""
+        if plan.medal.lower() not in ("gold", "silver", "bronze"):
+            plan.medal = ""
+        else:
+            plan.medal = plan.medal.lower()
+        if plan.extreme.lower() not in ("most", "fewest"):
+            plan.extreme = ""
+        else:
+            plan.extreme = plan.extreme.lower()
+        # Deduplicate and cap the entity list. A model asked for "the proper
+        # names and distinctive phrases" can loop: one rehearsal question came
+        # back with 170 reorderings of "Brisbane 2032 Olympics", the last of
+        # them truncated mid-string. That is prompt weight and stored-plan
+        # weight for nothing, and the searches it drives are the same search
+        # eight times. Order is kept, so the first mention still wins.
+        seen, kept = set(), []
+        for e in plan.entities:
+            k = (e or "").strip()
+            if k and k.lower() not in seen:
+                seen.add(k.lower())
+                kept.append(k)
+        plan.entities = kept[:8]
         return plan
 
     # -- entity resolution --------------------------------------------------
@@ -647,10 +680,21 @@ class Agent:
         counts = scalar(medal_res, "counts_by_noc", {}) or {}
         ev["medals_by_nation"] = {"medal": plan.medal or "", "counts": counts,
                                   "by_medal": scalar(medal_res, "counts_by_noc_and_medal", {}) or {}}
-        self._add_tally(ev, f"{plan.medal or 'all'} medals by nation, {plan.sport_key} at "
-                            f"{year} {plan.season or 'Summer'}",
+        where = f"{plan.sport_key} at {year} {plan.season or 'Summer'}"
+        self._add_tally(ev, f"{plan.medal or 'all'} medals by nation, {where}",
                         f"{plan.medal or 'medals (gold+silver+bronze)'}",
                         sorted(counts.items()))
+        # And one tally per colour, always -- not only when the plan named a
+        # colour. "Which nation won the most silver medals" with an empty
+        # `medal` field tallies every medal together, so the arithmetic says
+        # 28 for the USA while the answer says 13, and a wrong colour would
+        # have passed the same check. The breakdown is already in hand; this
+        # makes each colour arithmetic instead of something read off a row.
+        for colour in ("gold", "silver", "bronze"):
+            self._add_tally(ev, f"{colour} medals by nation, {where}", colour,
+                            sorted((noc, (per or {}).get(colour, 0))
+                                   for noc, per in (ev["medals_by_nation"]
+                                                    .get("by_medal") or {}).items()))
         if plan.nation:
             # The NOC is chosen from the codes that actually won something
             # here, not derived from the country name. Truncating the name to
@@ -794,19 +838,29 @@ class Agent:
                     # known by construction -- it is simply not a column.
                     row.setdefault("@dirs", []).append(name)
                     found.append(row)
-        if not found:
+        if not found or plan.extreme:
             # No film name and no director: the question is about the films as a
             # set -- "which earned the most on its budget", "which was the most
             # expensive". Comparing them needs the rows, so fetch the ones that
             # state both figures and let the arithmetic below decide. This is
             # the gap that sent such a question to a vector search over prose.
+            # ...or the plan asked which film is highest or lowest on some
+            # figure, in which case a name that happened to match is not the
+            # answer. "Of the films in this corpus, which made the least
+            # relative to what it cost" put "all" in the film field; a
+            # substring search on "all" matched the films with "all" in their
+            # titles, and the comparison ran over those. The answer named a
+            # film that was not the right one and cited one document.
             comparison_set = True
-            found = rows(tr.run_query("films_with_figures", {"currency": ""}), "Res")
+            whole = rows(tr.run_query("films_with_figures", {"currency": ""}), "Res")
+            have = {f.get("film_id") for f in found}
+            found = found + [f for f in whole if f.get("film_id") not in have]
             ev["notes"].append(
-                f"the question named no film and no director, so every film whose "
-                f"article states both a budget and a gross in one currency was "
-                f"loaded for comparison: all {len(found)} of the 546 films in the "
-                f"corpus that state both.")
+                f"the comparison covers every film whose article states both a "
+                f"budget and a gross in one currency -- all {len(whole)} of the 546 "
+                f"films in the corpus that state both"
+                + (f", plus {len(have)} matched by name" if have else "")
+                + ".")
         films, seen_films = [], set()
         for f in found:
             if f.get("film_id") in seen_films:

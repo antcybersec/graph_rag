@@ -30,6 +30,7 @@ second and needs no quota.
 from src.r2.agent import Agent, Composed, _tally, _within_a_day
 from src.r2.audit import audit_one
 from src.r2.claims import canon_units
+from src.r2.parse import _money
 
 
 # -- the arithmetic the composer is not allowed to do -----------------------
@@ -210,6 +211,106 @@ def test_audit_ignores_a_year_that_is_not_arithmetic():
     flags = audit_one(_rec(answer="At the 2024 Summer Olympics the USA won 14.",
                            computed=_golds()))
     assert flags == [], flags
+
+
+def test_audit_ignores_a_number_that_is_part_of_an_event_name():
+    """"Men's 100 metres" is a name, not arithmetic. Flagging the 100 buries
+    the flag that matters."""
+    flags = audit_one(_rec(route="repeat_champions",
+                           answer="Usain Bolt and Carl Lewis both won 3 times "
+                                  "(Men's 100 metres, Men's long jump).",
+                           computed=[{"what": "Games won", "unit": "Games",
+                                      "highest": {"value": 3,
+                                                  "holders": ["Usain Bolt | Men's 100 metres",
+                                                              "Carl Lewis | Men's long jump"]},
+                                      "lowest": {"value": 2, "holders": ["x"]},
+                                      "total": 67, "entries": 31}]))
+    assert flags == [], flags
+
+
+def test_audit_does_not_flag_a_widening_that_ended_in_not_in_corpus():
+    """Widening and then reporting the corpus does not hold it is the route
+    working, not a defect."""
+    steps = [{"step": 1, "tool": "coverage_check", "tigergraph": True, "rows": 1},
+             {"step": 2, "tool": "vector_search_chunks", "tigergraph": True, "rows": 8}]
+    assert audit_one(_rec(status="not_in_corpus", answer="", citations=[],
+                          trace=steps)) == []
+    assert any("full-text" in f for f in
+               audit_one(_rec(status="answered", answer="Paris.", trace=steps)))
+
+
+# -- money, which decides every budget and box-office answer ----------------
+
+def test_a_parenthetical_conversion_does_not_multiply_the_real_figure():
+    """"£800,000, ($1.4 million)" was read as £800,000,000,000, because the
+    first number was found here and the magnitude word in the conversion. The
+    currency came out USD from a dollar sign belonging to the conversion."""
+    assert _money("\u00a3800,000, ($1.4 million)") == (800000.0, "GBP")
+    assert _money("11 billion(11 million)") == (11000000000.0, "")
+
+
+def test_a_range_of_two_magnitudes_keeps_the_lower_bound_unmultiplied():
+    """"$600,000-$1 million" gave a Texas Chainsaw sequel a $600 billion
+    budget. A range's upper bound is never below its lower bound, so a
+    magnitude word after a smaller second number cannot apply to the first."""
+    assert _money("$600,000\u2013$1 million") == (600000.0, "USD")
+
+
+def test_a_range_of_one_magnitude_still_multiplies():
+    """"89-97 million" is one magnitude across both bounds: 97 > 89, so the
+    word applies to the range and the lower bound is 89 million, not 89."""
+    assert _money("89\u201397 million") == (89000000.0, "")
+    assert _money("Rs 10-12 crores") == (100000000.0, "INR")
+
+
+def test_a_magnitude_word_glued_to_the_next_token_still_counts():
+    """This corpus writes "$3 million14" with a footnote marker attached and
+    "19 croredistributor share" running into the next word. Requiring a word
+    boundary on the right of the magnitude lost both, giving a $3 budget and a
+    19-rupee gross."""
+    assert _money("$3 million14") == (3000000.0, "USD")
+    assert _money("19 croredistributor share") == (190000000.0, "INR")
+
+
+def test_a_magnitude_with_no_space_before_it_still_counts():
+    """This corpus writes "$55million" and "$65-70million" with no space.
+    Requiring a word boundary on the left gave Forrest Gump a $55 budget and
+    Saving Private Ryan a $65 one -- both out by a factor of a million, and
+    both prominent enough to be asked about."""
+    assert _money("$55million") == (55000000.0, "USD")
+    assert _money("$65\u201370million") == (65000000.0, "USD")
+    assert _money("$678million") == (678000000.0, "USD")
+
+
+def test_an_unknown_abbreviation_is_left_alone():
+    """Chalte Chalte's infobox reads "11 c". That is probably crore, and
+    probably is not good enough: guessing would be inventing a figure the
+    corpus does not state. Both of its figures carry the same unknown unit, so
+    their ratio survives and the absolute value is honestly unscaled."""
+    assert _money("11 c") == (11.0, "")
+
+
+def test_a_magnitude_misspelled_in_the_source_still_counts():
+    """"\u00a3218.5 milion($245.7 million)" is misspelled in the corpus. Reading
+    it literally gave Four Weddings and a Funeral a gross of \u00a3218.50."""
+    assert _money("\u00a3218.5 milion($245.7 million)") == (218500000.0, "GBP")
+
+
+def test_a_multi_part_budget_takes_the_first_component():
+    """El Mariachi's infobox reads "Production: $7,225Post-production:
+    $200,000". The first figure is what this returns, which is the production
+    budget the film is famous for -- documented rather than clever, because
+    every rule that summed the parts also summed a footnote marker."""
+    assert _money("Production: $7,225Post-production: $200,000") == (7225.0, "USD")
+
+
+def test_the_indian_conventions_and_the_plain_cases():
+    assert _money("$28.1 million") == (28100000.0, "USD")
+    assert _money("$185,898") == (185898.0, "USD")
+    assert _money("\u20b915 crore") == (150000000.0, "INR")
+    assert _money("") is None
+    assert _money("not a number") is None
+    assert _money("5 bn") == (5000000000.0, "")
 
 
 CHECKS = [(name, fn) for name, fn in sorted(globals().items())

@@ -104,6 +104,12 @@ def audit_one(record: dict) -> list[str]:
     # 1. a number in the answer that the computed figures do not explain
     if computed and status in ("answered", "partial"):
         known = _computed_values(record)
+        # Event names are full of numbers -- "Men's 100 metres", "Women's
+        # 10,000 metres" -- and flagging those buries the flag that matters.
+        # Any number that appears inside a name the arithmetic itself carries
+        # is accounted for.
+        in_names = " ".join(h for t in computed for key in ("highest", "lowest")
+                            for h in ((t.get(key) or {}).get("holders") or []))
         # Holders carry figures of their own in the text ("USA=14"), and years
         # are not arithmetic; neither is a doc id, which is not a number here.
         unexplained = []
@@ -113,6 +119,8 @@ def audit_one(record: dict) -> list[str]:
                 continue
             if 1800 <= v <= 2100 and float(v).is_integer():
                 continue                     # a year
+            if raw in in_names:
+                continue                     # part of an event or film name
             unexplained.append(raw)
         if unexplained:
             flags.append(f"FIGURE NOT IN THE ARITHMETIC: {unexplained[:6]} appear in the "
@@ -129,9 +137,16 @@ def audit_one(record: dict) -> list[str]:
 
     # 3. the route
     tools = [s.get("tool", "") for s in steps]
-    if any("search_chunks" in t or t in ("chunks_containing", "vector_search_chunks")
-           for t in tools) and record.get("route") not in ("text", "evidence"):
-        flags.append(f"route {record.get('route')!r} fell through to full-text search")
+    if (status in ("answered", "partial")
+            and any("search_chunks" in t or t in ("chunks_containing",
+                                                  "vector_search_chunks")
+                    for t in tools)
+            and record.get("route") not in ("text", "evidence")):
+        # Only when it then answered. A route that found nothing, widened and
+        # reported not_in_corpus did exactly what it is built to do, and
+        # flagging that is how a worklist becomes something nobody reads.
+        flags.append(f"route {record.get('route')!r} answered from full-text search "
+                     f"after its own queries found nothing")
     if not any(s.get("tigergraph") for s in steps):
         flags.append("no TigerGraph step at all")
     if sum(1 for s in steps if s.get("tigergraph") and s.get("rows", 0) > 0) == 0:

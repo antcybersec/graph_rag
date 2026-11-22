@@ -148,29 +148,77 @@ def parse_event(doc: dict) -> Optional[dict]:
     }
 
 
+_MAGNITUDE = {"crore": 1e7, "crores": 1e7, "lakh": 1e5, "lakhs": 1e5,
+              "billion": 1e9, "billon": 1e9, "million": 1e6, "milion": 1e6,
+              "millon": 1e6, "thousand": 1e3, "bn": 1e9}
+# No boundary on the right-hand side, and two misspellings accepted. Both are
+# answers to what this corpus actually contains rather than to tidiness:
+# "$3 million14" carries a footnote marker glued to the word and
+# "19 croredistributor share" runs straight into the next word, so a trailing
+# \b loses the magnitude and the figure comes out as 3 and 19. And
+# "\u00a3218.5 milion($245.7 million)" is misspelled in the source, which cost
+# Four Weddings and a Funeral a gross of \u00a3218.50.
+# No word boundary on either side, only a guard against the word being the tail
+# of a longer word. This corpus writes "$55million" and "$65-70million" with no
+# space, "$3 million14" with a footnote marker attached, and
+# "19 croredistributor share" running into the next word -- a \b on either side
+# loses the magnitude and Forrest Gump's budget becomes $55.
+_MAGNITUDE_RE = re.compile(r"(?<![a-z])(crores?|lakhs?|billion|billon|bn|million|"
+                           r"milion|millon|thousand)")
+_CURRENCY = (("\u20b9", "INR"), ("\u00a3", "GBP"), ("\u20ac", "EUR"),
+             ("\u20a9", "KRW"), ("\u00a5", "JPY"), ("$", "USD"))
+
+
 def _money(raw: str) -> Optional[tuple[float, str]]:
     """(amount, currency) for an infobox money string, or None.
 
     The corpus mixes conventions -- "$13 million", "15 crore", "Rs 10-12
     crores" -- so the currency is returned alongside the amount and callers
     must refuse to compare across currencies. A range takes its first number.
+
+    Two shapes made a first version of this wrong by six orders of magnitude,
+    and both are common enough to have produced impossible figures in the
+    graph: a budget of $600,000,000,000 for a Texas Chainsaw sequel and
+    $800,000,000,000 for Lock, Stock and Two Smoking Barrels.
+
+      * A parenthetical conversion -- "\u00a3800,000, ($1.4 million)". Taking the
+        first number and then looking anywhere for a magnitude word applies the
+        parenthetical's "million" to the real figure. It also read the currency
+        as USD from a dollar sign that belongs to the conversion, not to the
+        budget. Anything from the first "(" is dropped when a figure precedes
+        it, which also fixes "11 billion(11 million)".
+
+      * A range whose two figures have different magnitudes --
+        "$600,000-$1 million". The magnitude word sits after the *second*
+        number and belongs only to it. The tell is arithmetic rather than
+        grammar: a range's upper bound is never below its lower bound, so when
+        the number before the magnitude word is smaller than the first number,
+        the word cannot apply to both. "89-97 million" passes that test and is
+        multiplied; "$600,000-$1 million" fails it and is not.
     """
     s = unicodedata.normalize("NFKC", raw or "").replace(",", "")
-    m = re.search(r"\d+(?:\.\d+)?", s)
-    if not m:
+    cut = s.find("(")
+    if cut > 0 and re.search(r"\d", s[:cut]):
+        s = s[:cut]
+    nums = [(m.end(), float(m.group()))
+            for m in re.finditer(r"\d+(?:\.\d+)?", s)]
+    if not nums:
         return None
-    amount = float(m.group())
+    amount = nums[0][1]
+    mag = _MAGNITUDE_RE.search(s.lower())
+    if mag:
+        before_word = [n for n in nums[1:] if n[0] <= mag.start()]
+        if not before_word or before_word[-1][1] > amount:
+            amount *= _MAGNITUDE[mag.group(1)]
     low = s.lower()
-    if "crore" in low:
-        amount *= 1e7
-    elif "lakh" in low:
-        amount *= 1e5
-    elif "billion" in low:
-        amount *= 1e9
-    elif "million" in low:
-        amount *= 1e6
-    currency = "INR" if ("₹" in s or "rs" in low or "crore" in low or "lakh" in low) else \
-               "USD" if "$" in s else ""
+    currency = ""
+    if "rs" in low or "inr" in low or "crore" in low or "lakh" in low:
+        currency = "INR"
+    else:
+        for symbol, code in _CURRENCY:
+            if symbol in s:
+                currency = code
+                break
     return amount, currency
 
 
