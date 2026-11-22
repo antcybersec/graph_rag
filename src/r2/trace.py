@@ -39,6 +39,13 @@ def _rate(name: str, default: float) -> float:
 INPUT_USD_PER_MTOK = _rate("INPUT_USD_PER_MTOK", 0.10)
 OUTPUT_USD_PER_MTOK = _rate("OUTPUT_USD_PER_MTOK", 0.40)
 
+# Providers whose tokens cost nothing on the tier in use. Tokens spent here
+# still count towards the per-question totals the brief asks for -- they were
+# genuinely used -- but they are excluded from the cost figure, which would
+# otherwise charge a free call at a paid rate.
+FREE_PROVIDERS = {p.strip().lower() for p in
+                  os.environ.get("FREE_PROVIDERS", "groq,local").split(",") if p.strip()}
+
 
 def _count_rows(result: Any) -> int:
     """Rows a TigerGraph result carries, across every PRINT in the query.
@@ -130,6 +137,8 @@ class Trace:
         self.steps: list[dict] = []
         self.input_tokens = 0
         self.output_tokens = 0
+        self.billed_input = 0
+        self.billed_output = 0
         self.llm_calls = 0
         self.tg_queries = 0
         self._t0 = time.perf_counter()
@@ -163,11 +172,20 @@ class Trace:
                                  rows=rows, ms=ms, error=error)
         return result
 
-    def generate(self, prompt: str, *, tool: str, **kwargs):
-        """Call the model, accumulating tokens onto this question's totals."""
+    def generate(self, prompt: str, *, tool: str, provider: Optional[str] = None,
+                 **kwargs):
+        """Call the model, accumulating tokens onto this question's totals.
+
+        `provider` lets one question place different kinds of call on
+        different providers -- a short structured decision and a long evidence
+        prompt have different requirements. It is recorded on the step,
+        because a token billed at one provider's rate is not a token billed at
+        another's, and the cost figure in metrics.json has to be auditable.
+        """
         from src.common.llm import generate
         t = time.perf_counter()
-        result, usage = generate(prompt, model=kwargs.pop("model", self.model), **kwargs)
+        result, usage = generate(prompt, model=kwargs.pop("model", self.model),
+                                 provider=provider, **kwargs)
         ms = int((time.perf_counter() - t) * 1000)
 
         # Provider usage keys vary, and `generate` hands back a CallRecord
@@ -191,9 +209,15 @@ class Trace:
         self.input_tokens += inp
         self.output_tokens += out
         self.llm_calls += 1
+        used = (provider or os.environ.get("GEN_PROVIDER", "gemini")).lower()
+        if used not in FREE_PROVIDERS:
+            self.billed_input += inp
+            self.billed_output += out
         self.steps.append({"step": len(self.steps) + 1, "tool": tool,
-                           "tigergraph": False, "input_tokens": inp,
-                           "output_tokens": out, "ms": ms})
+                           "tigergraph": False, "provider": used,
+                           "model": getattr(usage, "model", None)
+                                    or (usage.get("model") if isinstance(usage, dict) else None),
+                           "input_tokens": inp, "output_tokens": out, "ms": ms})
         return result
 
     # --- plain stages -------------------------------------------------------
@@ -218,8 +242,16 @@ class Trace:
         return any(s["tigergraph"] for s in self.steps)
 
     def cost_usd(self) -> float:
-        return (self.input_tokens / 1e6 * INPUT_USD_PER_MTOK
-                + self.output_tokens / 1e6 * OUTPUT_USD_PER_MTOK)
+        """What this question actually cost.
+
+        Only tokens spent at a billed provider are priced. When the planner
+        and the selection calls run on a free tier and only the answer call is
+        billed, charging every token at the paid rate would overstate the cost
+        by about three times -- and an inflated cost figure is still a wrong
+        figure, which the efficiency criterion is entitled to check.
+        """
+        return (self.billed_input / 1e6 * INPUT_USD_PER_MTOK
+                + self.billed_output / 1e6 * OUTPUT_USD_PER_MTOK)
 
     def answer(self, status: str, answer, explanation: str, citations: list) -> dict:
         """The submission record for this question, in the brief's format."""

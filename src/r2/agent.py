@@ -223,6 +223,14 @@ citations: the doc_ids from CITABLE DOCUMENTS that actually support your
 answer. Only ids from that list. An answered or partial answer needs at
 least one.
 
+  Cite what a reader would have to check to confirm the answer -- no more and
+  no less. For a count or a total, that is the records counted, not every
+  record you were shown. For a "which one of these" answer, it is the
+  candidates you compared, because the answer rests on the comparison and not
+  only on the winner. For a single stated fact, it is the document that states
+  it. Citing everything in the evidence block is as wrong as citing too
+  little: both say you do not know which document carries the answer.
+
 enough: set false ONLY if the evidence block is so thin that a full-text
 search of the corpus might still find the answer. If the evidence shows the
 corpus does not hold it, that is an answer -- not_in_corpus -- and enough
@@ -310,6 +318,23 @@ class Agent:
         self.query_log = query_log
         self.model = model or os.environ.get("GEN_MODEL") or None
 
+        # Planning and selection are short, structured, low-reasoning calls:
+        # the planner prompt is ~1.3k tokens and a selection ~0.4-2.8k, while
+        # the answer prompt reaches 11k. That difference is worth exploiting,
+        # because the cheapest provider for the small calls is unusable for the
+        # large one -- Groq's free tier allows 1,000 requests a day but caps a
+        # request at 8,000 tokens per minute and rejects anything larger
+        # outright rather than throttling it.
+        #
+        # So the small calls can be sent somewhere else entirely. Set
+        # SMALL_CALL_PROVIDER/SMALL_CALL_MODEL and roughly two thirds of the
+        # requests per question leave the main provider's quota, which on a
+        # free tier is the difference between answering 100 questions a day
+        # and answering 250 with room to rehearse. Unset, everything goes to
+        # the one provider and nothing changes.
+        self.small_provider = os.environ.get("SMALL_CALL_PROVIDER") or None
+        self.small_model = os.environ.get("SMALL_CALL_MODEL") or None
+
         # Read once per run, not once per question: the catalogues are what
         # the planner selects keys from, and they do not change while the
         # graph is static. The calls are still traced and logged -- under a
@@ -351,6 +376,7 @@ class Agent:
                   + "\n".join(lines))
         sel = tr.generate(prompt, tool=f"select_{label.replace(' ', '_')}",
                           response_schema=Selection, thinking_budget=0,
+                          provider=self.small_provider, model=self.small_model,
                           pipeline="r2_agent", call_type="selection")
         valid = {row.get(key_field) for row in options}
         return [k for k in sel.keys if k in valid]
@@ -368,6 +394,7 @@ class Agent:
         plan = tr.generate(f"{catalogue}\n\nQUESTION: {question}",
                            tool="plan", system_instruction=PLANNER_SYSTEM,
                            response_schema=Plan, thinking_budget=0,
+                           provider=self.small_provider, model=self.small_model,
                            pipeline="r2_agent", call_type="plan")
         if plan.route not in ROUTES:
             plan.route = "text"

@@ -387,6 +387,7 @@ def generate(
     prompt: str,
     *,
     model: Optional[str] = None,
+    provider: Optional[str] = None,
     system_instruction: Optional[str] = None,
     response_schema: Optional[Type[T]] = None,
     thinking_budget: Optional[int] = None,
@@ -407,7 +408,12 @@ def generate(
     Ignored entirely under GEN_PROVIDER=local (see module docstring).
     """
     model_name = model or os.environ.get("GEN_MODEL", "gemini-3.8-flash")
-    provider = os.environ.get("GEN_PROVIDER", "gemini").lower()
+    # Per-call provider, defaulting to the environment's. Added so one pipeline
+    # can place different *kinds* of call on different providers: a short
+    # structured decision and a long evidence prompt have very different
+    # requirements, and the cheapest provider for one is unusable for the
+    # other. Nothing that omits the argument changes behaviour.
+    provider = (provider or os.environ.get("GEN_PROVIDER", "gemini")).lower()
 
     if provider == "local":
         return _generate_local(

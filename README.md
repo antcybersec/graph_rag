@@ -231,6 +231,13 @@ variable goes to 0 and the figure drops accordingly.
 The TigerGraph side is not the cost: the installed queries return in 100-300ms
 each, including the substring scan over all 16,377 chunks.
 
+## Known risks
+
+A ranked audit of what could get this rejected or cost it the top place —
+what each would cost, the evidence, and what was done — is in
+[`docs/round2-risks.md`](docs/round2-risks.md). Four of the ten are closed,
+three wait on the next measured run, three are process rather than code.
+
 ## Layout
 
 ```
