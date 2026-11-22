@@ -70,7 +70,7 @@ makes the contradiction visible — and it is why this is a graph problem.
 
 ## The agent's tools
 
-**31 installed GSQL queries.** The agent has no other route to the data, which
+**32 installed GSQL queries.** The agent has no other route to the data, which
 is why every database call appears in the trace by name with its parameters and
 row count. Grouped by what they are for:
 
@@ -83,7 +83,7 @@ row count. Grouped by what they are for:
   `medals_by_athlete_at_games`, `athlete_career`, `team_medals_for_name`,
   `repeat_champions`.
 - **Entity resolution** — `athlete_search`, `person_search`, `film_search`.
-- **Reference** — `films_by_director`, `office_chain`.
+- **Reference** — `films_by_director`, `films_with_figures`, `office_chain`.
 - **Evidence** — `claims_for_event`, `claims_by_subject`, `claims_search`,
   `claims_by_slot`, `claims_by_source`, `sources_for_event`.
 - **Retrieval** — `vector_search_chunks`, `chunks_containing`,
@@ -91,7 +91,7 @@ row count. Grouped by what they are for:
 
 ## How it decides what to do next
 
-Five stages. **The model decides what to look up; the graph decides what
+Six stages. **The model decides what to look up; the graph decides what
 exists.**
 
 1. **Plan** — one model call reads the question and returns a route and the
@@ -110,8 +110,45 @@ exists.**
    found by name are expanded through `claims_by_slot` to **every** claim
    competing over the same fact before any of them is weighed, because the
    document that overturns a claim may name only the event.
-5. **Answer** — one model call writes the answer from the gathered evidence
+5. **Count** — every counted column is reduced in code: most, fewest, total,
+   and *every* holder of a tie. See below.
+6. **Answer** — one model call writes the answer from the gathered evidence
    alone and picks its citations from the documents actually retrieved.
+
+### The model is not asked to do arithmetic
+
+Round 1 measured this gap rather than assuming it. On the aggregation and
+superlative questions — "which event had the most nations", "how many in all" —
+retrieval feeding a model scored **1 of 21**, while the same graph rows reduced
+in code scored **21 of 21** (`docs/round1-results.md`). The rows were never the
+problem; the step after them was. Round 1's worst regression was the same
+shape: three hidden answers of `12`, where 12 was the cap on the evidence and
+not the count.
+
+So the gather stage computes it. Where a route returns a counted column — medals
+by nation, nations and competitors per event, medals per athlete at one Games,
+Games per repeat champion, a film's gross and its gross over its budget — the
+reduction is done in Python and lands at the **top** of the evidence block,
+labelled as counted rather than written, and the composer is told to quote it
+instead of recounting the rows.
+
+Three details that are the whole point:
+
+- **A tie returns every holder.** Asked for "the most", a model names one and
+  does not mention that two are level, which is a wrong answer rather than a
+  short one. There is a real five-way tie at three Games among the athletics
+  repeat champions.
+- **`-1` means the article does not state the figure**, and those rows are
+  dropped from the arithmetic rather than counted as zero — otherwise "which
+  event had the fewest competitors" answers with an event whose article is
+  simply silent. The count of dropped rows is stated so the caveat is visible.
+- **Currencies are never pooled.** 714,000,000 rupees above 678,000,000 dollars
+  is not a bigger film, so gross is tallied per currency.
+
+The computed figures go into the answer record as well as the prompt
+(`record["computed"]`), together with the plan, so the arithmetic an answer
+rests on is in the submitted file and can be checked without re-running
+anything — which is what `python -m src.r2.audit` does.
 
 **Adaptive, with an explicit stopping criterion.** If a route retrieves no
 document at all, the agent widens to full-text search before composing. The
@@ -216,6 +253,55 @@ not because anything in Round 2 needs them.
   timestamp matching its trace step.
 - **metrics.json** is computed from the two answer files and nothing else, so
   the judges' recomputation cannot disagree with it.
+- **Both answer files come from one code version.** The public set is not
+  resumed from a half-finished run: a judge re-running the command would get
+  answers that do not match the submitted ones. A clean 50 costs ~130 requests,
+  which is the cheaper mistake to avoid.
+- **The hidden set gets an independent check, because it ships with no gold
+  answers.** `python -m src.r2.audit <answers.jsonl>` holds each answer against
+  the arithmetic its own record carries -- a figure in the answer that the query
+  never computed, a tie reported as one holder, a status that contradicts its
+  own text, a route whose queries returned nothing -- and prints a worklist,
+  worst first. No model, no database, no quota. Round 1 needed exactly this:
+  five of its hidden answers were wrong and nothing in the file said so.
+- **21 deterministic behaviours are pinned by tests** that need neither:
+  `python -m tests.test_r2`.
+
+### Running it with no API key at all
+
+```bash
+./offline.sh "Which nation won the most gold medals in athletics at Paris 2024?"
+```
+
+Planning, selection and composition run on a local Ollama model; TigerGraph was
+already local and the embeddings were always local BGE, so the whole system runs
+with no key and no network. Measured on an M4 with 16GB and `qwen3:8b`: **123s
+and two model calls for one question, answered correctly with citations**,
+against 16s on Gemini.
+
+This is the fallback and the no-key reproduction path, not how the submitted
+runs were produced -- those use one validated configuration, recorded in
+`metrics.json`. The two reasons are measured rather than assumed, and both are
+written down in `offline.sh`: on five probe questions the local model planned 4
+correctly where Gemini planned 5, and it cited all 48 retrieved documents where
+the answer rested on far fewer. Accuracy is 40% of the score and citations 10%,
+which is why this is insurance and not the default.
+
+RAM is the binding constraint, not speed. TigerGraph holds ~5.6GB and the model
+at 12,288 context ~5.9GB, which fits in 16GB; a model left resident beside the
+container afterwards OOM-killed it, so `OLLAMA_KEEP_ALIVE=0` unloads it the
+moment each call returns.
+
+### One question at a time
+
+```bash
+python -m src.r2.ask "Who directed Cocoon?"       # readable, with the trace
+python -m src.r2.ask --json "..."                 # the record, as run.py writes it
+```
+
+This is the path for the judging call. It takes the question as an argument, so
+there is no question id anywhere in it and nothing to look up: the same code
+answers an unseen question and a question from the public set.
 
 ## A note on the latency figures
 
@@ -244,7 +330,7 @@ three wait on the next measured run, three are process rather than code.
 src/r2/
   parse.py      corpus -> records, deterministically
   schema.py     14 vertex types, 16 edge types, 3 discriminators
-  queries.py    the 31 installed queries: the agent's entire tool surface
+  queries.py    the 32 installed queries: the agent's entire tool surface
   load.py       schema, structure, documents, chunks, evidence
   claims.py     source records -> claims; claims -> one resolved answer
   authority.py  how much weight a source carries, read off its own description
@@ -254,6 +340,10 @@ src/r2/
   score.py      our answers vs the published key (never used while answering)
   metrics.py    metrics.json, from the answer files alone
   ui.py         the demo page
+  ask.py        one question from the command line, with its trace
+  audit.py      an answer file checked with no model and no database
   conn.py       Community Edition or Savanna, from identical code
-build.sh run.sh ui.sh
+tests/
+  test_r2.py    21 checks on the parts that decide accuracy and honesty
+build.sh run.sh ui.sh offline.sh finish.sh
 ```

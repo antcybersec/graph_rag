@@ -106,6 +106,10 @@ STAGES = [
                "by name are expanded to *every* claim competing over the same fact before "
                "any of them is weighed -- the document that overturns a claim often names "
                "only the event."),
+    ("Count", "Every counted column is reduced **in code**: most, fewest, total, and "
+              "*every* holder of a tie. Round 1 measured the alternative -- a model "
+              "asked to find the maximum in retrieved rows scored 1 of 21 on "
+              "superlatives, against 21 of 21 for the same rows reduced in Python."),
     ("Answer", "One model call writes the answer from the gathered evidence alone and picks "
                "citations from the documents actually retrieved. A deterministic gate then "
                "drops any citation absent from the evidence and refuses to let an answer "
@@ -354,10 +358,15 @@ st.divider()
 
 # --- how it works ----------------------------------------------------------
 st.subheader("How a question becomes an answer")
-st.caption("Five stages. The model decides *what to look up*; the graph decides "
-           "*what exists*.")
-cols = st.columns(5)
-for col, (name, text) in zip(cols, STAGES):
+st.caption("Six stages. The model decides *what to look up*; the graph decides "
+           "*what exists*; and the arithmetic is nobody's opinion.")
+cols = st.columns(3)
+for col, (name, text) in zip(cols, STAGES[:3]):
+    with col:
+        st.markdown(f"**{name}**")
+        st.caption(text)
+cols = st.columns(3)
+for col, (name, text) in zip(cols, STAGES[3:]):
     with col:
         st.markdown(f"**{name}**")
         st.caption(text)

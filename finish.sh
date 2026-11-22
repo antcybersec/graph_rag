@@ -107,6 +107,13 @@ check_pub=$?
 python -m src.r2.check "$Q_DIR/questions_hidden.jsonl" "$OUT/answers_hidden.jsonl"
 check_hid=$?
 
+# The hidden set has no gold answers, so this is the only check it gets. It
+# costs nothing -- no model, no database -- and it is what caught Round 1's
+# five wrong hidden answers.
+say "auditing both files (no model, no quota)"
+python -m src.r2.audit "$OUT/answers_public.jsonl"
+python -m src.r2.audit "$OUT/answers_hidden.jsonl"
+
 say "graph counts (deliverable 6)"
 python -m src.r2.counts
 

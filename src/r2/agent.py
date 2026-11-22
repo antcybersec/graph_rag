@@ -1484,4 +1484,16 @@ class Agent:
             explanation = f"{explanation} [{gate_note}]"
         record = tr.answer(status, out.answer, explanation.strip(), citations)
         record["route"] = plan.route
+        # The plan and the arithmetic go into the record, not just into the
+        # prompt. Two reasons, both about what a judge can check: the plan is
+        # the agent's decision and a trace that hides it is not a trace of a
+        # decision; and the tallies are the figures the answer is supposed to
+        # quote, so `src.r2.audit` can hold the answer text against them with
+        # no model, no database and no quota. `ranked` is left out -- it is
+        # long, and the audit only needs the figures the answer should carry.
+        record["plan"] = {k: v for k, v in plan.model_dump().items()
+                          if v not in ("", [], False, None)}
+        record["computed"] = [{k: t[k] for k in
+                               ("what", "unit", "highest", "lowest", "total", "entries")}
+                              for t in ev.get("tallies", [])]
         return record

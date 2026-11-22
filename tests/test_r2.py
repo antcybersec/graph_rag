@@ -28,6 +28,7 @@ second and needs no quota.
     python -m tests.test_r2
 """
 from src.r2.agent import Agent, Composed, _tally, _within_a_day
+from src.r2.audit import audit_one
 from src.r2.claims import canon_units
 
 
@@ -145,6 +146,70 @@ def test_a_different_week_does_not_match():
     assert not _within_a_day("2028-07-30T12:00:00Z", "2028-07-24")
     assert not _within_a_day("", "2028-07-24")
     assert not _within_a_day("not a date", "2028-07-24")
+
+
+# -- the offline audit, which is the only check the hidden set gets ---------
+
+def _rec(**kw):
+    base = {"qid": "t", "status": "answered", "route": "sport_games",
+            "answer": "", "citations": ["Q1"], "computed": [],
+            "trace": [{"step": 1, "tool": "medals_by_nation",
+                       "tigergraph": True, "rows": 27}]}
+    base.update(kw)
+    return base
+
+
+def _golds(hi=14, holders=("USA",)):
+    return [{"what": "golds by nation", "unit": "gold",
+             "highest": {"value": hi, "holders": list(holders)},
+             "lowest": {"value": 1, "holders": ["a", "b"]},
+             "total": 48, "entries": 27}]
+
+
+def test_audit_passes_an_answer_that_quotes_the_computed_figure():
+    assert audit_one(_rec(answer="The USA, with 14 golds.", computed=_golds())) == []
+
+
+def test_audit_catches_the_evidence_cap_answered_as_a_count():
+    """Round 1's worst regression: three hidden answers said "12", which was
+    the cap on the evidence rather than the count. Nothing in the file said so."""
+    flags = audit_one(_rec(answer="12 events had more than 25 nations.", computed=_golds()))
+    assert any("FIGURE NOT IN THE ARITHMETIC" in f for f in flags), flags
+
+
+def test_audit_catches_a_tie_reported_as_one_holder():
+    flags = audit_one(_rec(route="repeat_champions",
+                           answer="Usain Bolt won the most, at three Games.",
+                           computed=_golds(3, ("Usain Bolt | 100 m", "Carl Lewis | long jump"))))
+    assert any("TIE NOT REPORTED" in f for f in flags), flags
+
+
+def test_audit_accepts_a_tie_that_is_named_as_one():
+    flags = audit_one(_rec(route="repeat_champions",
+                           answer="Usain Bolt and Carl Lewis tie on 3 Games each.",
+                           computed=_golds(3, ("Usain Bolt | 100 m", "Carl Lewis | long jump"))))
+    assert not any("TIE NOT REPORTED" in f for f in flags), flags
+
+
+def test_audit_catches_a_status_that_contradicts_its_own_text():
+    assert any("refusal" in f for f in
+               audit_one(_rec(answer="The corpus does not state this.")))
+    assert any("not_in_corpus with citations" in f for f in
+               audit_one(_rec(status="not_in_corpus", answer="")))
+
+
+def test_audit_catches_a_route_that_retrieved_nothing():
+    flags = audit_one(_rec(answer="USA.", trace=[{"step": 1, "tool": "medals_by_nation",
+                                                 "tigergraph": True, "rows": 0}]))
+    assert any("zero rows" in f for f in flags), flags
+
+
+def test_audit_ignores_a_year_that_is_not_arithmetic():
+    """Years are everywhere in this corpus. Flagging 2024 as an unexplained
+    figure would bury the one flag that matters."""
+    flags = audit_one(_rec(answer="At the 2024 Summer Olympics the USA won 14.",
+                           computed=_golds()))
+    assert flags == [], flags
 
 
 CHECKS = [(name, fn) for name, fn in sorted(globals().items())
