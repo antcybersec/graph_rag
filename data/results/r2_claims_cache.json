@@ -1,0 +1,1040 @@
+{
+ "SYN-LA28-S001:r2-claims-v2": [
+  {
+   "subject": "men's sabre",
+   "predicate": "bronze_medallist",
+   "value": "Mathis Delaunay",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-18T09:00:00-07:00",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "men's sabre",
+   "predicate": "bronze_medallist",
+   "value": "Marek Wróblewski",
+   "stance": "denies",
+   "population": "",
+   "effective": "2028-07-18T09:00:00-07:00",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S002:r2-claims-v2": [
+  {
+   "subject": "Men's singles, table 1, evening match",
+   "predicate": "start_time",
+   "value": "2028-07-15T18:32:00-07:00",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S003:r2-claims-v2": [
+  {
+   "subject": "women's individual archery",
+   "predicate": "stoppage_duration",
+   "value": "14",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": true
+  }
+ ],
+ "SYN-LA28-S004:r2-claims-v2": [
+  {
+   "subject": "women's 10 metre air pistol",
+   "predicate": "starters",
+   "value": "40",
+   "stance": "asserts",
+   "population": "starters",
+   "effective": "2028-07-27T00:00:00-07:00",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "women's 10 metre air pistol",
+   "predicate": "nation_count",
+   "value": "31",
+   "stance": "asserts",
+   "population": "nations",
+   "effective": "2028-07-27T00:00:00-07:00",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "women's 10 metre air pistol",
+   "predicate": "registered_entries",
+   "value": "42",
+   "stance": "asserts",
+   "population": "registered_entries",
+   "effective": "2028-07-27T00:00:00-07:00",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "women's 10 metre air pistol",
+   "predicate": "gold_medallist",
+   "value": "Zuzana Dvořáček",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-27T00:00:00-07:00",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S005:r2-claims-v2": [
+  {
+   "subject": "women's omnium",
+   "predicate": "venue",
+   "value": "Long Beach Arena",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "LA28 venue allocation v0.7",
+   "hedged": false
+  },
+  {
+   "subject": "women's omnium",
+   "predicate": "start_date",
+   "value": "2028-07-24",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "LA28 venue allocation v0.7",
+   "hedged": false
+  },
+  {
+   "subject": "women's omnium",
+   "predicate": "end_date",
+   "value": "2028-07-26",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "LA28 venue allocation v0.7",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S006:r2-claims-v2": [
+  {
+   "subject": "women's omnium",
+   "predicate": "gold_medallist",
+   "value": "Maja Nyborg",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "Maja Nyborg",
+   "predicate": "nationality",
+   "value": "NOR",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S007:r2-claims-v2": [
+  {
+   "subject": "archery podiums",
+   "predicate": "medallist_nation",
+   "value": "Uzbekistan",
+   "stance": "reports",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": true
+  },
+  {
+   "subject": "Tursunovs on the archery podiums",
+   "predicate": "familial_relation",
+   "value": "siblings or cousins",
+   "stance": "reports",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": true
+  }
+ ],
+ "SYN-LA28-S008:r2-claims-v2": [
+  {
+   "subject": "men's 10,000 metres",
+   "predicate": "gold_medallist",
+   "value": "Caleb Tolliver",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "men's 10,000 metres",
+   "predicate": "8000_metres_split",
+   "value": "21:04.60",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "men's 10,000 metres",
+   "predicate": "9000_metres_split",
+   "value": "no data",
+   "stance": "cannot_confirm",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "men's 10,000 metres",
+   "predicate": "finish_time",
+   "value": "26:28.42",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S009:r2-claims-v2": [
+  {
+   "subject": "men's 10 metre air rifle",
+   "predicate": "gold_medallist",
+   "value": "Iker Cifuentes",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-16T00:00:00-07:00",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "men's 10 metre air rifle",
+   "predicate": "silver_medallist",
+   "value": "Dragan Novaković",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-16T00:00:00-07:00",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "men's 10 metre air rifle",
+   "predicate": "bronze_medallist",
+   "value": "Tyler Dorrington",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-16T00:00:00-07:00",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S010:r2-claims-v2": [
+  {
+   "subject": "women's omnium",
+   "predicate": "entry",
+   "value": "Maja Nyborg",
+   "stance": "asserts",
+   "population": "registered_entries",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "Maja Nyborg",
+   "predicate": "nation",
+   "value": "Denmark",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S011:r2-claims-v2": [
+  {
+   "subject": "men's 100 metres final",
+   "predicate": "gold_medallist",
+   "value": "Ondřej Bondarchuk",
+   "stance": "reports",
+   "population": "",
+   "effective": "2028-07-23T21:07:00-07:00",
+   "replaces": "",
+   "hedged": true
+  },
+  {
+   "subject": "men's 100 metres final",
+   "predicate": "silver_medallist",
+   "value": "Haoran Jing",
+   "stance": "reports",
+   "population": "",
+   "effective": "2028-07-23T21:07:00-07:00",
+   "replaces": "",
+   "hedged": true
+  },
+  {
+   "subject": "men's 100 metres final",
+   "predicate": "bronze_medallist",
+   "value": "Aurélien Bouchardy",
+   "stance": "reports",
+   "population": "",
+   "effective": "2028-07-23T21:07:00-07:00",
+   "replaces": "",
+   "hedged": true
+  },
+  {
+   "subject": "men's 100 metres final",
+   "predicate": "fourth_place_finisher",
+   "value": "Sipho Asante-Mensah",
+   "stance": "reports",
+   "population": "",
+   "effective": "2028-07-23T21:07:00-07:00",
+   "replaces": "",
+   "hedged": true
+  }
+ ],
+ "SYN-LA28-S012:r2-claims-v2": [
+  {
+   "subject": "Tyler Dorrington",
+   "predicate": "rifle_seal_status",
+   "value": "valid",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-16T08:05:00-07:00",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "Tyler Dorrington",
+   "predicate": "cleared_to_start",
+   "value": "true",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-16T08:05:00-07:00",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "Tyler Dorrington",
+   "predicate": "penalty_applied",
+   "value": "false",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-16T08:05:00-07:00",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S013:r2-claims-v2": [
+  {
+   "subject": "men's singles match on table 1",
+   "predicate": "start_time",
+   "value": "2028-07-15T18:30:00-07:00",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "men's singles match on table 1",
+   "predicate": "start_time",
+   "value": "2028-07-16T01:30:00-07:00",
+   "stance": "reports",
+   "population": "",
+   "effective": "2028-07-16T01:30:00-07:00",
+   "replaces": "2028-07-15T18:30:00-07:00",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S014:r2-claims-v2": [
+  {
+   "subject": "women's 25 m pistol",
+   "predicate": "starters",
+   "value": "38",
+   "stance": "asserts",
+   "population": "starters",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "women's 25 m pistol",
+   "predicate": "venue",
+   "value": "Prado range",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "women's 25 m pistol",
+   "predicate": "badges_scanned",
+   "value": "38",
+   "stance": "asserts",
+   "population": "badges_scanned",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "women's 25 m pistol",
+   "predicate": "gold_medallist",
+   "value": "Zuzana Dvořáček",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S015:r2-claims-v2": [
+  {
+   "subject": "men's singles table 1 evening match",
+   "predicate": "start_time",
+   "value": "2028-07-16T01:30:00Z",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-16T01:30:00Z",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S016:r2-claims-v2": [
+  {
+   "subject": "Coliseum event",
+   "predicate": "gold_medallist",
+   "value": "Ondřej Bondarchuk",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "Coliseum event",
+   "predicate": "silver_medallist",
+   "value": "Haoran Jing",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "Coliseum event",
+   "predicate": "bronze_medallist",
+   "value": "Aurélien Bouchardy",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S017:r2-claims-v2": [
+  {
+   "subject": "women's 25 metre pistol",
+   "predicate": "starters",
+   "value": "36",
+   "stance": "asserts",
+   "population": "starters",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "women's 25 metre pistol",
+   "predicate": "nation_count",
+   "value": "26",
+   "stance": "asserts",
+   "population": "NOCs",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "women's 25 metre pistol",
+   "predicate": "gold_medallist",
+   "value": "Zuzana Dvořáček",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S018:r2-claims-v2": [
+  {
+   "subject": "Caleb Tolliver",
+   "predicate": "split_time_9000m",
+   "value": "23:43.10",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": true
+  },
+  {
+   "subject": "Caleb Tolliver",
+   "predicate": "split_time_final_1000m",
+   "value": "2:45",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": true
+  }
+ ],
+ "SYN-LA28-S019:r2-claims-v2": [
+  {
+   "subject": "men's 10,000 metres",
+   "predicate": "finish_time",
+   "value": "26:28.42",
+   "stance": "asserts",
+   "population": "finishers",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "Caleb Tolliver",
+   "predicate": "9000m_split",
+   "value": "not_certified",
+   "stance": "cannot_confirm",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S020:r2-claims-v2": [
+  {
+   "subject": "ARCH-M-118",
+   "predicate": "athlete_name",
+   "value": "Timur Tursunov",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "ARCH-W-731",
+   "predicate": "athlete_name",
+   "value": "Aigerim Tursunov",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S021:r2-claims-v2": [
+  {
+   "subject": "men's individual sabre",
+   "predicate": "gold_medallist",
+   "value": "Yuchen Jing",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "men's individual sabre",
+   "predicate": "silver_medallist",
+   "value": "Rohan Sidhu",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "men's individual sabre",
+   "predicate": "bronze_medallist",
+   "value": "Mathis Delaunay",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "men's individual sabre",
+   "predicate": "bronze_medallist",
+   "value": "Marek Wróblewski",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S022:r2-claims-v2": [
+  {
+   "subject": "Tyler Dorrington",
+   "predicate": "equipment_query_start_time",
+   "value": "2028-07-17T07:10:00-07:00",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-17T07:10:00-07:00",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "Tyler Dorrington",
+   "predicate": "participation_status",
+   "value": "barred",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-17T12:00:00-07:00",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S023:r2-claims-v2": [
+  {
+   "subject": "men's 10 metre air rifle",
+   "predicate": "equipment_query_athlete",
+   "value": "Tyler Dorrington (GBR)",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-16T07:10:00-07:00",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "men's 10 metre air rifle",
+   "predicate": "cleared_to_start",
+   "value": "false",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-16T07:10:00-07:00",
+   "replaces": "",
+   "hedged": true
+  }
+ ],
+ "SYN-LA28-S024:r2-claims-v2": [
+  {
+   "subject": "women's 10 m air pistol",
+   "predicate": "starters",
+   "value": "42",
+   "stance": "asserts",
+   "population": "starters",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "women's 10 m air pistol",
+   "predicate": "gold_medallist",
+   "value": "Zuzana Dvořáček",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S025:r2-claims-v2": [
+  {
+   "subject": "women's 25 metre pistol preparation area",
+   "predicate": "badges_scanned",
+   "value": "38",
+   "stance": "asserts",
+   "population": "badges_scanned",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "women's 25 metre pistol preparation area",
+   "predicate": "competitor_badges_scanned",
+   "value": "36",
+   "stance": "asserts",
+   "population": "competitor_badges_scanned",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "women's 25 metre pistol preparation area",
+   "predicate": "official_badges_scanned",
+   "value": "2",
+   "stance": "asserts",
+   "population": "official_badges_scanned",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S026:r2-claims-v2": [
+  {
+   "subject": "men's singles, table 1, evening match",
+   "predicate": "start_time",
+   "value": "2028-07-15T18:30:00-07:00",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-15T18:30:00-07:00",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S027:r2-claims-v2": [
+  {
+   "subject": "women's individual",
+   "predicate": "stoppage_duration",
+   "value": "11 minutes",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": true
+  }
+ ],
+ "SYN-LA28-S028:r2-claims-v2": [
+  {
+   "subject": "women's individual archery",
+   "predicate": "stoppage_duration",
+   "value": "11 minutes",
+   "stance": "cannot_confirm",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "women's individual archery",
+   "predicate": "stoppage_duration",
+   "value": "14 minutes",
+   "stance": "cannot_confirm",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S029:r2-claims-v2": [
+  {
+   "subject": "men's triathlon final",
+   "predicate": "venue",
+   "value": "Venice Beach Course",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-29T19:00:00-07:00",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "men's triathlon final",
+   "predicate": "start_time",
+   "value": "2028-07-29T19:00:00-07:00",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-29T19:00:00-07:00",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S030:r2-claims-v2": [
+  {
+   "subject": "women's omnium",
+   "predicate": "venue",
+   "value": "Carson Velodrome",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-24T00:00:00-07:00",
+   "replaces": "draft v0.7",
+   "hedged": false
+  },
+  {
+   "subject": "women's omnium",
+   "predicate": "start_date",
+   "value": "2028-07-24T00:00:00-07:00",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-24T00:00:00-07:00",
+   "replaces": "draft v0.7",
+   "hedged": false
+  },
+  {
+   "subject": "women's omnium",
+   "predicate": "end_date",
+   "value": "2028-07-26T00:00:00-07:00",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-26T00:00:00-07:00",
+   "replaces": "draft v0.7",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S031:r2-claims-v2": [
+  {
+   "subject": "men's 100 metres",
+   "predicate": "gold_medallist",
+   "value": "Ondřej Bondarchuk",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-23T22:15:00-07:00",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "men's 100 metres",
+   "predicate": "silver_medallist",
+   "value": "Haoran Jing",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-23T22:15:00-07:00",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "men's 100 metres",
+   "predicate": "bronze_medallist",
+   "value": "Sipho Asante-Mensah",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-23T22:15:00-07:00",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "men's 100 metres",
+   "predicate": "fourth_place",
+   "value": "Aurélien Bouchardy",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-23T22:15:00-07:00",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S032:r2-claims-v2": [
+  {
+   "subject": "Maja Nyborg",
+   "predicate": "sporting_nationality",
+   "value": "Norway",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2029-02-01T00:00:00+01:00",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "Maja Nyborg",
+   "predicate": "previous_sporting_nationality",
+   "value": "Denmark",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S033:r2-claims-v2": [
+  {
+   "subject": "men's sabre",
+   "predicate": "gold_medallist",
+   "value": "Yuchen Jing",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "men's sabre",
+   "predicate": "silver_medallist",
+   "value": "Rohan Sidhu",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "men's sabre",
+   "predicate": "bronze_medallist",
+   "value": "Mathis Delaunay",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S034:r2-claims-v2": [
+  {
+   "subject": "men's triathlon final",
+   "predicate": "start_time",
+   "value": "2028-07-30T09:00:00-07:00",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-30T09:00:00-07:00",
+   "replaces": "2028-07-29T19:00:00-07:00",
+   "hedged": false
+  },
+  {
+   "subject": "men's triathlon final",
+   "predicate": "venue",
+   "value": "Venice Beach Course",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S035:r2-claims-v2": [
+  {
+   "subject": "men's individual archery",
+   "predicate": "gold_medallist",
+   "value": "Timur Tursunov",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "women's individual archery",
+   "predicate": "bronze_medallist",
+   "value": "Aigerim Tursunov",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "Timur Tursunov and Aigerim Tursunov",
+   "predicate": "family_relationship",
+   "value": "not recorded",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S036:r2-claims-v2": [
+  {
+   "subject": "men's triathlon final",
+   "predicate": "venue",
+   "value": "Venice Beach Course",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "men's triathlon final",
+   "predicate": "start_time",
+   "value": "2028-07-29T19:00:00-07:00",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "men's triathlon final",
+   "predicate": "gate_opening_time",
+   "value": "2028-07-29T17:30:00-07:00",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S037:r2-claims-v2": [
+  {
+   "subject": "women's omnium",
+   "predicate": "venue",
+   "value": "Long Beach Arena",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-24T00:00:00-07:00",
+   "replaces": "",
+   "hedged": true
+  },
+  {
+   "subject": "women's omnium",
+   "predicate": "start_date",
+   "value": "2028-07-24T00:00:00-07:00",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-24T00:00:00-07:00",
+   "replaces": "",
+   "hedged": true
+  },
+  {
+   "subject": "women's omnium",
+   "predicate": "end_date",
+   "value": "2028-07-26T00:00:00-07:00",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-26T00:00:00-07:00",
+   "replaces": "",
+   "hedged": true
+  }
+ ],
+ "SYN-LA28-S038:r2-claims-v2": [
+  {
+   "subject": "men's triathlon final",
+   "predicate": "start_time",
+   "value": "2028-07-30T09:00:00-07:00",
+   "stance": "asserts",
+   "population": "",
+   "effective": "2028-07-30T09:00:00-07:00",
+   "replaces": "2028-07-29",
+   "hedged": false
+  },
+  {
+   "subject": "men's triathlon final",
+   "predicate": "gold_medallist",
+   "value": "Tyler Tolliver",
+   "stance": "asserts",
+   "population": "",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  },
+  {
+   "subject": "men's triathlon final",
+   "predicate": "withdrawal_count",
+   "value": "0",
+   "stance": "asserts",
+   "population": "starters",
+   "effective": "",
+   "replaces": "",
+   "hedged": false
+  }
+ ],
+ "SYN-LA28-S039:r2-claims-v2": [
+  {
+   "subject": "women's 10 metre air pistol",
+   "predicate": "registered_entries",
+   "value": "42",
+   "stance": "asserts",
+   "population": "registered_entries",
+   "effective": "2028-07-20T17:00:00-07:00",
+   "replaces": "",
+   "hedged": false
+  }
+ ]
+}

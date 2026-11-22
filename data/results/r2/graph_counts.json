@@ -1,0 +1,39 @@
+{
+  "graph": "local @ http://localhost graph=r2",
+  "vertices_total": 30800,
+  "edges_total": 48888,
+  "vertices": {
+    "Athlete": 5406,
+    "Chunk": 16377,
+    "Claim": 96,
+    "Document": 3530,
+    "EventSeries": 658,
+    "Film": 546,
+    "Games": 23,
+    "Nation": 145,
+    "Office": 234,
+    "OlympicEvent": 2750,
+    "Person": 550,
+    "SourceRecord": 39,
+    "Sport": 53,
+    "Venue": 393
+  },
+  "edges": {
+    "ABOUT_EVENT": 49,
+    "ASSERTED_BY": 96,
+    "DESCRIBES_EVENT": 2750,
+    "DESCRIBES_FILM": 546,
+    "DESCRIBES_PERSON": 152,
+    "DIRECTED_FILM": 563,
+    "HAS_CHUNK": 16377,
+    "HELD_AT": 2612,
+    "HELD_OFFICE": 240,
+    "INSTANCE_OF": 2750,
+    "IN_GAMES": 2750,
+    "IN_SPORT": 2750,
+    "MEDAL_FOR": 8493,
+    "PREV_EDITION": 1682,
+    "SUPERSEDES": 14,
+    "WON": 7064
+  }
+}

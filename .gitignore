@@ -12,6 +12,22 @@ data/results/*
 # anyone who clones the repo (or a cloud deploy of src/dashboard/app.py) sees
 # "no benchmark results found" instead of the actual 300 graded rows.
 !data/results/benchmark_results.jsonl
+
+# Round 2 submission deliverables. These are results, but they are also what
+# is being submitted -- the answer files, the metrics computed from them, the
+# TigerGraph query logs that the traces have to line up with, and the graph's
+# vertex and edge counts. The git tag is meant to cover the code that produced
+# them, so they belong in the repository next to it.
+!data/results/r2/
+!data/results/r2/**
+# The claim extraction cache is tracked on purpose: it is the one part of the
+# build that calls a model, and committing it makes a rebuild produce
+# byte-identical claims instead of 39 fresh extractions that might differ.
+!data/results/r2_claims_cache.json
+# ...but not the rotated logs a re-run leaves behind, nor the demo page's own
+# log, which records clicking around rather than a submitted run.
+data/results/r2/*.bak
+data/results/r2/ui_querylog.jsonl
 .DS_Store
 *.log
 .ipynb_checkpoints/
@@ -24,3 +40,6 @@ PROGRESS.md
 docs/presentation-prep.md
 docs/architecture.excalidraw
 scripts/make_excalidraw.py
+
+# Round 2 working plan: ours, not the submission.
+docs/round2-plan.md

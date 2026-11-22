@@ -1,3 +1,14 @@
+"""ROUND 1 PIPELINE -- NOT PART OF THE ROUND 2 SYSTEM.
+
+Round 2's rule 4 forbids pattern-matching on question wording. This file does
+it, because Round 1 permitted it and this is the code that produced the Round 1
+result in docs/round1-results.md.
+
+Nothing here is imported by the Round 2 entry points: `run.sh` runs
+`src.r2.run`, which reaches only `src/r2/`. The Round 2 agent is
+`src/r2/agent.py`, where no code reads the wording of a question at all.
+"""
+
 """Pipeline 6: selection planning with TypeSafe System One -- no Gemini on the answer path.
 
 The investigator plans with a generative model: it writes out a query plan as

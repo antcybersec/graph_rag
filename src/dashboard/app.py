@@ -309,6 +309,26 @@ QTYPES = bench.qtype_order(df)
 
 st.markdown('<div class="kicker">GRAPH_RAG BENCHMARK</div>', unsafe_allow_html=True)
 st.title("Agentic GraphRAG — 67% to 99% on the same model")
+
+# Orientation before caveats. Without this the page opens on six pipeline
+# names and two different accuracy metrics, which is a wall unless you
+# already know what the six are -- and the first thing a reader needs is
+# what the page is for and which number to read.
+st.markdown(
+    """
+> **Start here.** This page is the **Round 1** study: one eval set, six
+> retrieval designs, and the question of whether graph structure and agentic
+> control actually improve answers. **The number to read is `Exact match`** —
+> it is computed against the gold answer with no model in the loop. The 1-5
+> judge scores beside it are a 20% sample of *model* opinion, not ground
+> truth, so treat them as a second opinion and not as the result.
+>
+> Looking for the **Round 2** system — the agent that reasons over conflicting
+> sources and says when the corpus has no answer? That is a different page:
+> `./ui.sh`, or `streamlit run src/r2/ui.py`.
+"""
+)
+
 st.markdown(
     """
 Six pipelines answer the same eval set of **{n_q} questions**, so the only thing
