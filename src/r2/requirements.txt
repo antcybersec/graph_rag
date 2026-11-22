@@ -1,0 +1,13 @@
+# Dependencies for deploying src/r2/ui.py read-only (Streamlit Community
+# Cloud). Named requirements.txt on purpose: Cloud looks for that exact name
+# beside the main file, which is the same pattern src/dashboard uses.
+#
+# The page's only top-level imports are the standard library and Streamlit.
+# pyTigerGraph, torch and sentence-transformers are imported lazily inside the
+# function that opens a database connection, so a deployment that cannot reach
+# TigerGraph never loads them -- and installing them would add about a gigabyte
+# for code that never runs there.
+#
+# Locally, use requirements.lock.txt instead: the live page needs the database
+# client and the embedding model.
+streamlit==1.63.0

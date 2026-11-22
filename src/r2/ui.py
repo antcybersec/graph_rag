@@ -98,8 +98,31 @@ def get_agent():
 
 @st.cache_data(ttl=120, show_spinner=False)
 def graph_counts():
-    _, conn, _ = get_agent()
-    return conn.getVertexCount("*"), conn.getEdgeCount("*")
+    """Counts from the live graph, or from the build that produced the results.
+
+    The same file has to serve two places: run locally it talks to TigerGraph
+    in Docker, which is what the judging call needs; deployed to Streamlit
+    Cloud there is no localhost to reach, and a page that answers nothing is
+    still worth reading. So an unreachable graph degrades the page instead of
+    breaking it, and anything shown from the recorded build says so.
+    """
+    try:
+        _, conn, _ = get_agent()
+        return conn.getVertexCount("*"), conn.getEdgeCount("*"), True
+    except Exception:
+        recorded = RESULTS / "graph_counts.json"
+        if recorded.exists():
+            data = json.loads(recorded.read_text(encoding="utf-8"))
+            return data.get("vertices", {}), data.get("edges", {}), False
+        return {}, {}, False
+
+
+def graph_live() -> bool:
+    try:
+        get_agent()
+        return True
+    except Exception:
+        return False
 
 
 def load_jsonl(path: Path):
@@ -123,11 +146,15 @@ section = st.sidebar.radio(
     ["Ask it something", "How it works", "The graph", "The agent's tools", "Public results"],
     label_visibility="collapsed")
 st.sidebar.markdown("---")
-try:
+LIVE = graph_live()
+if LIVE:
     _, _, where = get_agent()
     st.sidebar.success(f"TigerGraph: {where}")
-except Exception as exc:  # the page must say why, not show a stack trace
-    st.sidebar.error(f"TigerGraph unreachable\n\n{exc}")
+else:
+    st.sidebar.info(
+        "**Read-only.** No TigerGraph reachable from here, so this page shows "
+        "the recorded build and the submitted results. To ask it live, clone "
+        "the repository and run `./build.sh corpus.jsonl` then `./ui.sh`.")
 
 # ---------------------------------------------------------------- ask it ----
 if section == "Ask it something":
@@ -135,6 +162,18 @@ if section == "Ask it something":
     st.caption("Type any question about the corpus -- Olympic events 1984-2028, films, "
                "US politicians, or the LA 2028 source records that disagree with each "
                "other. Nothing is cached: every answer below is produced now.")
+
+    if not LIVE:
+        st.info(
+            "**This part needs the graph.** Answering a question here runs real "
+            "queries against TigerGraph, so it only works where the database is "
+            "reachable — on the machine that built it, which is how it is "
+            "demonstrated in the judging call.\n\n"
+            "Everything else on this page is readable from here: **How it works** "
+            "for the architecture, **The graph** for what was built, **The agent's "
+            "tools** for the 31 queries it can run, and **Public results** for how "
+            "it scored and where it was wrong.")
+        st.stop()
 
     question = st.text_input("Question", placeholder="Which nation won the most rowing "
                                                      "golds at the 2024 Summer Olympics?",
@@ -249,12 +288,14 @@ elif section == "How it works":
 # -------------------------------------------------------------- the graph ---
 elif section == "The graph":
     st.markdown("### What the graph holds")
+    vertices, edges, live = graph_counts()
     st.caption("Read live from TigerGraph. These are the vertex and edge counts "
-               "submitted as deliverable 6.")
-    try:
-        vertices, edges = graph_counts()
-    except Exception as exc:
-        st.error(f"Could not read the graph: {exc}")
+               "submitted as deliverable 6." if live else
+               "From the recorded build (`data/results/r2/graph_counts.json`) — the "
+               "same counts submitted as deliverable 6, written by "
+               "`python -m src.r2.counts` against the live graph.")
+    if not vertices:
+        st.warning("No graph reachable and no recorded counts on disk.")
         st.stop()
 
     a, b = st.columns(2)
