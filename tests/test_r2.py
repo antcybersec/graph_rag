@@ -389,6 +389,36 @@ def test_audit_keeps_every_tally_when_the_plan_names_none():
     assert len(_asked_about(_editions(), {"metric": "qqq"})) == 2
 
 
+def test_audit_knows_the_per_entry_figures_a_ranking_holds():
+    """r2-pub-038 answered "22 athletes competed in the men's decathlon",
+    which is exactly right and cites the gold document -- and was flagged,
+    because 22 is one row of the ranking and the record used to carry only
+    the top, the bottom, the total and the count."""
+    tally = [{"what": "competitors per edition", "unit": "competitors",
+              "highest": {"value": 27, "holders": ["2016 Summer"]},
+              "lowest": {"value": 9, "holders": ["1988 Summer"]},
+              "total": 189, "entries": 8,
+              "ranked": [["2016 Summer", 27], ["2024 Summer", 22],
+                         ["1988 Summer", 9]]}]
+    flags = audit_one(_rec(route="event_series",
+                           answer="22 athletes competed in the men's decathlon.",
+                           plan={"metric": "competitors"}, computed=tally))
+    assert flags == [], flags
+
+
+def test_audit_still_catches_an_invented_figure_with_a_ranking_present():
+    """The ranking must not become a blanket excuse for any number."""
+    tally = [{"what": "competitors per edition", "unit": "competitors",
+              "highest": {"value": 27, "holders": ["2016 Summer"]},
+              "lowest": {"value": 9, "holders": ["1988 Summer"]},
+              "total": 189, "entries": 8,
+              "ranked": [["2016 Summer", 27], ["2024 Summer", 22]]}]
+    flags = audit_one(_rec(route="event_series",
+                           answer="31 athletes competed in the men's decathlon.",
+                           plan={"metric": "competitors"}, computed=tally))
+    assert any("FIGURE NOT IN THE ARITHMETIC" in f for f in flags), flags
+
+
 def test_audit_reconciles_a_listing_that_adds_up_to_the_computed_total():
     """The per-edition figures live in `ranked`, which the record leaves out,
     so they cannot be matched one by one -- but eight numbers that add up to

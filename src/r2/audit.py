@@ -69,9 +69,16 @@ from collections import Counter
 # phantom "-25" on the worklist.
 _NUMBER = re.compile(r"(?<![0-9A-Za-z])-?\d+(?:,\d{3})*(?:\.\d+)?")
 
+# Phrases that say a value does not exist. An answer containing one of these
+# under status `answered` is the honesty error the rubric singles out, and it
+# is the one the composer makes: on the 23 Nov run r2-pub-048 and r2-pub-049
+# both came back `answered` while saying, correctly, that the duration asked
+# about could not be established. "No value exists" is not a value.
 _REFUSAL = ("not in the corpus", "does not say", "no source", "cannot be determined",
             "not stated", "does not state", "no document", "not established",
-            "corpus does not")
+            "corpus does not", "could not be established", "could not be verified",
+            "not be established", "not be verified", "no officially confirmed",
+            "is no confirmed", "no confirmed duration")
 
 
 def _numbers(text: str) -> list[str]:
@@ -175,6 +182,14 @@ def _computed_values(record: dict) -> set:
             v = _as_float(t.get(key))
             if v is not None:
                 out.add(v)
+        # Every per-entry figure the ranking holds. A correct answer quotes
+        # these: one of them for "how many competed in the decathlon", all of
+        # them for an edition-by-edition listing.
+        for pair in t.get("ranked") or []:
+            if isinstance(pair, (list, tuple)) and len(pair) == 2:
+                v = _as_float(pair[1])
+                if v is not None:
+                    out.add(v)
     return out
 
 

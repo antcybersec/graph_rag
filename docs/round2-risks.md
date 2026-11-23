@@ -107,6 +107,37 @@ spend none. Note that a reproduction run has to use the same provider as the
 run that wrote the file; `repro` prints the provider it used and says so when
 it is not `google`.
 
+## 2b. Citations on the evidence route — *measured 23 Nov, open*
+
+**Cost:** citations are 10% of the score.
+
+**Measured on the 50 public answers of the 23 Nov run**, against the key's
+`gold_doc_ids`: **recall 0.883, precision 0.919** over the 48 questions that
+have gold documents. 17 of the 48 are imperfect, and the misses are not spread
+evenly — they are two distinct patterns:
+
+- **The evidence route under-cites.** 9 of the 11 questions that lost a gold
+  document are `evidence`, each missing one or two of the source records in a
+  disagreement. r2-pub-048, 049 and 050 all cite the official record and miss
+  the rival claims, even though the composer prompt says to cite every source
+  in a disagreement. It is not the gate discarding them: **zero citations were
+  dropped on the whole run**, and the rival records are registered as citable
+  by `_cite`. The composer was shown them and chose one.
+- **The medal routes over-cite.** 30 spurious citations, 26 of them from three
+  `sport_games` questions: r2-pub-006 cites 18 documents where the key wants 8,
+  r2-pub-033 cites 14 where it wants 4. It cites every event in the sport
+  rather than the events the answer rests on.
+
+**Candidate fix, not attempted yet, and the reason:** the graph knows which
+claims concern the same slot and which `SUPERSEDES` which, so code could
+complete a citation set the way code already does the arithmetic — cite one
+member of a disagreement and the rest come with it. That is the right shape of
+fix and it is deterministic. It is not in this run because it trades recall
+against precision and both are scored, and measuring the trade costs a full
+paid run. One day's quota buys one run, and the day it was found the budget was
+already committed to the four status errors, which are worth more. **Measure
+it on a fresh day's quota before shipping it.**
+
 ## 3. The build fails on the judges' machine — *up to 15%*
 
 **Cost:** repeatability is graded on "clean setup, locked dependencies" and a

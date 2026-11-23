@@ -108,7 +108,11 @@ Guidance that is about the data, not about any particular question:
 - `event_phrase` is how the question names the contest, in its own words
   ("men's slalom", "women's 10 metre air pistol"). Do not normalise it.
 - `wants_prose` is true when the answer is a reason, a cause or an account of
-  what happened -- anything that must be read rather than counted.
+  what happened -- anything that must be read rather than counted. A question
+  that asks *why* something happened, or *how* it came about, always wants
+  prose: the medal rows say who won and never say why. Set it even when the
+  question also names a year and an event, because those only say which
+  article to read.
 - `wants_evidence` is true when the question is about the standing of
   evidence: documents that disagree, something provisional or later
   corrected, what is officially confirmed, what cannot be established, what
@@ -209,6 +213,25 @@ status:
     answered       you can state all of it
     partial        you can state some of it and not the rest
     not_in_corpus  you can state none of it
+
+  Run this test before you write anything, every time:
+
+    1. List what the question asked you to state. A "why" question asks for
+       one thing: the reason. "What do the accounts say, and what is
+       confirmed?" asks for two.
+    2. Cross off each item you can give as a value -- a name, a number, a
+       duration, a date, a reason. **"There is no confirmed value", "it could
+       not be established", "it could not be verified" and "the sources
+       disagree" do not cross anything off.** They are the reason an item is
+       missing, and "no value exists" is not a value. Writing that sentence
+       well does not change the status.
+    3. None crossed off -> not_in_corpus. Some -> partial. All -> answered.
+
+  Step 2 is where this goes wrong, and it goes wrong in one direction: a good
+  account of why a figure is missing reads like an answer and is not one. If
+  the question asked how long something was and nothing establishes how long
+  it was, you can state none of what was asked, however much you can say
+  about it.
 
   Explaining *why* something is missing is not stating it. These four are the
   calibration, and three of them look partial until you ask what was
@@ -1597,17 +1620,43 @@ class Agent:
         # the wider net before answering rather than after being asked to:
         # waiting for the composer to request it cost a question whose answer
         # was sitting in another article.
+        widened = False
         if not ev["citable"] and plan.route != "text":
             ev["notes"].append("the route retrieved no documents; widening to full-text search")
             self._text_search(tr, question, plan, ev)
+            widened = True
 
         out = self.compose(tr, question, ev)
 
-        # The one retry. The composer asked for a wider net, so cast it once
-        # and answer again -- and only once, because an agent that can always
-        # look again never has to admit a gap.
-        if not out.enough and ev["route"] != "text":
-            ev["notes"].append("the first pass found too little; falling back to full-text search")
+        # The one retry, on either of two triggers.
+        #
+        # The composer asked for a wider net -- cast it once and answer again,
+        # and only once, because an agent that can always look again never has
+        # to admit a gap.
+        #
+        # Or the composer concluded the corpus is silent. That conclusion is
+        # only honest if the text was actually looked at, and a route can
+        # reach it without having looked: the widening above fires on an empty
+        # evidence bag, and a bag can be full of the wrong documents. Both
+        # film questions about Cocoon failed exactly here -- `film_search`
+        # found no such film, the route fell back to loading all 478 films
+        # that state their figures, and that made the bag non-empty, so the
+        # widening never fired and the answer was "the corpus does not contain
+        # information about who directed Cocoon". The corpus does contain it:
+        # not as a film article, but in an editor's filmography, under the
+        # heading "Films directed by Ron Howard". Nothing but a text search
+        # was ever going to find that, and the question is the one in ask.py's
+        # own docstring.
+        #
+        # So: never report an absence that was inferred from a missing graph
+        # row alone. Look in the text first, then say it.
+        if not widened and ev["route"] != "text" and (
+                not out.enough or out.status == "not_in_corpus"):
+            ev["notes"].append(
+                "the first pass found too little; falling back to full-text search"
+                if not out.enough else
+                "the first pass found no answer in the graph; searching the document "
+                "text before reporting the corpus as silent")
             self._text_search(tr, question, plan, ev)
             out = self.compose(tr, question, ev)
 
@@ -1624,11 +1673,20 @@ class Agent:
         # the agent's decision and a trace that hides it is not a trace of a
         # decision; and the tallies are the figures the answer is supposed to
         # quote, so `src.r2.audit` can hold the answer text against them with
-        # no model, no database and no quota. `ranked` is left out -- it is
-        # long, and the audit only needs the figures the answer should carry.
+        # no model, no database and no quota.
+        #
+        # `ranked` is included, against an earlier judgement that the audit
+        # "only needs the figures the answer should carry". That was wrong
+        # twice on the same run. The per-entry figures are exactly what a
+        # correct answer quotes -- "22 athletes competed in the men's
+        # decathlon" is one row of the ranking, and the edition-by-edition
+        # listings are all of it -- so without them the audit flagged three
+        # correct answers and had no way to tell them from invented numbers.
+        # It is at most twelve pairs per tally.
         record["plan"] = {k: v for k, v in plan.model_dump().items()
                           if v not in ("", [], False, None)}
         record["computed"] = [{k: t[k] for k in
-                               ("what", "unit", "highest", "lowest", "total", "entries")}
+                               ("what", "unit", "highest", "lowest", "total",
+                                "entries", "ranked")}
                               for t in ev.get("tallies", [])]
         return record
