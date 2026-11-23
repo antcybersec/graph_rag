@@ -1,0 +1,890 @@
+{
+ "questions": 50,
+ "accuracy_pct": 91.6,
+ "fully_correct": 43,
+ "status_correct": 46,
+ "citation_recall_avg": 0.883,
+ "citation_precision_avg": 0.919,
+ "by_expected_status": {
+  "answered": {
+   "n": 44,
+   "status_ok": 42,
+   "accuracy_pct": 93.9
+  },
+  "not_in_corpus": {
+   "n": 4,
+   "status_ok": 3,
+   "accuracy_pct": 75.0
+  },
+  "partial": {
+   "n": 2,
+   "status_ok": 1,
+   "accuracy_pct": 75.0
+  }
+ },
+ "judge_model": "gemini-3.1-flash-lite",
+ "per_question": [
+  {
+   "qid": "r2-pub-001",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified all athletes, categories, and years listed in the key.",
+   "citations": {
+    "gold_docs": 13,
+    "cited": 13,
+    "hit": 13,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-002",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified both athletes, their respective events, and the years they won.",
+   "citations": {
+    "gold_docs": 5,
+    "cited": 5,
+    "hit": 5,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-003",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified all eight wrestling events won by Japan, although it did not explicitly name the individual gold medalists, which was not strictly required by the prompt.",
+   "citations": {
+    "gold_docs": 8,
+    "cited": 8,
+    "hit": 8,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-004",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "All winners for the specified years were correctly identified.",
+   "citations": {
+    "gold_docs": 4,
+    "cited": 4,
+    "hit": 4,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-005",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system provided all the required films and years correctly.",
+   "citations": {
+    "gold_docs": 4,
+    "cited": 4,
+    "hit": 4,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-006",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system answer accurately identified both the nation and the count provided in the key.",
+   "citations": {
+    "gold_docs": 8,
+    "cited": 18,
+    "hit": 8,
+    "recall": 1.0,
+    "precision": 0.444
+   }
+  },
+  {
+   "qid": "r2-pub-007",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified the nation (Japan) and the number of gold medals (9).",
+   "citations": {
+    "gold_docs": 9,
+    "cited": 15,
+    "hit": 9,
+    "recall": 1.0,
+    "precision": 0.6
+   }
+  },
+  {
+   "qid": "r2-pub-008",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified the number of countries and listed all the nations specified in the key.",
+   "citations": {
+    "gold_docs": 16,
+    "cited": 16,
+    "hit": 16,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-009",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified all data points, the minimum, and the maximum.",
+   "citations": {
+    "gold_docs": 8,
+    "cited": 8,
+    "hit": 8,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-010",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified the number of nations for each year listed and correctly identified the years with the most and fewest nations based on the provided key.",
+   "citations": {
+    "gold_docs": 7,
+    "cited": 7,
+    "hit": 7,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-011",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified all data points, the maximum year, and the minimum year.",
+   "citations": {
+    "gold_docs": 8,
+    "cited": 8,
+    "hit": 8,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-012",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified all data points, the minimum, and the maximum.",
+   "citations": {
+    "gold_docs": 8,
+    "cited": 8,
+    "hit": 8,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-013",
+   "score": 0.85,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system answer includes all requested medals correctly, though it also includes additional information (team medals) not explicitly requested by the question but factually accurate.",
+   "citations": {
+    "gold_docs": 7,
+    "cited": 9,
+    "hit": 7,
+    "recall": 1.0,
+    "precision": 0.778
+   }
+  },
+  {
+   "qid": "r2-pub-014",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified all four Olympic titles including the specific weight categories and years mentioned in the key.",
+   "citations": {
+    "gold_docs": 4,
+    "cited": 4,
+    "hit": 4,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-015",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified all three Olympic medals recorded in the key with the associated years, events, and medal types.",
+   "citations": {
+    "gold_docs": 3,
+    "cited": 3,
+    "hit": 3,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-016",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified all individual Olympic titles listed in the key.",
+   "citations": {
+    "gold_docs": 6,
+    "cited": 6,
+    "hit": 6,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-017",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified Amistad as the film that grossed less than twice its budget.",
+   "citations": {
+    "gold_docs": 5,
+    "cited": 1,
+    "hit": 1,
+    "recall": 0.2,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-018",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified both predecessors in the correct order.",
+   "citations": {
+    "gold_docs": 2,
+    "cited": 2,
+    "hit": 2,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-019",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified both successors and predecessors in the governorship of Maine.",
+   "citations": {
+    "gold_docs": 1,
+    "cited": 2,
+    "hit": 1,
+    "recall": 1.0,
+    "precision": 0.5
+   }
+  },
+  {
+   "qid": "r2-pub-020",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified the disqualification, the reason (non-compliant shoes), the timing of the inspection, and the final medal reallocation.",
+   "citations": {
+    "gold_docs": 1,
+    "cited": 1,
+    "hit": 1,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-021",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system answer effectively conveys all facts from the key answer using synonymous phrasing.",
+   "citations": {
+    "gold_docs": 1,
+    "cited": 1,
+    "hit": 1,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-022",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system answer matches the key accurately.",
+   "citations": {
+    "gold_docs": 1,
+    "cited": 1,
+    "hit": 1,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-023",
+   "score": 0.0,
+   "status_expected": "answered",
+   "status_got": "not_in_corpus",
+   "status_correct": false,
+   "missing": [
+    "Lyles crossed the line 5 milliseconds sooner (9.784 vs 9.789)."
+   ],
+   "wrong": [],
+   "note": "The system incorrectly stated the information was not in the corpus when the key provided the answer and the status was 'answered'.",
+   "citations": {
+    "gold_docs": 1,
+    "cited": 1,
+    "hit": 1,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-024",
+   "score": 0.66,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [
+    "all eight finalists had run under 10 seconds in the semi-finals"
+   ],
+   "wrong": [],
+   "note": "The answer covers two of the three supporting facts but missed the detail regarding the semi-final times.",
+   "citations": {
+    "gold_docs": 1,
+    "cited": 1,
+    "hit": 1,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-025",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified the event and the number of nations as specified in the key.",
+   "citations": {
+    "gold_docs": 1,
+    "cited": 1,
+    "hit": 1,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-026",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified the event and the number of nations.",
+   "citations": {
+    "gold_docs": 1,
+    "cited": 1,
+    "hit": 1,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-027",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified the event and the number of nations as specified in the key.",
+   "citations": {
+    "gold_docs": 1,
+    "cited": 1,
+    "hit": 1,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-028",
+   "score": 1.0,
+   "status_expected": "not_in_corpus",
+   "status_got": "not_in_corpus",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified that the information is not in the corpus.",
+   "citations": {
+    "gold_docs": 0,
+    "cited": 0,
+    "hit": null,
+    "precision": null
+   }
+  },
+  {
+   "qid": "r2-pub-029",
+   "score": 1.0,
+   "status_expected": "partial",
+   "status_got": "partial",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified the winners for the years present in the key and correctly declined to provide a winner for the year marked as not_in_corpus.",
+   "citations": {
+    "gold_docs": 3,
+    "cited": 3,
+    "hit": 3,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-030",
+   "score": 0.0,
+   "status_expected": "answered",
+   "status_got": "not_in_corpus",
+   "status_correct": false,
+   "missing": [
+    "Ron Howard"
+   ],
+   "wrong": [
+    "The corpus does not contain information about who directed the film Cocoon."
+   ],
+   "note": "The system incorrectly stated the information was not in the corpus when the key provided the correct answer.",
+   "citations": {
+    "gold_docs": 1,
+    "cited": 0,
+    "hit": 0,
+    "recall": 0.0,
+    "precision": 0.0
+   }
+  },
+  {
+   "qid": "r2-pub-031",
+   "score": 1.0,
+   "status_expected": "not_in_corpus",
+   "status_got": "not_in_corpus",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified that the information is not in the corpus and declined to provide a value.",
+   "citations": {
+    "gold_docs": 0,
+    "cited": 0,
+    "hit": null,
+    "precision": null
+   }
+  },
+  {
+   "qid": "r2-pub-032",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified all three athletes, their respective events, and the winning years as provided in the key.",
+   "citations": {
+    "gold_docs": 6,
+    "cited": 6,
+    "hit": 6,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-033",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified both the nation and the count of gold medals.",
+   "citations": {
+    "gold_docs": 4,
+    "cited": 14,
+    "hit": 4,
+    "recall": 1.0,
+    "precision": 0.286
+   }
+  },
+  {
+   "qid": "r2-pub-034",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified all three events and the corresponding medals.",
+   "citations": {
+    "gold_docs": 3,
+    "cited": 3,
+    "hit": 3,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-035",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified the event and the number of nations as specified in the key.",
+   "citations": {
+    "gold_docs": 1,
+    "cited": 1,
+    "hit": 1,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-036",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified the winner.",
+   "citations": {
+    "gold_docs": 1,
+    "cited": 1,
+    "hit": 1,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-037",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified the winner and the event edition.",
+   "citations": {
+    "gold_docs": 1,
+    "cited": 1,
+    "hit": 1,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-038",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system answer correctly identifies the number of athletes as 22.",
+   "citations": {
+    "gold_docs": 1,
+    "cited": 1,
+    "hit": 1,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-039",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified Aurélien Bouchardy and acknowledged the provisional nature of the display.",
+   "citations": {
+    "gold_docs": 1,
+    "cited": 2,
+    "hit": 1,
+    "recall": 1.0,
+    "precision": 0.5
+   }
+  },
+  {
+   "qid": "r2-pub-040",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified the athlete and the exact effective time including the timezone offset.",
+   "citations": {
+    "gold_docs": 2,
+    "cited": 1,
+    "hit": 1,
+    "recall": 0.5,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-041",
+   "score": 0.8,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [
+    "The explanation that the blog was republishing a provisional scoreboard from July 23."
+   ],
+   "wrong": [
+    "Classification of the blog as an unverified witness report instead of identifying it as a publication of a provisional scoreboard."
+   ],
+   "note": "The system correctly identified that the blog did not supersede the jury but failed to explain that the blog was simply reporting an earlier provisional scoreboard.",
+   "citations": {
+    "gold_docs": 3,
+    "cited": 2,
+    "hit": 2,
+    "recall": 0.667,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-042",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified both the planned location (Long Beach Arena) and the actual location (Carson Velodrome).",
+   "citations": {
+    "gold_docs": 3,
+    "cited": 3,
+    "hit": 3,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-043",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified the information as incorrect and cited the superseding documentation and correct location.",
+   "citations": {
+    "gold_docs": 4,
+    "cited": 3,
+    "hit": 3,
+    "recall": 0.75,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-044",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system answer accurately reflects the venue and the effective date mentioned in the key.",
+   "citations": {
+    "gold_docs": 1,
+    "cited": 1,
+    "hit": 1,
+    "recall": 1.0,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-045",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified the number of registered entries and actual competitors as specified in the key.",
+   "citations": {
+    "gold_docs": 3,
+    "cited": 2,
+    "hit": 2,
+    "recall": 0.667,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-046",
+   "score": 1.0,
+   "status_expected": "not_in_corpus",
+   "status_got": "not_in_corpus",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified that the information is not in the corpus and provided a accurate context for the missing data.",
+   "citations": {
+    "gold_docs": 2,
+    "cited": 1,
+    "hit": 1,
+    "recall": 0.5,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-047",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system accurately identified the confusion between registered entries and actual starters/confirmed competitors, noting the discrepancy in source authority.",
+   "citations": {
+    "gold_docs": 4,
+    "cited": 3,
+    "hit": 3,
+    "recall": 0.75,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-048",
+   "score": 0.5,
+   "status_expected": "partial",
+   "status_got": "answered",
+   "status_correct": false,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified the unverified nature of the claims and acknowledged that an official duration could not be established.",
+   "citations": {
+    "gold_docs": 3,
+    "cited": 2,
+    "hit": 2,
+    "recall": 0.667,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-049",
+   "score": 0.0,
+   "status_expected": "not_in_corpus",
+   "status_got": "answered",
+   "status_correct": false,
+   "missing": [],
+   "wrong": [
+    "The system failed to decline answering for a 'not_in_corpus' status, instead providing an invented claim that LA28 archery operations made a statement."
+   ],
+   "note": "When the key status is not_in_corpus, the system must decline to give a value. Providing a statement attributed to officials is an error.",
+   "citations": {
+    "gold_docs": 3,
+    "cited": 1,
+    "hit": 1,
+    "recall": 0.333,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-050",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified that the absence of a log entry does not prove the absence of an event and included the supporting context that the record check was inconclusive.",
+   "citations": {
+    "gold_docs": 3,
+    "cited": 1,
+    "hit": 1,
+    "recall": 0.333,
+    "precision": 1.0
+   }
+  }
+ ]
+}
