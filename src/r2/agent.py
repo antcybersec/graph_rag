@@ -233,6 +233,7 @@ status:
   it was, you can state none of what was asked, however much you can say
   about it.
 
+
   Explaining *why* something is missing is not stating it. These four are the
   calibration, and three of them look partial until you ask what was
   requested:
@@ -271,6 +272,15 @@ answer:
   an explanation.
 
 Reading the evidence:
+  - **A list under a heading that names an attribute states that attribute
+    for every item in the list.** "Films directed by Ron Howard" followed by
+    "- Cocoon (1985)" states that Ron Howard directed Cocoon, and it states it
+    just as plainly as an infobox would. The heading is part of the sentence:
+    read it that way. This holds wherever the list appears -- a filmography on
+    an editor's page, a list of titles held on an official's page -- because
+    the corpus is one corpus and a fact does not need its own article to be
+    in it. A passage retrieved from a document about someone else is still
+    evidence about what it names.
   - A count of -1 means the article did not state it. That is missing
     information, not zero.
   - STANDS is what the strongest evidence supports. REJECTED entries are real
@@ -1179,11 +1189,35 @@ class Agent:
             titles = {d["doc_id"]: d.get("title", "") for d in rows(
                 tr.run_query("doc_for_chunk", {"chunks": [c["chunk_id"] for c in found]},
                              tool="doc_for_chunk_lexical"), "Res")}
-            for c in found[:5]:
+            # One passage per document, rather than the first five chunks.
+            #
+            # `found[:5]` discarded half the evidence on exactly the question
+            # this query was written for. "Who directed Cocoon?" matches ten
+            # chunks in the whole corpus -- the word is a common noun, so most
+            # are a "slimy cocoon" in Fire in the Sky and Killer Klowns from
+            # Outer Space -- and the one that answers it is the eighth, in the
+            # biography of the film's editor. The first five were the slimy
+            # ones. The composer was told "10 passages in 7 documents matched",
+            # shown five of them, and refused; its reasoning was right and its
+            # evidence was a third of what had been retrieved.
+            #
+            # The cap is per document because document coverage is what the
+            # search is for, and because `chunks_containing` has no ORDER BY:
+            # which five arrive is arbitrary, and an arbitrary cut over an
+            # unordered set is the same defect that made films_with_figures
+            # give a different answer every run.
+            seen_docs: set = set()
+            for c in found:
+                doc_id = c["doc_id"]
+                if doc_id in seen_docs:
+                    continue
+                seen_docs.add(doc_id)
+                if len(seen_docs) > 8:
+                    break
                 ev.setdefault("passages", []).append({
-                    "doc_id": c["doc_id"], "title": titles.get(c["doc_id"], ""),
+                    "doc_id": doc_id, "title": titles.get(doc_id, ""),
                     "text": _clip(c.get("text", ""), 1200)})
-                self._cite(ev, c["doc_id"], titles.get(c["doc_id"], ""))
+                self._cite(ev, doc_id, titles.get(doc_id, ""))
             retrieved += doc_ids
             ev["notes"].append(f"literal search for {entity!r} matched "
                                f"{len(found)} passage(s) in {len(doc_ids)} document(s)")
