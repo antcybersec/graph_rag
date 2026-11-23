@@ -120,8 +120,10 @@ def main() -> int:
                             "missing": ["no answer produced"], "wrong": [], "note": ""})
             continue
         r = judge_one(g, got[qid], model)
+        c = citation_overlap(g, got[qid])
+        r["citations"] = c
         results.append(r)
-        cites.append(citation_overlap(g, got[qid]))
+        cites.append(c)
         flag = "ok  " if r["score"] >= 0.999 else ("PART" if r["score"] > 0 else "MISS")
         print(f"{flag} {qid}  {r['score']:.2f}  {r['status_expected']:>13s} -> "
               f"{str(r['status_got']):13s} {('missing=' + '; '.join(r['missing'])[:90]) if r['missing'] else ''}"
@@ -132,20 +134,43 @@ def main() -> int:
     accuracy = sum(r["score"] for r in results) / n * 100 if n else 0.0
     status_ok = sum(1 for r in results if r["status_correct"])
     recalls = [c["recall"] for c in cites if c.get("recall") is not None]
+    # Precision was being computed per question and then dropped. Evidence is
+    # 10% of the score and citing six documents to support one fact spends it
+    # just as surely as citing none, so both halves get reported.
+    precisions = [c["precision"] for c in cites if c.get("precision") is not None]
+    # Only six of the fifty public questions are not plain `answered`, so a
+    # 50-question status average hides the entire honesty criterion. Split it.
+    by_status: dict = {}
+    for r in results:
+        b = by_status.setdefault(r["status_expected"], {"n": 0, "status_ok": 0, "score": 0.0})
+        b["n"] += 1
+        b["status_ok"] += 1 if r["status_correct"] else 0
+        b["score"] += r["score"]
+    for b in by_status.values():
+        b["accuracy_pct"] = round(b["score"] / b["n"] * 100, 1) if b["n"] else 0.0
+        del b["score"]
     summary = {
         "questions": n,
         "accuracy_pct": round(accuracy, 1),
         "fully_correct": full,
         "status_correct": status_ok,
         "citation_recall_avg": round(sum(recalls) / len(recalls), 3) if recalls else None,
+        "citation_precision_avg": round(sum(precisions) / len(precisions), 3) if precisions else None,
+        "by_expected_status": by_status,
         "judge_model": model or os.environ.get("GEN_MODEL"),
         "per_question": results,
     }
     out = Path(args.out or args.answers + ".score.json")
     out.write_text(json.dumps(summary, indent=1, ensure_ascii=False), encoding="utf-8")
     print(f"\naccuracy {accuracy:.1f}%  ({full}/{n} fully correct, "
-          f"{status_ok}/{n} correct status, citation recall "
-          f"{summary['citation_recall_avg']})\n-> {out}")
+          f"{status_ok}/{n} correct status, citations "
+          f"recall {summary['citation_recall_avg']} / "
+          f"precision {summary['citation_precision_avg']})")
+    for st in sorted(by_status):
+        b = by_status[st]
+        print(f"  {st:>13s}  {b['n']:2d} questions  "
+              f"status {b['status_ok']}/{b['n']}  accuracy {b['accuracy_pct']:.1f}%")
+    print(f"-> {out}")
     return 0
 
 

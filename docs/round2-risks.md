@@ -79,11 +79,33 @@ all 48 retrieved documents where the answer rested on far fewer, which costs
 citation precision. `llama3.2:3b` was tried first and is not good enough — it
 got 2 routes of 5 and dropped the slots the query needs.
 
+**Closed on the measurement leg, 23 Nov:** "showing the traces match" was a
+thing to be done by eye, which is the wrong way to hold a fatal risk.
+`python -m src.r2.repro <questions> <answers> --qid <id>` re-answers a
+submitted question and returns one of three verdicts. It cannot be byte
+equality — the composed sentence is model-written, and two runs of a perfectly
+repeatable system word it differently — so what it compares is everything the
+score is computed from: the status, **every number in the answer in order**,
+the citation ids as a set, and the route with its sequence of TigerGraph
+queries.
+
+- `MATCH` — status, figures and citations all identical
+- `CLOSE` — status and figures identical; citations or wording moved
+- `DIFFERENT` — a status or a figure moved, and it exits non-zero
+
+The figures check is the one that matters. Every count, argmax and tie is done
+in code from graph rows, so a figure that moves between two runs means
+something non-deterministic is feeding the arithmetic and the submitted answer
+was luck — which is exactly how the `films_with_figures` `LIMIT 200` bug was
+found, by hand, after it had already changed one answer twice.
+
 **Open:** rehearse twice — once asking unseen questions through `./ui.sh` or
-`python -m src.r2.ask "..."`, once reproducing two hidden-set answers from the
-submitted file and showing the traces match. **Keep the day's quota in
-reserve: live questions cost ~40 requests, a batch run costs 260** — or run the
-live questions through `./offline.sh` and spend none.
+`python -m src.r2.ask "..."`, once running `src.r2.repro` on two hidden-set
+answers. **Keep the day's quota in reserve: live questions cost ~40 requests,
+a batch run costs 260** — or run the live questions through `./offline.sh` and
+spend none. Note that a reproduction run has to use the same provider as the
+run that wrote the file; `repro` prints the provider it used and says so when
+it is not `google`.
 
 ## 3. The build fails on the judges' machine — *up to 15%*
 

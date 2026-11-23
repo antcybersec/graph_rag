@@ -31,6 +31,7 @@ from src.r2.agent import Agent, Composed, _tally, _within_a_day
 from src.r2.audit import audit_one
 from src.r2.claims import canon_units
 from src.r2.parse import _money
+from src.r2.repro import compare as _compare
 
 
 # -- the arithmetic the composer is not allowed to do -----------------------
@@ -337,6 +338,57 @@ def test_the_indian_conventions_and_the_plain_cases():
     assert _money("") is None
     assert _money("not a number") is None
     assert _money("5 bn") == (5000000000.0, "")
+
+
+# --- reproduction: what counts as the same answer twice -------------------
+# Repeatability is 15% of the score and the brief disqualifies answers the
+# system cannot reproduce. The composed sentence is model-written, so the
+# check cannot be byte equality; these fix what it is instead.
+
+def _pair(answer="France won 13 silver", status="answered",
+          citations=("a", "b"), tools=("q1",)):
+    return {"qid": "x", "status": status, "answer": answer,
+            "citations": list(citations), "route": "r",
+            "trace": [{"tigergraph": True, "tool": t} for t in tools]}
+
+
+def test_reproduction_ignores_rewording_that_keeps_every_figure():
+    """The one case byte equality would get wrong: same facts, new sentence."""
+    c = _compare(_pair(), _pair(answer="13 silver went to France",
+                                citations=("b", "a")))
+    assert c["verdict"] == "MATCH", c
+    assert c["same_figures"] and c["same_citations"] and c["same_retrieval"]
+
+
+def test_reproduction_fails_when_a_figure_moves():
+    """A moved count means something non-deterministic is feeding the
+    arithmetic, which is the finding this tool exists to catch."""
+    assert _compare(_pair(), _pair(answer="France won 14 silver"))["verdict"] == "DIFFERENT"
+
+
+def test_reproduction_fails_when_the_status_moves():
+    assert _compare(_pair(), _pair(status="partial"))["verdict"] == "DIFFERENT"
+
+
+def test_reproduction_is_close_not_different_when_only_citations_move():
+    """Worth distinguishing: a lost citation costs citation marks, a moved
+    figure costs the answer. They are not the same defect."""
+    c = _compare(_pair(), _pair(citations=("a",)))
+    assert c["verdict"] == "CLOSE"
+    assert c["citations_lost"] == ["b"] and c["citations_gained"] == []
+
+
+def test_reproduction_counts_figures_in_order_not_as_a_set():
+    """"13 silver, 28 in all" and "28 silver, 13 in all" are different
+    answers, so the comparison is a list and not a set."""
+    c = _compare(_pair(answer="13 silver and 28 in all"),
+                 _pair(answer="28 silver and 13 in all"))
+    assert c["verdict"] == "DIFFERENT"
+
+
+def test_reproduction_notices_a_changed_query_sequence():
+    c = _compare(_pair(), _pair(tools=("q1", "q2")))
+    assert not c["same_retrieval"]
 
 
 CHECKS = [(name, fn) for name, fn in sorted(globals().items())

@@ -32,7 +32,7 @@ Or `./finish.sh`, which does all of it unattended and waits for the quota
 first.
 
 Three of those need neither a model nor a key, which is why they are worth
-running often: `tests/test_r2.py` (21 pure-function checks), `src.r2.smoke`
+running often: `tests/test_r2.py` (40 pure-function checks), `src.r2.smoke`
 (all ten route cases against the live graph) and `src.r2.audit` (each answer
 held against the arithmetic its own record carries). The audit is the only
 check the hidden set gets, because it ships with no answers.
@@ -96,6 +96,11 @@ python -m src.r2.run questions_public.jsonl data/results/r2/answers_public.jsonl
       worklist either explained or fixed
 - [ ] `python -m src.r2.smoke` green on all ten routes
 - [ ] `python -m tests.test_r2` green
+- [ ] `python -m src.r2.repro questions_public.jsonl \
+      data/results/r2/answers_public.jsonl --sample 2` returns no `DIFFERENT`.
+      This is the only check that tests the claim repeatability is graded on,
+      and the only one that costs model calls (~3 requests a question), so it
+      is run on a sample rather than the file
 
 ## For the judging call
 
@@ -108,6 +113,11 @@ python -m src.r2.run questions_public.jsonl data/results/r2/answers_public.jsonl
   local graph and the local embedder. 123s a question on an M4/16GB against 16s
   on Gemini. It is the answer to a quota wall on the day, and it is worth
   showing for its own sake.
+- `python -m src.r2.repro <questions> <answers> --qid <id>` is the answer to
+  "show me that this answer reproduces". It re-answers the question and prints
+  `MATCH` / `CLOSE` / `DIFFERENT` against the submitted record, comparing the
+  status, every figure in order, the citations and the query sequence — not the
+  wording, which is model-written and moves without anything being wrong.
 - `./ui.sh` opens the demo page. It reads the graph live, so it cannot show a
   stale number.
 - The container keeps its data in the named volume `tg_r2_data`, so the graph
