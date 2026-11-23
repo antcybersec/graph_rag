@@ -340,6 +340,177 @@ def test_the_indian_conventions_and_the_plain_cases():
     assert _money("5 bn") == (5000000000.0, "")
 
 
+# --- the audit's noise floor, measured against real answers ----------------
+# Eight of the first twenty answers of the 23 Nov run were flagged, and six of
+# the eight were correct answers. A worklist that is three-quarters noise is
+# not read, and the hidden set has no other check. These fix the three
+# reconciliations that brought it to one in twenty-eight.
+
+def _editions():
+    """What an `event_series` question computes: two tallies, one asked for."""
+    return [{"what": "competitors per edition of this contest", "unit": "competitors",
+             "highest": {"value": 17, "holders": ["2024 Summer", "2028 Summer"]},
+             "lowest": {"value": 14, "holders": ["2000 Summer"]},
+             "total": 112, "entries": 7},
+            {"what": "nations per edition of this contest", "unit": "nations",
+             "highest": {"value": 17, "holders": ["2024 Summer"]},
+             "lowest": {"value": 14, "holders": ["2000 Summer"]},
+             "total": 110, "entries": 7}]
+
+
+def test_audit_checks_the_tally_the_plan_asked_for():
+    """r2-pub-010, from the real run. The answer is right row for row against
+    the published key; it was flagged because the tally the question did NOT
+    ask about had a tie at the same value."""
+    answer = ("the number of nations competing was 14 in 2000, 16 in 2004, 16 in 2008, "
+              "16 in 2012, 16 in 2016, 17 in 2024, and 15 in 2028. The 2024 Summer "
+              "Olympics had the most nations (17), and the 2000 Summer the fewest (14).")
+    flags = audit_one(_rec(route="event_series", answer=answer,
+                           plan={"metric": "nations", "extreme": "most"},
+                           computed=_editions()))
+    assert flags == [], flags
+
+
+def test_audit_still_reports_a_tie_in_the_tally_that_was_asked_for():
+    """The suppression must not be a way out of the tie check."""
+    flags = audit_one(_rec(route="event_series",
+                           answer="2024 had the most competitors, 17.",
+                           plan={"metric": "competitors", "extreme": "most"},
+                           computed=_editions()))
+    assert any("TIE NOT REPORTED" in f for f in flags), flags
+
+
+def test_audit_keeps_every_tally_when_the_plan_names_none():
+    """A check that silently stops running is worse than a noisy one."""
+    from src.r2.audit import _asked_about
+    assert len(_asked_about(_editions(), {})) == 2
+    assert len(_asked_about(_editions(), {"metric": "nations"})) == 1
+    # a metric that matches nothing falls back rather than checking nothing
+    assert len(_asked_about(_editions(), {"metric": "qqq"})) == 2
+
+
+def test_audit_reconciles_a_listing_that_adds_up_to_the_computed_total():
+    """The per-edition figures live in `ranked`, which the record leaves out,
+    so they cannot be matched one by one -- but eight numbers that add up to
+    the computed total of 186 are that ranking written out."""
+    tally = [{"what": "nations per edition", "unit": "nations",
+              "highest": {"value": 32, "holders": ["2012 Summer"]},
+              "lowest": {"value": 16, "holders": ["1988 Summer"]},
+              "total": 186, "entries": 8}]
+    answer = ("1988: 16, 2000: 24, 2004: 24, 2008: 26, 2012: 32, 2016: 24, "
+              "2024: 21, 2028: 19. The highest was 2012 with 32.")
+    flags = audit_one(_rec(route="event_series", answer=answer,
+                           plan={"metric": "nations", "extreme": "most"},
+                           computed=tally))
+    assert flags == [], flags
+
+
+def test_audit_reports_a_listing_that_does_not_add_up():
+    """The stronger half of the same check: a listing whose figures do not
+    reconcile with the total is a finding, not noise."""
+    tally = [{"what": "nations per edition", "unit": "nations",
+              "highest": {"value": 32, "holders": ["2012 Summer"]},
+              "lowest": {"value": 16, "holders": ["1988 Summer"]},
+              "total": 186, "entries": 8}]
+    answer = ("1988: 16, 2000: 24, 2004: 24, 2008: 26, 2012: 32, 2016: 24, "
+              "2024: 21, 2028: 77. The highest was 2012 with 32.")
+    flags = audit_one(_rec(route="event_series", answer=answer,
+                           plan={"metric": "nations", "extreme": "most"},
+                           computed=tally))
+    assert any("FIGURE NOT IN THE ARITHMETIC" in f for f in flags), flags
+
+
+def test_audit_does_not_read_a_weight_class_as_arithmetic():
+    """"Men's Greco-Roman 60 kg" put a 60 on the worklist."""
+    flags = audit_one(_rec(answer="Japan won the Men's Greco-Roman 60 kg, "
+                                  "with 14 golds in all.", computed=_golds()))
+    assert flags == [], flags
+
+
+def test_audit_does_not_read_a_hyphen_as_a_minus_sign():
+    flags = audit_one(_rec(answer="six men with top-25 all-time records, and 14 golds.",
+                           computed=_golds()))
+    assert not any("-25" in f for f in flags), flags
+
+
+# --- the superlative check: Round 1's failure class, stated as a check ------
+
+def test_audit_catches_a_superlative_that_ignored_the_ranking():
+    """The ranking puts the USA top with 14. The answer names France and no
+    figure, so the model answered the superlative from somewhere other than
+    the arithmetic it was handed."""
+    flags = audit_one(_rec(answer="France led the medal table.",
+                           plan={"extreme": "most"}, computed=_golds()))
+    assert any("SUPERLATIVE NOT TAKEN FROM THE ARITHMETIC" in f for f in flags), flags
+
+
+def test_audit_accepts_a_superlative_that_names_the_top_holder():
+    flags = audit_one(_rec(answer="The USA led the medal table.",
+                           plan={"extreme": "most"}, computed=_golds()))
+    assert not any("SUPERLATIVE" in f for f in flags), flags
+
+
+def test_audit_accepts_a_superlative_answered_with_the_figure_alone():
+    """"How many golds did the leading nation win?" wants 14, not a name.
+    Flagging that would be noise, and a worklist with noise goes unread."""
+    flags = audit_one(_rec(answer="14.", plan={"extreme": "most"}, computed=_golds()))
+    assert not any("SUPERLATIVE" in f for f in flags), flags
+
+
+def test_audit_superlative_check_reads_the_right_end_of_the_ranking():
+    """A `fewest` question is checked against `lowest`, not `highest`: naming
+    the top holder is the wrong answer to it."""
+    tally = [{"what": "golds by nation", "unit": "gold",
+              "highest": {"value": 14, "holders": ["USA"]},
+              "lowest": {"value": 1, "holders": ["Kenya", "Fiji"]},
+              "total": 48, "entries": 27}]
+    flags = audit_one(_rec(answer="The USA, with 14.",
+                           plan={"extreme": "fewest"}, computed=tally))
+    assert any("SUPERLATIVE" in f for f in flags), flags
+    ok = audit_one(_rec(answer="Kenya and Fiji, with one each.",
+                        plan={"extreme": "fewest"}, computed=tally))
+    assert not any("SUPERLATIVE" in f for f in ok), ok
+
+
+def test_audit_superlative_check_stays_quiet_when_it_cannot_check():
+    """Holders too short to match leave nothing to test against, and a check
+    that cannot run must not report a defect."""
+    unmatchable = [{"what": "x", "unit": "n",
+                    "highest": {"value": 14, "holders": ["USA"]},
+                    "lowest": {"value": 1, "holders": ["a", "b"]},
+                    "total": 48, "entries": 27}]
+    flags = audit_one(_rec(answer="The USA, with 14.",
+                           plan={"extreme": "fewest"}, computed=unmatchable))
+    assert not any("SUPERLATIVE" in f for f in flags), flags
+
+
+def test_audit_superlative_check_is_satisfied_by_any_one_tally():
+    """One question can compute several tallies -- medals by nation plus one
+    per colour -- when only one of them is what was asked. Satisfying any of
+    them is enough, or the check fires on correct answers."""
+    computed = _golds() + [{"what": "silvers by nation", "unit": "silver",
+                            "highest": {"value": 9, "holders": ["GBR"]},
+                            "lowest": {"value": 1, "holders": ["c"]},
+                            "total": 30, "entries": 20}]
+    flags = audit_one(_rec(answer="GBR won the most silver, nine of them.",
+                           plan={"extreme": "most"}, computed=computed))
+    assert not any("SUPERLATIVE" in f for f in flags), flags
+
+
+def test_audit_superlative_check_stays_quiet_without_a_plan_extreme():
+    """A question that did not ask for an extreme is not checked for one."""
+    flags = audit_one(_rec(answer="France won 13 silver.", computed=_golds()))
+    assert not any("SUPERLATIVE" in f for f in flags), flags
+
+
+def test_audit_ignores_a_holder_too_short_to_match_anything():
+    """A holder called "1" is inside almost any answer; matching on it would
+    make the check pass unconditionally."""
+    from src.r2.audit import _names
+    assert _names(["1", "GB", "USA", "athletics | men s 100 metres"]) == [
+        "usa", "athletics"]
+
+
 # --- reproduction: what counts as the same answer twice -------------------
 # Repeatability is 15% of the score and the brief disqualifies answers the
 # system cannot reproduce. The composed sentence is model-written, so the
