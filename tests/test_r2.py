@@ -340,6 +340,25 @@ def test_the_indian_conventions_and_the_plain_cases():
     assert _money("5 bn") == (5000000000.0, "")
 
 
+# --- metrics: every number derived from the answer files -------------------
+
+def test_run_time_is_the_span_of_the_run():
+    """total_run_time_s was null because it was a parameter nobody passed.
+    Every other number in metrics.json is derived from the answer files, so a
+    judge recomputing them gets the same values; this one has to be too."""
+    from src.r2.metrics import _run_time_s
+    recs = [{"started_at": "2026-11-23T10:18:56Z", "finished_at": "2026-11-23T10:19:14Z"},
+            {"started_at": "2026-11-23T10:19:14Z", "finished_at": "2026-11-23T10:32:55Z"}]
+    assert _run_time_s(recs) == 839
+
+
+def test_run_time_is_none_when_the_records_do_not_carry_times():
+    from src.r2.metrics import _run_time_s
+    assert _run_time_s([{"qid": "x"}]) is None
+    assert _run_time_s([]) is None
+    assert _run_time_s([{"started_at": "not a time", "finished_at": "also not"}]) is None
+
+
 # --- the audit's noise floor, measured against real answers ----------------
 # Eight of the first twenty answers of the 23 Nov run were flagged, and six of
 # the eight were correct answers. A worklist that is three-quarters noise is

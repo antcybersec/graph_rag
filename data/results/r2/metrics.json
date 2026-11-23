@@ -16,7 +16,7 @@
     "tigergraph_queries_per_question_avg": 10.6,
     "trace_steps_per_question_avg": 13.08,
     "answers_with_tigergraph_step": 50,
-    "total_run_time_s": null,
+    "total_run_time_s": 839,
     "cost_usd_total": 0.0461,
     "cost_usd_per_question": 0.00092
   },
@@ -37,7 +37,7 @@
     "tigergraph_queries_per_question_avg": 8.5,
     "trace_steps_per_question_avg": 10.98,
     "answers_with_tigergraph_step": 50,
-    "total_run_time_s": null,
+    "total_run_time_s": 843,
     "cost_usd_total": 0.044,
     "cost_usd_per_question": 0.00088
   }

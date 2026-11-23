@@ -13,7 +13,9 @@ accuracy stays null, as instructed.
 from __future__ import annotations
 
 import argparse
+import calendar
 import json
+import time
 from pathlib import Path
 
 from src.r2.trace import INPUT_USD_PER_MTOK, OUTPUT_USD_PER_MTOK
@@ -35,6 +37,37 @@ def _pct(values: list[float], q: float) -> float:
     ordered = sorted(values)
     idx = min(len(ordered) - 1, max(0, int(round(q * (len(ordered) - 1)))))
     return float(ordered[idx])
+
+
+def _run_time_s(records: list[dict]):
+    """Wall-clock span of the run, from the answer file alone.
+
+    This was reported as null because it was a parameter nobody passed, which
+    is the one thing metrics.json is not allowed to be: every other number in
+    it is derived from the answer files, so a judge recomputing them gets the
+    same values. The span is derivable too -- each record carries its own
+    `started_at` and `finished_at` -- so it is derived here rather than
+    measured by the thing being measured.
+
+    It is the span from the first question starting to the last one finishing,
+    so for a run that stopped and resumed it reports the elapsed wall clock
+    and not the time spent working. Both submitted files are written by one
+    process in one sitting, where the two are the same.
+    """
+    fmt = "%Y-%m-%dT%H:%M:%SZ"
+    starts, ends = [], []
+    for r in records:
+        for key, into in (("started_at", starts), ("finished_at", ends)):
+            raw = r.get(key)
+            if not raw:
+                continue
+            try:
+                into.append(calendar.timegm(time.strptime(str(raw), fmt)))
+            except (ValueError, TypeError):
+                continue
+    if not starts or not ends:
+        return None
+    return round(max(ends) - min(starts), 1)
 
 
 def summarise(records: list[dict], accuracy_pct=None, run_time_s=None) -> dict:
@@ -65,7 +98,7 @@ def summarise(records: list[dict], accuracy_pct=None, run_time_s=None) -> dict:
             sum(len(r.get("trace", [])) for r in records) / n, 2),
         "answers_with_tigergraph_step": sum(
             1 for r in records if any(s.get("tigergraph") for s in r.get("trace", []))),
-        "total_run_time_s": run_time_s,
+        "total_run_time_s": run_time_s if run_time_s is not None else _run_time_s(records),
         "cost_usd_total": round(inp / 1e6 * INPUT_USD_PER_MTOK
                                 + out / 1e6 * OUTPUT_USD_PER_MTOK, 4),
         "cost_usd_per_question": round((inp / 1e6 * INPUT_USD_PER_MTOK
