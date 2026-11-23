@@ -138,6 +138,72 @@ paid run. One day's quota buys one run, and the day it was found the budget was
 already committed to the four status errors, which are worth more. **Measure
 it on a fresh day's quota before shipping it.**
 
+## 2c. What a half run bought — *measured 23 Nov, two fixes applied*
+
+The day's remaining quota was spent re-measuring the public set after the
+passage-per-document change, because that change touches every question that
+reads article text and seven targeted checks are not a regression test. The
+run stopped at **28 of 50** on the provider's daily limit. Scored against the
+key the free way — status and `gold_doc_ids`, no judge calls — the 28 gave:
+
+| | committed run | re-run |
+|---|---|---|
+| status correct | 27/28 | 26/28 |
+| citation recall | 0.970 | 0.896 |
+| citation precision | 0.872 | 0.902 |
+
+One fix, two regressions, and both regressions were worth more than the noise
+they looked like:
+
+- **r2-pub-023 was fixed, but not by the change that was aimed at it.** The
+  trace shows the route stayed `event_series` and the *widening fallback* read
+  the prose after the first pass came up empty. The planner rule added the
+  same day — "a *why* question always wants prose" — contributed nothing here.
+- **r2-pub-022 was broken by that planner rule.** It asks why Romankov was
+  absent from the 1984 men's foil. The committed run planned route `evidence`,
+  found the claim in Q5443136 and answered correctly. The re-run planned route
+  `text` with `wants_prose: true`, found nothing, and reported the corpus
+  silent. The rule said a *why* question wants prose; the route list says
+  `text` is "the prose of an article"; the planner joined them. The flag was
+  never meant to pick a route, and the widening fallback means it does not
+  need to. Fixed by saying so in the prompt — the flag never decides the
+  route — and by demoting `text` in the route list to the last resort, for a
+  question that names nothing the graph is organised by.
+- **r2-pub-007 was right and scored `partial` anyway.** "Japan dominated judo
+  at the 2020 Summer Olympics with 9 golds" — correct nation, correct figure,
+  both computed in code — with **zero citations**, because the composer
+  offered the literal string `sport_games` where a document id belongs. The
+  gate dropped it correctly and demoted the answer, which is the right call in
+  general (see r2-pub-029) but not here: when code did the arithmetic, the
+  documents it counted over are known exactly. So the gate now substitutes the
+  retrieved set when a tally is behind the answer and nothing else survived,
+  bounded at 25 documents — the largest gold set in the public key is 16, and
+  a comparison route can retrieve hundreds, where citing all of them would buy
+  a citation mark with a precision one. This is the narrow, strictly
+  non-regressive corner of the 2b fix: it only fires where the behaviour today
+  is zero citations.
+
+**The lesson that generalises:** a prompt rule written to fix one question was
+measured, on a different question, to cost more than it gained — and the
+question it was written for had already been fixed by a code change. Seven
+targeted checks said 6/7. Twenty-eight measured questions said the net was
+negative. Targeted validation cannot see a regression it did not aim at.
+
+**Caveat on these two fixes:** both are verified by unit tests (63 checks, no
+model, no database) and by reading the traces. Neither has been through a
+paid run — quota was exhausted at the moment they were written. They are the
+first thing the next full re-run has to confirm, specifically r2-pub-022 back
+to route `evidence` and r2-pub-023 holding `answered`.
+
+### A test-suite bug found while writing those tests
+
+`CHECKS` in `tests/test_r2.py` was a module-level list built at import time,
+so any check written below that line was collected before it existed and
+silently skipped — four new ones, with the suite still reporting all green.
+Collection now happens inside `main()`, so a check counts wherever it is
+written in the file. Worth recording because a test suite that under-reports
+its own size is the one kind of bug the suite cannot catch.
+
 ## 3. The build fails on the judges' machine — *up to 15%*
 
 **Cost:** repeatability is graded on "clean setup, locked dependencies" and a

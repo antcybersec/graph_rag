@@ -77,8 +77,15 @@ def test_tally_ranking_is_stable_for_equal_counts():
 
 # -- the gate the composer does not get to overrule -------------------------
 
-def _gate(out, citable):
-    return Agent.gate(None, out, {"citable": citable})
+def _gate(out, citable, tallies=None):
+    ev = {"citable": citable}
+    if tallies is not None:
+        ev["tallies"] = tallies
+    return Agent.gate(None, out, ev)
+
+
+_TALLY = [{"what": "gold medals by nation", "unit": "gold",
+           "highest": {"value": 9, "holders": ["JPN"]}, "entries": 12}]
 
 
 def test_gate_drops_a_citation_that_was_never_in_the_evidence():
@@ -611,13 +618,22 @@ def test_reproduction_notices_a_changed_query_sequence():
     assert not c["same_retrieval"]
 
 
-CHECKS = [(name, fn) for name, fn in sorted(globals().items())
-          if name.startswith("test_") and callable(fn)]
+def _checks() -> list:
+    """Collected when the run starts, not when this line is read.
+
+    As a module-level list this was built at import time, so every check
+    written below it was silently skipped -- four of them, and the suite still
+    reported all green. Calling it from main() means a test counts wherever it
+    is written in the file.
+    """
+    return [(name, fn) for name, fn in sorted(globals().items())
+            if name.startswith("test_") and callable(fn)]
 
 
 def main() -> int:
     failures = 0
-    for name, fn in CHECKS:
+    checks = _checks()
+    for name, fn in checks:
         try:
             fn()
             print(f"  PASS  {name}")
@@ -627,8 +643,67 @@ def main() -> int:
         except Exception as exc:
             failures += 1
             print(f"  ERROR {name}: {type(exc).__name__}: {exc}")
-    print(f"\n{len(CHECKS) - failures}/{len(CHECKS)} checks passed")
+    print(f"\n{len(checks) - failures}/{len(checks)} checks passed")
     return 1 if failures else 0
+
+
+
+
+# -- the citation set code can supply for itself ---------------------------
+# r2-pub-007 measured this: "Japan dominated judo at the 2020 Summer Olympics
+# with 9 golds" -- the right nation and the right figure, both computed in
+# code -- scored `partial` with no citation, because the composer offered the
+# literal string "sport_games" instead of a document. Code knew the 15
+# documents it had counted over the whole time.
+
+def test_gate_supplies_the_computed_documents_when_the_composer_cites_nothing():
+    citable = {f"Q{i}": f"Judo event {i}" for i in range(15)}
+    status, cites, note = _gate(
+        Composed(status="answered", explanation="",
+                 answer="Japan dominated judo at the 2020 Summer Olympics with 9 golds.",
+                 citations=["sport_games"]),
+        citable, tallies=_TALLY)
+    assert status == "answered", status
+    assert set(cites) == set(citable), cites
+    assert "arithmetic was computed over" in note, note
+
+
+def test_gate_still_demotes_an_uncited_answer_with_no_arithmetic_behind_it():
+    """The stand-in is only sound because code did the counting. Without a
+    tally there is nothing saying which document supports what, so the
+    honesty demotion stays."""
+    status, cites, note = _gate(
+        Composed(status="answered", explanation="", answer="Teddy Riner won in 2012 and 2016.",
+                 citations=[]),
+        {"Q1": "Judo at the 2012 Summer Olympics"})
+    assert status == "partial", status
+    assert cites == [], cites
+    assert "no citation does" in note, note
+
+
+def test_gate_does_not_dump_a_sweep_as_a_citation_set():
+    """478 films are retrieved to compare two figures. Citing all of them
+    would buy a citation mark with a precision one, so past the bound the
+    demotion stays. The largest gold set in the public key is 16."""
+    citable = {f"Q{i}": f"Film {i}" for i in range(400)}
+    status, cites, note = _gate(
+        Composed(status="answered", explanation="", answer="Titanic grossed the most.",
+                 citations=[]),
+        citable, tallies=_TALLY)
+    assert status == "partial", status
+    assert cites == [], cites
+    assert "no citation does" in note, note
+
+
+def test_gate_still_refuses_when_the_arithmetic_rested_on_nothing():
+    """A tally does not rescue an answer with no document behind it at all --
+    that is still the invented answer the brief scores zero."""
+    status, cites, note = _gate(
+        Composed(status="answered", explanation="", answer="Japan won 9 golds.", citations=[]),
+        {}, tallies=_TALLY)
+    assert status == "not_in_corpus", status
+    assert cites == [], cites
+    assert "no support in the corpus" in note, note
 
 
 if __name__ == "__main__":

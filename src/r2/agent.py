@@ -82,9 +82,11 @@ ROUTES = {
         "and when, what was never verified, what a particular document does "
         "or does not establish, and what was true as of a given date."),
     "text": (
-        "Anything whose answer is in the prose of an article and nowhere in "
-        "the structured fields -- including a fact that appears only in a "
-        "different article than the one the question is about."),
+        "Last resort, when no other route fits at all: a question that names "
+        "nothing the graph is organised by -- no athlete, contest, film, "
+        "office or source record. Do not choose it merely because the answer "
+        "has to be read rather than counted; every route falls back to the "
+        "article prose on its own when its fields come up short."),
 }
 
 PLANNER_SYSTEM = """You turn a question into a retrieval plan for a graph database of Olympic
@@ -113,6 +115,13 @@ Guidance that is about the data, not about any particular question:
   prose: the medal rows say who won and never say why. Set it even when the
   question also names a year and an event, because those only say which
   article to read.
+  **This flag never decides the route.** It says the answer has to be read,
+  not which part of the graph to read it from. Pick the route from what the
+  question is *about* -- a person, a contest, a film, the standing of the
+  sources -- and set the flag alongside it. Every route reads the article
+  prose when its own fields come up short, so routing a *why* question to
+  `text` only throws away the structured retrieval that finds the article in
+  the first place.
 - `wants_evidence` is true when the question is about the standing of
   evidence: documents that disagree, something provisional or later
   corrected, what is officially confirmed, what cannot be established, what
@@ -1634,11 +1643,31 @@ class Agent:
                 note = (note + "; " if note else "") + \
                     "nothing was retrieved, so the answer has no support in the corpus"
             else:
-                status = "partial"
-                note = (note + "; " if note else "") + \
-                    (f"the answer stands but no citation does: {len(ev['citable'])} "
-                     f"document(s) were retrieved and the composer identified none of "
-                     f"them as supporting it")
+                # One case does not need demoting at all. When code did the
+                # arithmetic, the documents it counted over are known here,
+                # exactly: they are what the route retrieved. The composer
+                # naming none of them -- r2-pub-007 answered "Japan, 9 golds",
+                # correctly, and offered the literal string "sport_games" as
+                # its citation -- is a slip in the one step that code can do
+                # for itself. So the retrieved set stands in, and the answer
+                # keeps the status the composer gave it.
+                #
+                # The bound is what separates an evidence set from a sweep.
+                # The largest gold set in the public key is 16 documents,
+                # while a comparison route can retrieve hundreds; citing
+                # hundreds would trade a citation mark for a precision one.
+                if ev.get("tallies") and len(ev["citable"]) <= 25:
+                    citations = list(ev["citable"])
+                    note = (note + "; " if note else "") + \
+                        (f"the composer cited nothing, so the {len(citations)} "
+                         f"document(s) the arithmetic was computed over stand as "
+                         f"the citation set")
+                else:
+                    status = "partial"
+                    note = (note + "; " if note else "") + \
+                        (f"the answer stands but no citation does: {len(ev['citable'])} "
+                         f"document(s) were retrieved and the composer identified none of "
+                         f"them as supporting it")
         return status, citations, note
 
     # -- one question -------------------------------------------------------
