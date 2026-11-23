@@ -251,9 +251,19 @@ def audit_one(record: dict) -> list[str]:
         if unexplained and adds_up:
             pass  # the listing reconciles with the arithmetic; nothing to read
         elif unexplained:
+            # A question the planner marked `wants_prose` is answered from
+            # documents, so its figures are read rather than computed and the
+            # check cannot settle them. Still worth listing -- r2-pub-024's
+            # 9.76 and 9.87 were right, and the way to know was to read the
+            # cited document -- but say which kind of flag it is, or the
+            # reader has to work that out for each one.
+            prose = (record.get("plan") or {}).get("wants_prose")
+            why = (" -- the plan asked for prose, so these were probably read "
+                   "from the cited document rather than computed; check them "
+                   "against it" if prose else "")
             flags.append(f"FIGURE NOT IN THE ARITHMETIC: {unexplained[:6]} appear in the "
                          f"answer but not among the figures the query computed "
-                         f"({sorted(known)[:8]})")
+                         f"({sorted(known)[:8]}){why}")
 
     # 4. status against the text
     #
