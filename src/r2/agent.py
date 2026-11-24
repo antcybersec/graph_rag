@@ -226,8 +226,10 @@ status:
   Run this test before you write anything, every time:
 
     1. List what the question asked you to state. A "why" question asks for
-       one thing: the reason. "What do the accounts say, and what is
-       confirmed?" asks for two.
+       one thing: the reason -- one item to cross off, however many reasons
+       the text turns out to give for it. A question with two clauses asks
+       for two. This step counts items; it does not decide how much you
+       write, which is covered under `answer` below.
     2. Cross off each item you can give as a value -- a name, a number, a
        duration, a date, a reason. **"There is no confirmed value", "it could
        not be established", "it could not be verified" and "the sources
@@ -1216,6 +1218,13 @@ class Agent:
             # which five arrive is arbitrary, and an arbitrary cut over an
             # unordered set is the same defect that made films_with_figures
             # give a different answer every run.
+            # Deterministic order here too, not only in the query. Which chunk
+            # represents a document, and which documents survive the cap, must
+            # not depend on the order rows happen to arrive in -- that is the
+            # same arbitrary-cut defect one level up, and it is the one a judge
+            # sees as "the answer changed between two identical runs".
+            found.sort(key=lambda c: (c.get("ord", 0), str(c.get("doc_id", "")),
+                                      str(c.get("chunk_id", ""))))
             seen_docs: set = set()
             for c in found:
                 doc_id = c["doc_id"]

@@ -526,7 +526,18 @@ FOR GRAPH {GRAPH} SYNTAX v3 {{
      question, never the question's own wording. */
   Res = SELECT c FROM Chunk:c
         WHERE lower(c.text) LIKE "%" + lower(fragment) + "%"
+        ORDER BY c.ord ASC, c.chunk_id ASC
         LIMIT k;
+  /* ORDER BY is what makes the LIMIT safe. A limit over an unordered select
+     returns an arbitrary k of the matches, so two runs of the same question
+     can see different documents -- the defect that made films_with_figures
+     give a different answer each run, which is why that query has no limit
+     at all. Here the limit is wanted, so the order is specified instead.
+     `ord` first, not `doc_id` first, because the caller keeps one passage per
+     document: ordering by position takes the opening chunk of every matching
+     document before the second chunk of any of them, which is the widest
+     document coverage the limit can buy -- and the coverage is the whole
+     reason this query exists. */
   /* k matters more than it looks: "Cocoon" appears in seven chunks and the
      only one that answers who directed it is the biography of the film's
      editor. A limit of five returned five other mentions and the answer was

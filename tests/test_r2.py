@@ -884,5 +884,40 @@ def test_score_reports_whether_the_grade_was_independent():
     assert '"answered_by"' in src, "score output must record who wrote the answers"
 
 
+
+# -- a limit over an unordered select is not repeatable --------------------
+# films_with_figures carries no LIMIT at all because `LIMIT 200` over ~250
+# unordered rows put different films in the set on two runs of the same
+# question. chunks_containing kept the same defect: `LIMIT k` with no ORDER
+# BY, so which k of the matches arrived was arbitrary, and with k=12 a common
+# fragment overflows it easily. Measured after ordering: "100 metres" returns
+# 12 chunks from 12 distinct documents, identical across three calls.
+
+def test_every_limit_in_a_query_has_an_order_by():
+    """Scan the real query text rather than trusting a remembered list."""
+    import re
+    from src.r2 import queries
+    bad = []
+    for name, body in getattr(queries, "ALL_QUERIES", []):
+        # Strip comments: a LIMIT discussed in prose is not a LIMIT executed.
+        code = re.sub(r"/\*.*?\*/", "", body, flags=re.S)
+        if re.search(r"\bLIMIT\b", code, re.I) and not re.search(r"\bORDER BY\b", code, re.I):
+            bad.append(name)
+    assert not bad, f"LIMIT without ORDER BY in: {bad}"
+
+
+def test_the_lexical_search_orders_before_it_caps():
+    """The query's order is necessary but not sufficient: which chunk stands
+    for a document, and which documents survive the per-document cap, must
+    not depend on arrival order either."""
+    src = open("/Users/anantkumar/graph_rag/src/r2/agent.py", encoding="utf-8").read()
+    i = src.index("def _lexical_search")
+    j = src.index("def _vector_search")
+    body = src[i:j]
+    assert "found.sort(" in body, "_lexical_search must sort before capping"
+    assert body.index("found.sort(") < body.index("seen_docs: set = set()"), \
+        "the sort must come before the per-document cap"
+
+
 if __name__ == "__main__":
     raise SystemExit(main())
