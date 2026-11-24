@@ -331,7 +331,16 @@ Both bounds are auditable from `llm_calls_per_question_avg` in `metrics.json`.
 On a paid key the variable goes to 0 and the figure drops accordingly.
 
 The TigerGraph side is not the cost: the installed queries return in 100-300ms
-each, including the substring scan over all 16,377 chunks.
+each, including the substring scan over all 16,377 chunks. All 418 queries of
+the public run together account for a few seconds of the 50-question total.
+
+`tigergraph_queries_per_question_avg` is a **mean of 8.36, and a median of 4**
+— worth stating together, because the mean is one route. The `evidence` route
+is 9 of the 50 public questions and 52% of all queries, averaging 24 per
+question against 3.0 for `athlete` and 3.1 for `sport_games`. That is the
+route that cross-checks documents against each other — which claims concern
+the same slot, which supersedes which — so it is where the question count
+*should* concentrate. A question answered from one tally costs four queries.
 
 ## Known risks
 
