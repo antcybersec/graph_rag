@@ -20,6 +20,26 @@ say() { printf '\n== %s\n' "$*"; }
 
 [ -f "$CORPUS" ] || { echo "corpus not found: $CORPUS" >&2; exit 1; }
 
+# `.env` is gitignored, so a fresh clone has none, and `load_dotenv()` then
+# finds nothing. The code defaults now match `.env.example` exactly, so that
+# alone is a correct build -- but the file still has to exist for a key to go
+# in, and writing it here means the answering path and this build agree about
+# every setting rather than relying on whoever remembers to copy it.
+say "configuration"
+if [ ! -f .env ]; then
+  cp .env.example .env
+  echo "created .env from .env.example (settings already correct; add a key to use the API)"
+else
+  echo ".env already present, left untouched"
+fi
+if ! grep -qE '^GOOGLE_API_KEY=.+' .env; then
+  echo
+  echo "NOTE: GOOGLE_API_KEY is empty in .env."
+  echo "      The build needs no key -- embeddings are local (BAAI/bge-base-en-v1.5)."
+  echo "      Answering questions does: put a key in .env, or use ./offline.sh,"
+  echo "      which replays the submitted answers with no key and no quota."
+fi
+
 say "python environment"
 # Name the interpreter requirement rather than inheriting whatever `python3`
 # happens to be. The pinned tree needs 3.10+ (aiohappyeyeballs, a transitive

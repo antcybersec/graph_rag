@@ -706,5 +706,72 @@ def test_gate_still_refuses_when_the_arithmetic_rested_on_nothing():
     assert "no support in the corpus" in note, note
 
 
+
+# -- the configuration a fresh clone actually gets -------------------------
+# `.env` is gitignored, and `load_dotenv()` only finds it on the machine that
+# wrote it. So for a judge cloning the repository, the code defaults ARE the
+# configuration. They had drifted from the validated setup in five places at
+# once: embeddings defaulted to the Gemini API (a different vector space from
+# the BGE vectors the graph holds, so retrieval returns noise, and it needs a
+# key and burns quota), the answering model defaulted to a model never
+# measured, and the pacing and timeout defaults did not match the run the
+# reported efficiency figures came from. Nothing errored -- it just quietly
+# became a different system. This check is the thing that would have caught it.
+
+def _env_example() -> dict:
+    out = {}
+    for line in open("/Users/anantkumar/graph_rag/.env.example", encoding="utf-8"):
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, v = line.split("=", 1)
+            out[k.strip()] = v.strip()
+    return out
+
+
+def _code_defaults() -> dict:
+    import re
+    src = open("/Users/anantkumar/graph_rag/src/common/llm.py", encoding="utf-8").read()
+    out = {}
+    for m in re.finditer(r'os\.environ\.get\(\s*"([A-Z_]+)"\s*,\s*([^),]+?)\s*\)', src):
+        out.setdefault(m.group(1), m.group(2).strip().strip('"').replace("_", ""))
+    return out
+
+
+def test_code_defaults_match_the_validated_configuration():
+    """Every variable that has both a code default and a shipped value must
+    agree, so a clone with no .env is the system that was measured."""
+    ex, code = _env_example(), _code_defaults()
+    mismatched = {k: (code[k], ex[k]) for k in set(code) & set(ex)
+                  if code[k].replace("_", "") != ex[k].replace("_", "")}
+    assert not mismatched, f"code default != .env.example: {mismatched}"
+
+
+def test_the_embedding_default_is_the_local_model():
+    """A Gemini embedding default is the dangerous one: it does not error, it
+    writes vectors into a different space and retrieval silently degrades."""
+    code = _code_defaults()
+    assert code.get("EMBED_PROVIDER") == "local", code.get("EMBED_PROVIDER")
+    assert "bge" in code.get("EMBED_MODEL", "").lower(), code.get("EMBED_MODEL")
+
+
+def test_the_answering_default_is_the_measured_model():
+    code = _code_defaults()
+    assert code.get("GEN_MODEL") == "gemini-3.1-flash-lite", code.get("GEN_MODEL")
+
+
+# -- the reproduction tool must not disclaim a real reproduction -----------
+# repro.py hardcoded the provider name as "google" and compared against it, so
+# in the one configuration that produced the submission it printed "this is not
+# the provider the submitted file was produced with" -- on every run. The
+# provider is recorded on every model step of the submitted file; read it there.
+
+def test_repro_does_not_name_a_provider_that_the_project_never_uses():
+    src = open("/Users/anantkumar/graph_rag/src/r2/repro.py", encoding="utf-8").read()
+    body = "\n".join(l for l in src.splitlines() if not l.strip().startswith("#"))
+    assert '"google"' not in body, 'repro.py still compares against "google"'
+    assert 'step.get("provider")' in body, \
+        "repro.py should read the provider from the submitted record"
+
+
 if __name__ == "__main__":
     raise SystemExit(main())

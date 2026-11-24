@@ -163,14 +163,34 @@ def main(argv=None) -> int:
         qids = rng.sample(pool, min(args.sample, len(pool)))
         print(f"re-answering {len(qids)} of {len(pool)} answered questions, chosen at random")
 
-    provider = os.environ.get("GEN_PROVIDER", "google")
+    # Which provider and model produced the submitted file is recorded in the
+    # file, on every model step -- so read it from there rather than naming it
+    # here. A hardcoded name was wrong ("google", where every trace in both
+    # submitted files says "gemini"), which meant this tool printed "these are
+    # not the answers' own provider" on every single run, including the one
+    # configuration where it was false. A disclaimer that fires always says
+    # nothing, and in a judging call it says the opposite of the truth.
+    submitted_pairs = {(str(step.get("provider")), str(step.get("model")))
+                       for a in submitted.values()
+                       for step in (a.get("trace") or [])
+                       if isinstance(step, dict) and step.get("provider")}
+    provider = os.environ.get("GEN_PROVIDER", "gemini")
     model = os.environ.get("GEN_MODEL", "(default)")
     print(f"connecting: {describe()}")
     print(f"answering with: provider={provider} model={model}")
-    if provider != "google":
-        print("  NOTE: this is not the provider the submitted file was produced with, so a\n"
-              "        match here is evidence that the arithmetic is deterministic, not that\n"
-              "        the submitted answers reproduce.")
+    if submitted_pairs:
+        shown = ", ".join(f"{p}/{m}" for p, m in sorted(submitted_pairs))
+        print(f"submitted file was produced with: {shown}")
+        if not any(p == provider for p, _ in submitted_pairs):
+            print("  NOTE: that is not the provider answering now, so a match here is\n"
+                  "        evidence that the arithmetic is deterministic, not that the\n"
+                  "        submitted answers reproduce.")
+        elif not any((p, m) == (provider, model) for p, m in submitted_pairs):
+            print("  NOTE: same provider, different model -- a match is strong evidence\n"
+                  "        but not a like-for-like reproduction.")
+    else:
+        print("  NOTE: the submitted file records no provider, so this run cannot confirm\n"
+              "        it was produced with the same one.")
 
     conn = get_connection()
     agent = Agent(conn, query_log=QueryLog(args.log))

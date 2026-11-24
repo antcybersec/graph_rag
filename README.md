@@ -16,6 +16,14 @@ file describes the Round 2 system.
 ./ui.sh                                               # the demo page
 ```
 
+`build.sh` needs **no API key**: the corpus is embedded on-device with
+`BAAI/bge-base-en-v1.5`. It writes a `.env` from `.env.example` on first run,
+and the settings in it are already the ones every measurement in this
+repository was taken with — the code defaults match that file exactly, and
+`tests/test_r2.py` fails if the two ever drift apart. Only `run.sh` needs a
+key (`GOOGLE_API_KEY` in `.env`); `./offline.sh` replays the submitted answers
+with no key and no quota.
+
 `build.sh` is safe to re-run: every GSQL object is `CREATE OR REPLACE` and
 every row is upserted by primary id, so a second run converges on the same
 graph rather than failing or duplicating.

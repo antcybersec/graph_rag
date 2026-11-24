@@ -118,7 +118,7 @@ def _get_local_embed_model(model_name: str):
         return model
 
 
-GEMINI_REQUEST_TIMEOUT_MS = int(os.environ.get("GEMINI_REQUEST_TIMEOUT_MS", 90_000))
+GEMINI_REQUEST_TIMEOUT_MS = int(os.environ.get("GEMINI_REQUEST_TIMEOUT_MS", 45_000))
 
 
 def _get_client() -> genai.Client:
@@ -160,7 +160,7 @@ class _RateLimiter:
             time.sleep(wait_time)
 
 
-_rate_limiter = _RateLimiter(min_interval_sec=float(os.environ.get("LLM_MIN_INTERVAL_SEC", 6.5)))
+_rate_limiter = _RateLimiter(min_interval_sec=float(os.environ.get("LLM_MIN_INTERVAL_SEC", 4.5)))
 
 # Groq's free tier request-per-day budget is generous (up to 1000/day, confirmed
 # via response headers) but several models cap tokens-per-minute at just 8000 --
@@ -417,7 +417,7 @@ def generate(
     (better for orchestrator reasoning / judge calls where quality matters).
     Ignored entirely under GEN_PROVIDER=local (see module docstring).
     """
-    model_name = model or os.environ.get("GEN_MODEL", "gemini-3.8-flash")
+    model_name = model or os.environ.get("GEN_MODEL", "gemini-3.1-flash-lite")
     # Per-call provider, defaulting to the environment's. Added so one pipeline
     # can place different *kinds* of call on different providers: a short
     # structured decision and a long evidence prompt have very different
@@ -530,8 +530,8 @@ def embed(
     and BGE embeddings live in unrelated vector spaces, so cosine similarity
     across the two is meaningless.
     """
-    model_name = model or os.environ.get("EMBED_MODEL", "gemini-embedding-001")
-    provider = os.environ.get("EMBED_PROVIDER", "gemini").lower()
+    model_name = model or os.environ.get("EMBED_MODEL", "BAAI/bge-base-en-v1.5")
+    provider = os.environ.get("EMBED_PROVIDER", "local").lower()
 
     if provider == "local":
         return _embed_local(texts, model_name, task_type, tracker, pipeline, question_id)
