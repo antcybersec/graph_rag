@@ -919,5 +919,65 @@ def test_the_lexical_search_orders_before_it_caps():
         "the sort must come before the per-document cap"
 
 
+
+# -- the reproduction gate compared two of the four things it promised -----
+# compare()'s docstring listed status, figures, citations and retrieval as the
+# four that must not move. The verdict used status and figures. So a route
+# change and a halved citation set both returned MATCH, while
+# docs/round2-submission.md makes "returns no DIFFERENT" the gate a judge is
+# shown. Worse, figures() extracts only digits, so an argmax that moved from
+# one holder to another with the same count was a clean MATCH -- "France won
+# 13 silver medals" against "Italy won 13 silver medals". The number is the
+# easy half of a superlative; which entity holds it is the answer.
+
+def _rrec(ans, cites=None, route="r"):
+    return {"qid": "q", "status": "answered", "answer": ans,
+            "citations": cites or ["D1"], "route": route, "trace": []}
+
+
+def test_reproduction_catches_a_swapped_entity_behind_an_unchanged_number():
+    from src.r2.repro import compare as cmp_
+    c = cmp_(_rrec("France won 13 silver medals."), _rrec("Italy won 13 silver medals."))
+    assert c["verdict"] == "DIFFERENT", c["verdict"]
+    assert c["names_swapped"] == ["France"], c["names_swapped"]
+
+
+def test_reproduction_catches_a_swapped_athlete():
+    from src.r2.repro import compare as cmp_
+    c = cmp_(_rrec("Nomura won 3 golds."), _rrec("Riner won 3 golds."))
+    assert c["verdict"] == "DIFFERENT", c["verdict"]
+
+
+def test_reproduction_does_not_flag_a_name_merely_spelled_out_further():
+    """One answer saying strictly more is a rewording, not a changed answer --
+    otherwise the check cries wolf and gets ignored, which is how the provider
+    disclaimer became useless."""
+    from src.r2.repro import compare as cmp_
+    c = cmp_(_rrec("Japan won 9 golds."), _rrec("Japan (JPN) won 9 golds."))
+    assert c["verdict"] == "MATCH", (c["verdict"], c["names"])
+
+
+def test_reproduction_does_not_flag_a_different_sentence_opening():
+    from src.r2.repro import compare as cmp_
+    c = cmp_(_rrec("The corpus does not say."), _rrec("No information is available."))
+    assert c["verdict"] == "MATCH", (c["verdict"], c["names"])
+
+
+def test_a_changed_route_is_no_longer_a_clean_match():
+    from src.r2.repro import compare as cmp_
+    c = cmp_(_rrec("Japan won 9 golds.", route="evidence"),
+             _rrec("Japan won 9 golds.", route="text"))
+    assert c["verdict"] == "CLOSE", c["verdict"]
+    assert not c["same_retrieval"]
+
+
+def test_lost_citations_are_no_longer_a_clean_match():
+    from src.r2.repro import compare as cmp_
+    c = cmp_(_rrec("Japan won 9 golds.", ["A", "B", "C", "D"]),
+             _rrec("Japan won 9 golds.", ["A"]))
+    assert c["verdict"] == "CLOSE", c["verdict"]
+    assert c["citations_lost"] == ["B", "C", "D"], c["citations_lost"]
+
+
 if __name__ == "__main__":
     raise SystemExit(main())

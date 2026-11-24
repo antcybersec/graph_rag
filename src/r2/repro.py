@@ -50,6 +50,41 @@ from pathlib import Path
 
 _NUM = re.compile(r"\d+(?:\.\d+)?")
 
+# Capitalised runs, which in these answers are the nations, athletes, films and
+# offices the answer names. The leading-word blocklist is what keeps "The",
+# "No" and "According" out of the set: every sentence starts capitalised, so
+# without it every reworded opening would read as a changed entity.
+_NAME = re.compile(r"\b[A-Z][\w'\u2019-]*(?:\s+[A-Z][\w'\u2019-]*)*")
+_NOT_A_NAME = {
+    "A", "An", "The", "This", "That", "These", "Those", "There", "It", "Its",
+    "No", "None", "Not", "Nothing", "According", "Based", "However", "While",
+    "When", "Where", "Which", "Who", "What", "Why", "How", "If", "In", "On",
+    "At", "For", "From", "Of", "To", "By", "With", "And", "Or", "But", "As",
+    "Both", "Neither", "Either", "Only", "All", "Two", "Three", "Four", "Five",
+    "Six", "Seven", "Eight", "Nine", "Ten", "First", "Second", "Third",
+    "Corpus", "Document", "Documents", "Source", "Sources", "Olympics",
+    "Olympic", "Games", "Summer", "Winter", "Men", "Women", "Mens", "Womens",
+}
+
+
+def names(text: object) -> set:
+    """The proper names an answer states, as a set.
+
+    `figures` compares only digits, so an argmax that moved from one holder to
+    another with the same count reproduced as a clean MATCH -- "France won 13
+    silver medals" against "Italy won 13 silver medals". The number is the
+    easy half of a superlative; which entity holds it is the answer.
+    """
+    blob = json.dumps(text, ensure_ascii=False) if not isinstance(text, str) else text
+    out = set()
+    for raw in _NAME.findall(blob):
+        parts = [w for w in raw.split() if w not in _NOT_A_NAME]
+        if parts:
+            cleaned = " ".join(parts)
+            if len(cleaned) > 2:
+                out.add(cleaned)
+    return out
+
 
 def figures(text: object) -> list[str]:
     """Every number in an answer, in order, as written.
@@ -74,16 +109,28 @@ def compare(old: dict, new: dict) -> dict:
     f_old, f_new = figures(old.get("answer")), figures(new.get("answer"))
     c_old = sorted(old.get("citations") or [])
     c_new = sorted(new.get("citations") or [])
+    n_old, n_new = names(old.get("answer")), names(new.get("answer"))
     same_status = old.get("status") == new.get("status")
     same_figures = f_old == f_new
     same_cites = c_old == c_new
     r_old, r_new = retrieval(old), retrieval(new)
 
-    if not same_status or not same_figures:
+    # A substitution, not an addition. One answer saying strictly more than the
+    # other is a rewording ("Japan" against "Japan (JPN)") and is not a changed
+    # answer; each naming something the other does not is one entity standing
+    # where another stood, which is the failure a superlative hides behind an
+    # unchanged number.
+    swapped = sorted(n_old - n_new) if (n_old - n_new) and (n_new - n_old) else []
+    same_names = not swapped
+
+    if not same_status or not same_figures or not same_names:
         verdict = "DIFFERENT"
-    elif same_cites:
+    elif same_cites and r_old == r_new:
         verdict = "MATCH"
     else:
+        # The docstring promised four things must not move and the verdict
+        # used two: a route change and a halved citation set both passed as
+        # MATCH, while "returns no DIFFERENT" is the submission's gate.
         verdict = "CLOSE"
 
     text_old = str(old.get("answer") or "")
@@ -95,6 +142,9 @@ def compare(old: dict, new: dict) -> dict:
         "same_status": same_status,
         "figures": [f_old, f_new],
         "same_figures": same_figures,
+        "names": [sorted(n_old), sorted(n_new)],
+        "same_names": same_names,
+        "names_swapped": swapped,
         "citations": [len(c_old), len(c_new)],
         "same_citations": same_cites,
         "citations_lost": [c for c in c_old if c not in c_new],
