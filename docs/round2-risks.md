@@ -353,6 +353,68 @@ because a suite that cannot count itself is the one bug it cannot catch.
 - **The risk 2b citation-completion fix.** It was predicated on a 500/day
   budget that does not exist.
 
+## 2e. The live reproduction, rehearsed at last — *24 Nov, both halves pass*
+
+Risk 2 has carried "rehearse the live reproduction twice" as open since it was
+written, and `repro.py` had never once been run against a real answer file —
+which is how the `"google"` provider bug survived five tests. Rehearsed now,
+on the committed pair, on a cold-started container.
+
+**Half one — "show me this answer reproduces."**
+
+```
+$ python -m src.r2.repro questions_public.jsonl answers_public.jsonl \
+      --qid r2-pub-006,r2-pub-030
+connecting: local @ http://localhost graph=r2
+answering with: provider=gemini model=gemini-3.1-flash-lite
+submitted file was produced with: gemini/gemini-3.1-flash-lite
+
+ok  r2-pub-006  MATCH      figures ['2024','8'] -> same, citations 18 -> 18,
+                           retrieval identical (4 steps), wording 92% similar
+ok  r2-pub-030  MATCH      figures ['1985'] -> same, citations 1 -> 1,
+                           retrieval identical (7 steps), wording 47% similar
+
+2 re-answered: 2 MATCH, 0 CLOSE, 0 DIFFERENT
+```
+
+Two things worth pointing at in a call. The provider line now *names what the
+file was made with* and prints no disclaimer, because the provider matches —
+the old code said "this is not the provider the submitted file was produced
+with" every single time. And **pub-030 matched at 47% wording similarity**:
+the composed sentence is model-written and came back substantially reworded,
+while status, every figure, the citation set and the whole query sequence were
+identical. That is the distinction the checker exists to draw, and it is also
+a live demonstration that the hardened `names()` check does not fire on
+rewording — a 47%-different sentence naming the same entities still matches.
+
+**Half two — "now ask it something we just made up."**
+
+Asked, unseen and not in either question file: *"Which nation won the most
+gold medals in judo at the 2024 Summer Olympics, and how many?"*
+
+> `not_in_corpus` — "The corpus does not contain information regarding the
+> gold medal results for judo at the 2024 Summer Olympics; the only document
+> provided for that event is a qualification overview." Cited: Q114270340.
+
+Verified against the corpus afterwards: it holds judo medal events for 1988
+through 2020 and, for 2024, exactly one document — `Q114270340 "Judo at the
+2024 Summer Olympics – Qualification"`. The refusal is literally correct and
+cites the document that proves the gap.
+
+This is the strongest demo available, because **the plausible wrong answer is
+one edition away in the same graph**. r2-pub-007 asks almost the same thing of
+2020 and is answered "Japan, 9 golds" from a tally of 15 documents. A system
+that pattern-matched the sport would have produced that. The trace shows it
+did the honest thing instead: `coverage_check`, `events_in_sport_games`,
+`medals_by_nation`, compose, then — finding nothing citable — the widening
+fallback (`embed_question`, `vector_search_chunks`, `doc_for_chunk`) and a
+second compose, before reporting silence. 32.3s, 9,003 input and 312 output
+tokens, three model calls.
+
+**Still open:** this was one rehearsal of each half, not two, and the quota for
+the day is nearly spent. Repeat both before the call, and prefer
+`./offline.sh` for practice runs since it needs no key and no quota.
+
 ## 3. The build fails on the judges' machine — *up to 15%*
 
 **Cost:** repeatability is graded on "clean setup, locked dependencies" and a
