@@ -317,10 +317,18 @@ answers an unseen question and a question from the public set.
 answer, as the brief defines it. On a free-tier API key that includes
 **rate-limit pacing**: calls to the model are spaced by
 `LLM_MIN_INTERVAL_SEC` (4.5s) to stay under the per-minute cap, and that sleep
-happens inside the call. So roughly `4.5s x (llm_calls_per_question - 1)` of
-each question's latency is waiting, not work — the arithmetic is auditable
-from `llm_calls_per_question_avg` in `metrics.json`. On a paid key the
-variable goes to 0 and the figure drops accordingly.
+happens inside the call.
+
+The pacer is one module-global keyed by model (`src/common/llm.py:174-194`),
+so the interval is enforced before *every* call, including the first of each
+question — it is not reset per question. But the wait is only whatever is left
+of the interval, and the graph work between two questions (10-11 queries at
+100-300ms) sometimes already covers it. So the pacing inside a question's
+latency is **between `4.5s x (llm_calls_per_question - 1)` and
+`4.5s x llm_calls_per_question`** — the lower bound is what to subtract to be
+safe, and it understates how much of the figure is waiting rather than work.
+Both bounds are auditable from `llm_calls_per_question_avg` in `metrics.json`.
+On a paid key the variable goes to 0 and the figure drops accordingly.
 
 The TigerGraph side is not the cost: the installed queries return in 100-300ms
 each, including the substring scan over all 16,377 chunks.
