@@ -145,7 +145,14 @@ def _get_local_embed_model(model_name: str):
         return model
 
 
-GEMINI_REQUEST_TIMEOUT_MS = int(os.environ.get("GEMINI_REQUEST_TIMEOUT_MS", 45_000))
+# 90s, not 45s. A timed-out request has already spent a quota call and
+# returns nothing, so an impatient timeout converts a slow success into a
+# wasted call plus a retry that spends another. Waiting longer costs only
+# wall clock. Measured: the committed public run peaked at ~60s for a
+# question with two model calls, so a 45s ceiling sat below real latency,
+# and on a slower provider day the first question of a run took 94s for
+# two calls -- the shape of one timeout, a backoff and a successful retry.
+GEMINI_REQUEST_TIMEOUT_MS = int(os.environ.get("GEMINI_REQUEST_TIMEOUT_MS", 90_000))
 
 
 def _get_client() -> genai.Client:
