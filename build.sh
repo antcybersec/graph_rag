@@ -61,6 +61,14 @@ pip install --quiet --upgrade pip
 pip install --quiet -r requirements-r2.txt
 export TOKENIZERS_PARALLELISM=false
 
+# Distinguish "Docker is not running" from "the graph was never built". They
+# need opposite actions, and `docker ps` answers both with the same failure, so
+# a missing daemon was being reported as a missing graph.
+if ! docker info >/dev/null 2>&1; then
+  echo "the Docker daemon is not responding." >&2
+  echo "  Start Docker Desktop (or your docker daemon) and run this again." >&2
+  exit 1
+fi
 say "TigerGraph container ($IMAGE)"
 if ! docker ps --format '{{.Names}}' | grep -qx "$CONTAINER"; then
   if docker ps -a --format '{{.Names}}' | grep -qx "$CONTAINER"; then

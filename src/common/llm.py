@@ -33,11 +33,38 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
-from tenacity import retry, stop_after_attempt, wait_random_exponential
+from tenacity import retry, retry_if_not_exception_type, stop_after_attempt, wait_random_exponential
 
 from src.common.token_tracker import TokenTracker, CallRecord, default_tracker
 
 load_dotenv()
+
+class ConfigError(Exception):
+    """A setting is wrong, so retrying cannot help.
+
+    A missing API key reaches the Google client as `ValueError: No API key was
+    provided` -- an empty GOOGLE_API_KEY is falsy, so it resolves to None
+    rather than raising a KeyError. Under a blanket five-attempt retry that
+    became a ~30 second wait and five identical failures before a judge saw
+    any message, for a problem fixed by pasting a key into .env. Raised early
+    and excluded from the retry so it fails in one attempt, saying what to do.
+    """
+
+
+def _require_key(provider: str = "gemini") -> None:
+    """Fail once, clearly, instead of five times, slowly."""
+    env, where = {
+        "gemini": ("GOOGLE_API_KEY", "https://aistudio.google.com/apikey"),
+        "openrouter": ("OPENROUTER_API_KEY", "https://openrouter.ai/keys"),
+        "groq": ("GROQ_API_KEY", "https://console.groq.com/keys"),
+    }.get(provider, ("", ""))
+    if env and not (os.environ.get(env) or "").strip():
+        raise ConfigError(
+            f"{env} is not set, so provider '{provider}' cannot be used.\n"
+            f"  Put a key in .env ({where}), or run without one:\n"
+            f"    ./offline.sh \"your question\"      answers locally, no key, no quota\n"
+            f"  Building the graph needs no key -- embeddings are local.")
+
 
 _client: Optional[genai.Client] = None
 T = TypeVar("T", bound=BaseModel)
@@ -392,7 +419,8 @@ def _generate_groq(
     return content, record
 
 
-@retry(wait=wait_random_exponential(min=2, max=60), stop=stop_after_attempt(5), reraise=True)
+@retry(wait=wait_random_exponential(min=2, max=60), stop=stop_after_attempt(5),
+       retry=retry_if_not_exception_type(ConfigError), reraise=True)
 def generate(
     prompt: str,
     *,
@@ -441,6 +469,7 @@ def generate(
             tracker, pipeline, call_type, question_id, context_tokens,
         )
 
+    _require_key("gemini")
     client = _get_client()
 
     config_kwargs = {}
@@ -511,7 +540,8 @@ def _embed_local(texts: list, model_name: str, task_type: str, tracker, pipeline
     return vectors, record
 
 
-@retry(wait=wait_random_exponential(min=2, max=60), stop=stop_after_attempt(5), reraise=True)
+@retry(wait=wait_random_exponential(min=2, max=60), stop=stop_after_attempt(5),
+       retry=retry_if_not_exception_type(ConfigError), reraise=True)
 def embed(
     texts: list,
     *,
@@ -536,6 +566,7 @@ def embed(
     if provider == "local":
         return _embed_local(texts, model_name, task_type, tracker, pipeline, question_id)
 
+    _require_key("gemini")
     client = _get_client()
     dim = dim or int(os.environ.get("EMBED_DIM", 768))
 

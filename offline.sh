@@ -38,12 +38,38 @@ MODEL="${OFFLINE_MODEL:-qwen3:8b}"
 CONTAINER="${TG_CONTAINER:-tigergraph}"
 
 command -v ollama >/dev/null || { echo "ollama is not installed: https://ollama.com" >&2; exit 1; }
+# `ollama list` only talks to a running server. Without this the first model
+# call raises a bare ConnectionError, gets retried five times with backoff,
+# and surfaces as a traceback -- for a server that needs starting.
+if ! curl -fsS --max-time 5 "${OLLAMA_HOST:-http://localhost:11434}/api/tags" >/dev/null 2>&1; then
+  echo "ollama is installed but not responding at ${OLLAMA_HOST:-http://localhost:11434}" >&2
+  echo "  start it with:  ollama serve" >&2
+  exit 1
+fi
 # Match the whole tag: "qwen3" matches a model called qwen3:4b that is not the
 # one measured, and "ollama pull" on a model already present is a no-op anyway.
 ollama list | awk 'NR>1{print $1}' | grep -qx "$MODEL" \
   || { echo "pulling $MODEL (about 5GB, once)"; ollama pull "$MODEL"; }
 
+# Distinguish "Docker is not running" from "the graph was never built". They
+# need opposite actions, and `docker ps` answers both with the same failure, so
+# a missing daemon was being reported as a missing graph.
+if ! docker info >/dev/null 2>&1; then
+  echo "the Docker daemon is not responding." >&2
+  echo "  Start Docker Desktop (or your docker daemon) and run this again." >&2
+  exit 1
+fi
 if ! docker ps --format '{{.Names}}' | grep -qx "$CONTAINER"; then
+  # Deliberately NOT creating the container here, unlike build.sh. `docker run`
+  # would start an empty graph, and an empty graph does not look broken -- it
+  # answers every question "not in the corpus", which in a demo reads as a
+  # working system that is confidently wrong. Say what is missing instead.
+  if ! docker ps -a --format '{{.Names}}' | grep -qx "$CONTAINER"; then
+    echo "no TigerGraph container named '$CONTAINER' on this machine." >&2
+    echo "  The graph has to be built once first:" >&2
+    echo "    ./build.sh corpus.jsonl        (needs no API key -- embeddings are local)" >&2
+    exit 1
+  fi
   echo "starting TigerGraph"
   docker start "$CONTAINER" >/dev/null
   for _ in $(seq 1 90); do
