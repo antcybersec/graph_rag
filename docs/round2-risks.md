@@ -415,6 +415,48 @@ tokens, three model calls.
 the day is nearly spent. Repeat both before the call, and prefer
 `./offline.sh` for practice runs since it needs no key and no quota.
 
+## 2f. Two efficiency fixes, measured and declined — *24 Nov*
+
+Both were proposed as one-line changes. Measuring them is what settled it, and
+in one case the measurement contradicted the first reason for refusing.
+
+**Gating `select_source_document` on the deterministic date match.**
+`src/r2/agent.py:1092` serialises the whole source catalogue into a prompt for
+every `evidence` question — 2,762 input tokens a call, 9.6% of all input
+tokens — even when the `by_date` match two lines above already pinned the
+document. The proposal is to skip the model call when `by_date` is non-empty.
+
+Declined, on the measurement: **only 1 of the 9 public evidence questions
+carries dates in its plan at all**, so the gate would skip one model call per
+50-question set, not fourteen. And that single question is exactly the case the
+two-channel design exists for — a question that gives a date *and* names a
+second document, where `by_date` finds the first and the model finds the
+other. One call saved, on the one question where losing a document is likeliest,
+on the route that already under-cites (risk 2b). Not worth it.
+
+(My first reason for declining was that r2-pub-041 is that shape. It is not —
+its plan carries no dates, so the gate would not fire on it. The measurement
+is the reason; the guess was wrong.)
+
+**Memoising `claims_by_source`.** It runs in two loops with no shared memo
+(`src/r2/agent.py:1097` and `:1109`, plus a third channel at `:1312`), so any
+document reached by two channels is queried twice; it is 34 of 57 duplicate
+queries. Declined for now, and **not because it is risky to dedupe a
+read-only query** — because `seeds` accumulates across both loops under
+`if len(seeds) > 60: break`. Removing duplicate rows changes when that break
+fires, which changes the evidence, which changes answers. That makes it a
+semantic change needing a paid run to verify, not a free cleanup. Worth doing
+with the break condition reviewed at the same time.
+
+**What the numbers actually say, re-measured on the committed re-run.** 418
+public queries, mean 8.36 per question (down from 10.60 before today's route
+changes), **median 4**, 5.0% byte-identical repeats within a question. The
+entire query layer costs a few seconds of the run — around 0.6% of latency. So
+the redundancy is worth a fraction of a second and the real cost of the
+duplication is presentational: the mean invites a question the median answers.
+Fixed in `README.md` by quoting both and naming the route split, since
+`evidence` is 9 of 50 questions and 52% of all queries.
+
 ## 3. The build fails on the judges' machine — *up to 15%*
 
 **Cost:** repeatability is graded on "clean setup, locked dependencies" and a
