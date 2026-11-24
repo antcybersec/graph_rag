@@ -211,6 +211,148 @@ Collection now happens inside `main()`, so a check counts wherever it is
 written in the file. Worth recording because a test suite that under-reports
 its own size is the one kind of bug the suite cannot catch.
 
+## 2d. What an audit of the unrehearsed 30% found — *24 Nov, seven defects*
+
+Accuracy had been measured to death and the two criteria worth 30% together,
+repeatability and live judging, had never been rehearsed once. Auditing them
+found seven defects, every one of which would have been visible to a judge and
+none of which any accuracy measurement could have surfaced.
+
+**The arithmetic that justified looking there.** Of 4.19 accuracy points lost
+across 7 public questions, 2.0 were already fixed, 1.5 is the pub-048/049
+borderline where the model sits near even, and the three never-examined
+questions are worth **0.69 points — 0.55% of the final score**. Thirty points
+sat untested. Chasing accuracy was the expensive way to win a rounding error.
+
+### 1. The reproduction tool disclaimed every reproduction it performed
+
+`repro.py` compared the provider against the literal `"google"`. Nothing in
+this project is ever `"google"` — the default is `gemini` in `llm.py` and
+`trace.py`, `.env.example` says `gemini`, and **all 238 model steps across both
+submitted answer files record `gemini`**. So the tool printed "this is not the
+provider the submitted file was produced with, so a match here is evidence
+that the arithmetic is deterministic, not that the submitted answers
+reproduce" on every run, including the only configuration where that sentence
+is false. On a judging call, on the 15% criterion, built to answer "show me
+this reproduces". It now reads provider and model out of the submitted record,
+which cannot drift. Five tests covered `compare()`'s verdict logic and none
+touched the provider line; that is how it survived.
+
+### 2. The reproduction gate compared two of the four things it promised
+
+`compare()`'s docstring names status, figures, citations and retrieval as the
+four that must not move. The verdict used two. Verified by calling it
+directly: **"France won 13 silver medals" against "Italy won 13 silver
+medals" returned `MATCH`** — `figures()` extracts only digits, so the identity
+of the entity an answer names was never compared. For a system whose central
+claim is that code does every count, argmax and tie, a reproduction check
+blind to which holder won checks the easy half. A changed route and a halved
+citation set also passed as `MATCH`, while "returns no `DIFFERENT`" is the gate
+the submission doc shows a judge.
+
+`names()` now compares stated proper names, treating a *substitution* as
+`DIFFERENT` and an *addition* as a rewording, so "Japan" against "Japan (JPN)"
+still matches. That asymmetry is deliberate: a check that cries wolf gets
+ignored, which is exactly what happened to the provider disclaimer.
+
+### 3. A fresh clone was not the system that was measured
+
+`.env` is gitignored and `load_dotenv()` only finds it on the machine that
+wrote it, so for anyone cloning the repository **the code defaults are the
+configuration** — and they had drifted in five places: embeddings to
+`gemini-embedding-001` instead of local BGE, the answering model to
+`gemini-3.8-flash` which was never measured, plus the pacing and timeout the
+reported efficiency figures came from.
+
+The embedding default is the dangerous one because it does not fail. With a
+key exported it embeds all 16,377 chunks at the same 768 dimensions into a
+different vector space from the graph's, nothing errors, and `vector_search`
+quietly returns noise — a judge sees a working build answering worse than the
+submission, with no error explaining why. Defaults now equal `.env.example`,
+`build.sh` writes a `.env` on first run, and a test fails if they ever
+disagree, verified by reintroducing the drift and watching two checks fail.
+
+### 4. The 91.6% was graded by the model that wrote the answers
+
+`score.py` read `JUDGE_MODEL` at module scope, but the project's only
+`load_dotenv()` lives in `src/common/llm.py`, which `score.py` imports lazily
+*inside* the judge function. The read returned `None` and the fallback silently
+took `GEN_MODEL`. `answers_public.jsonl.score.json` records `judge_model:
+gemini-3.1-flash-lite` — the model that wrote all 121 steps it graded — while
+`metrics.json` asserted a judge "different from the one that produced the
+answers". Three committed statements were false.
+
+A consequence worth keeping in view: **every per-question note in that score
+file was written by a self-grading judge**, so they are weak evidence. One
+such note described pub-049 as "an invented claim that LA28 archery operations
+made a statement". The cited source `SYN-LA28-S028` *is* from LA28 archery
+operations and *does* say "no official duration was recorded" and that the
+reports "could not be verified" — the answer was a fair paraphrase and the
+note was wrong. pub-049's failure is its status, nothing worse. Acting on that
+note would have spent a run chasing a defect that does not exist.
+
+### 5. A limit over an unordered select, still live
+
+`chunks_containing` had `LIMIT k` with no `ORDER BY`, over the query that feeds
+the whole lexical path, with `k=12` that a common fragment overflows easily.
+This is the defect class the project already knew — `films_with_figures`
+carries no limit at all because `LIMIT 200` over ~250 unordered rows changed
+an answer between runs — sitting unfixed one query over.
+
+Ordered by `ord ASC, chunk_id ASC`: position first rather than `doc_id` first,
+because the caller keeps one passage per document, so ordering by position
+takes the opening chunk of *every* matching document before the second chunk
+of any. Measured after reinstalling all 32 queries: `"100 metres"` returns 12
+chunks from **12 distinct documents** where before it was an arbitrary 12,
+`"Cocoon"` 10 from 7 matching this query's own documented count, and three
+successive calls return byte-identical rows. It improves retrieval as well as
+repeatability. `_lexical_search` also sorts before capping, since the query's
+order does not fix which chunk represents a document.
+
+### 6. The live-demo path failed with a traceback instead of a reason
+
+`offline.sh` — which genuinely plans, retrieves and composes an answer to an
+invented question with no key and no network, and is the strongest asset for
+the call — died on a fresh clone with "No such container: tigergraph". It ran
+`docker start` with no `docker ps -a` check that `build.sh` has had all along.
+It now says the graph must be built first and deliberately does **not** create
+the container: `docker run` would bring up an empty graph, and an empty graph
+does not look broken — it answers everything "not in the corpus", which reads
+as a working system being confidently wrong.
+
+A dead Docker daemon and an unbuilt graph both surface from `docker ps` as the
+same failure, so the first was reported as the second, advising a rebuild when
+the fix is starting Docker. A blank `GOOGLE_API_KEY` reached the Google client
+as `ValueError: No API key was provided` — the empty string is falsy, so it
+resolves to `None` rather than raising `KeyError` — and sat under a
+five-attempt exponential retry: a config error cost ~30 seconds and five
+identical failures before any message. Now one attempt, measured 0.00s,
+printing the two ways to proceed.
+
+### 7. The test suite under-reported its own size
+
+`CHECKS` was a module-level list built at import time, so four checks written
+below that line were collected before they existed and silently skipped while
+the suite reported all green. Collection moved into `main()`. Worth recording
+because a suite that cannot count itself is the one bug it cannot catch.
+
+### Deliberately not fixed, and why
+
+- **pub-013's over-answering** (0.12% of the final score). The athlete route
+  calls `team_medals_for_name` unconditionally and the composer prompt invites
+  the extras with "if you include them at all". A fix means a second composer
+  edit in the same run as the Rule 4 removal, leaving the result unattributable
+  — the mistake made on 23 Nov, when two simultaneous changes took three
+  measurements to untangle.
+- **pub-024's dropped prose fact.** The sentence was verbatim in the prompt at
+  offset 1375 of the 4500-char clip, and the instruction to use it
+  ("give every reason the text offers") is already present and was not
+  followed. The only lever is more prompting, which already failed here. Three
+  counterexamples on the identical path (pub-010, 011, 045, all 1.00) rule out
+  the prompt-dilution explanation.
+- **The risk 2b citation-completion fix.** It was predicated on a 500/day
+  budget that does not exist.
+
 ## 3. The build fails on the judges' machine — *up to 15%*
 
 **Cost:** repeatability is graded on "clean setup, locked dependencies" and a
