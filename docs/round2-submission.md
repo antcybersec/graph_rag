@@ -32,7 +32,7 @@ Or `./finish.sh`, which does all of it unattended and waits for the quota
 first.
 
 Three of those need neither a model nor a key, which is why they are worth
-running often: `tests/test_r2.py` (63 pure-function checks), `src.r2.smoke`
+running often: `tests/test_r2.py` (73 pure-function checks), `src.r2.smoke`
 (all ten route cases against the live graph) and `src.r2.audit` (each answer
 held against the arithmetic its own record carries). The audit is the only
 check the hidden set gets, because it ships with no answers.
@@ -47,9 +47,16 @@ fails, so it can be run before submitting and believed.
 
 The free Gemini tier allows **500 generate_content requests per day per
 model**. Per *model* matters: the answering model is `gemini-3.1-flash-lite`
-and the judge is `gemini-3.1-flash-lite-preview`, a different id and so a
-different pool, so scoring the public set costs nothing from the budget the
-runs need. A 50-question run makes roughly 120, so one day covers both runs
+and the judge is configured as `gemini-3.1-flash-lite-preview`. Two
+corrections, both measured on 24 Nov. First, that judge setting was **not in
+effect** for the committed score: `score.py` read `JUDGE_MODEL` before any
+`load_dotenv()` had run, got nothing, and silently fell back to the answering
+model, so the 91.6% is self-graded. Fixed, and the scorer now refuses to be
+quiet about it. Second, a different model id is **not** known to be a
+different quota pool: Google's rate-limit documentation says limits are
+"applied per project, not per API key" and never says two ids get separate
+daily allowances. Measured, ~371 answering calls in one Pacific day were
+enough to exhaust it, so judge calls are budgeted against the same pool. A 50-question run makes roughly 120, so one day covers both runs
 with room to spare — but it does not cover both runs *plus* several rehearsals,
 and when it runs out it runs out mid-run. The 429 body says exactly when it
 comes back (`retryDelay`, in seconds), which is better than guessing.

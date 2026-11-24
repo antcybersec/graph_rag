@@ -353,6 +353,6 @@ src/r2/
   repro.py      a submitted answer re-answered, and whether it reproduced
   conn.py       Community Edition or Savanna, from identical code
 tests/
-  test_r2.py    63 checks on the parts that decide accuracy, honesty and repeatability
+  test_r2.py    73 checks on the parts that decide accuracy, honesty and repeatability
 build.sh run.sh ui.sh offline.sh finish.sh
 ```

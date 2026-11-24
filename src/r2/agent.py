@@ -65,8 +65,8 @@ ROUTES = {
     "athlete": (
         "Every medal one named athlete won, across all Games and sports."),
     "repeat_champions": (
-        "Athletes who won the same event at more than one Games, within one "
-        "sport. Needs a sport and a season."),
+        "Athletes who took the same title in more than one edition of the Games, "
+        "within one sport. Needs a sport and a season."),
     "multi_medal_games": (
         "Medal counts per athlete at one Games -- who won three or more, who "
         "won the most. Needs a year and a season."),
@@ -108,7 +108,7 @@ Guidance that is about the data, not about any particular question:
 - `years` holds every Games year the question asks about, including ones you
   doubt exist. Leave it empty when the question asks about all editions.
 - `event_phrase` is how the question names the contest, in its own words
-  ("men's slalom", "women's 10 metre air pistol"). Do not normalise it.
+  (as in "men's slalom" or "women's team sprint"). Do not normalise it.
 - `wants_prose` is true when the answer is a reason, a cause or an account of
   what happened -- anything that must be read rather than counted. A question
   that asks *why* something happened, or *how* it came about, always wants
@@ -144,17 +144,17 @@ Guidance that is about the data, not about any particular question:
   which nation won the most *silver* medals is not a question about medals.
 - `as_of` is set only when the question pins a moment ("as of 2 July 2028"),
   as a full ISO date.
-- `years` holds every year the question names, as integers: "the 2004, 2008,
-  2012 and 2016 Olympics" is `years: [2004, 2008, 2012, 2016]`. A bare year
-  belongs here and **never** in `dates`, and never as a made-up day: writing
-  2004 as "2004-08-15" invents a date the question did not give and leaves
-  `years` empty, so the editions the question asks about are never checked.
+- `years` holds every year the question names, as integers: a question naming
+  four editions gives four integers, in the order it names them. A bare year
+  belongs here and **never** in `dates`, and never as a made-up day: turning
+  a bare year into "<year>-08-15" invents a date the question did not give and
+  leaves `years` empty, so the editions it asks about are never checked.
 - `dates` holds every date the question mentions in full ISO form
-  (YYYY-MM-DD), including dates it attributes to a document ("a blog
-  published on July 24", "the July 27 directory entry"). When a question
-  gives only a day and month, supply the year from context -- every source
-  record in this corpus was published between July 2028 and February 2029,
-  so a bare "July 28" means 2028-07-28.
+  (YYYY-MM-DD), including dates it attributes to a document (a post
+  described by the day it was published, a directory entry described by its
+  date). When a question gives only a day and month, supply the year from
+  context -- every source record in this corpus was published between July
+  2028 and February 2029, so a bare day in July means the 2028 one.
 - `numbers` holds every number the question quotes as a value someone
   claimed: counts, durations, placings, times. Write them as digits. A
   disputed figure is often the quickest way to find the documents that
@@ -243,25 +243,25 @@ status:
   about it.
 
 
-  Explaining *why* something is missing is not stating it. These four are the
-  calibration, and three of them look partial until you ask what was
-  requested:
+  Explaining *why* something is missing is not stating it. These are the four
+  shapes where that goes wrong. Each is a shape, not a case: match the shape
+  of the question in front of you, whatever it is about.
 
-  - "Who won the men's +100 kg judo at the 2004, 2008, 2012 and 2016 Games?"
-    The corpus holds three of the four editions. Four things were asked and
-    you can state three -> **partial**.
-  - "What do the accounts say about an equipment stoppage, and what is
-    confirmed?" Two things were asked. You can say what the accounts claim;
-    nothing is confirmed -> **partial**.
-  - "Which two athletes registered but did not start?" One thing was asked:
-    the names. The entry list gives anonymous reserve slots, so you can state
-    none of it -> **not_in_corpus**, even though you can say that two of
-    forty-two did not start and cite the document that shows it. That
-    sentence is the reason, not the answer.
-  - "Exactly how long was the officially confirmed stoppage?" One thing was
-    asked: a confirmed duration. There is none -> **not_in_corpus**, even
-    though two unverified figures exist and the official record says neither
-    was logged. Say all of that, cite it, and keep the status honest.
+  - **One item per thing listed.** A question that names four editions, four
+    rounds or four people asks for four values. Holding three of them is
+    three crossed off and one not -> **partial**.
+  - **Two clauses, two items.** "What do the sources say about X, and what is
+    confirmed?" asks for two things. Reporting the claims while nothing is
+    confirmed crosses off one -> **partial**.
+  - **A count is not a name.** Asked who, or which ones, a figure for how
+    many is not an answer -- an anonymous total, a number of unnamed entries,
+    a quantity with no identities attached crosses nothing off ->
+    **not_in_corpus**. Still say what the figure is and cite it; that sentence
+    is the reason the names are missing, not the names.
+  - **Unverified is not confirmed.** Asked for a confirmed, official or
+    established value, figures that the sources themselves mark as unverified
+    cross nothing off -> **not_in_corpus**. Report them, say who claimed what
+    and that none was confirmed, cite it, and keep the status honest.
 
 answer:
   Plain text, complete and compact. Give every fact the question asks for.
@@ -282,14 +282,14 @@ answer:
 
 Reading the evidence:
   - **A list under a heading that names an attribute states that attribute
-    for every item in the list.** "Films directed by Ron Howard" followed by
-    "- Cocoon (1985)" states that Ron Howard directed Cocoon, and it states it
-    just as plainly as an infobox would. The heading is part of the sentence:
-    read it that way. This holds wherever the list appears -- a filmography on
-    an editor's page, a list of titles held on an official's page -- because
-    the corpus is one corpus and a fact does not need its own article to be
-    in it. A passage retrieved from a document about someone else is still
-    evidence about what it names.
+    for every item in the list.** A heading of the form "<attribute> of
+    <someone>" followed by "- <item>" states that attribute of that item, and
+    states it just as plainly as a labelled field would. The heading is part
+    of the sentence: read it that way. This holds wherever the list appears --
+    a credits list on a colleague's page, a roll of positions on an
+    official's page -- because the corpus is one corpus and a fact does not
+    need its own article to be in it. A passage retrieved from a document
+    about someone else is still evidence about what it names.
   - A count of -1 means the article did not state it. That is missing
     information, not zero.
   - STANDS is what the strongest evidence supports. REJECTED entries are real
@@ -394,7 +394,8 @@ def _within_a_day(published_at: str, date: str) -> bool:
     """Is this publication timestamp on `date`, or the day either side of it?
 
     The tolerance is not sloppiness: publication times are stored in UTC and
-    a question naming "the July 24 blog" means July 24 where it was written.
+    a question naming a document by its publication day means that day where
+    it was written.
     One day of slack covers the offset without letting an unrelated document
     in -- the corpus's sources are days apart, not hours.
     """

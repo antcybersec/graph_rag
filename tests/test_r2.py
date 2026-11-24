@@ -773,5 +773,116 @@ def test_repro_does_not_name_a_provider_that_the_project_never_uses():
         "repro.py should read the provider from the submitted record"
 
 
+
+# -- Rule 4: nothing in the code may know a question or its answer ---------
+# Round 2 rule 4 forbids regexes on question wording, question ids, and
+# answers in the code. The answering code never read a question's wording --
+# and the *prompt* did. COMPOSER_SYSTEM carried four "calibration" examples
+# that paraphrased four real public questions near-verbatim and prescribed
+# each one's key status, plus a worked example naming a film and its director
+# that are the gold answer to a fifth. A prompt is a string literal in a
+# source file; a judge reading the code reads it. The risk register's own
+# rule-4 defence ("no code reads the wording of a question") was true and did
+# not cover this, which is why this check tests the prompts against the key
+# itself rather than against a list of things someone remembered to look for.
+
+_KEY_PATH = "/Users/anantkumar/Downloads/r2/questions_public.jsonl"
+
+
+def _prompt_text() -> str:
+    from src.r2.agent import COMPOSER_SYSTEM, PLANNER_SYSTEM, ROUTES
+    return "\n".join([COMPOSER_SYSTEM, PLANNER_SYSTEM, *ROUTES.values()])
+
+
+def _key_rows() -> list:
+    import json, os
+    if not os.path.exists(_KEY_PATH):
+        return []
+    return [json.loads(l) for l in open(_KEY_PATH, encoding="utf-8") if l.strip()]
+
+
+def _shingles(text: str, n: int = 6) -> set:
+    import re
+    w = re.findall(r"[a-z0-9]+", text.lower())
+    return {" ".join(w[i:i + n]) for i in range(max(0, len(w) - n + 1))}
+
+
+def test_no_question_id_appears_anywhere_in_the_answering_code():
+    """A qid in a comment is a rationale; a qid in a string the model sees is
+    not. Check the prompts, which are what actually reach the model."""
+    import re
+    assert not re.search(r"r2-(pub-)?\d{3}", _prompt_text()), \
+        "a question id appears in a prompt"
+
+
+def test_no_public_question_is_paraphrased_in_a_prompt():
+    """Six-word overlap against every real question. This is the check that
+    would have caught the four calibration examples."""
+    rows = _key_rows()
+    if not rows:
+        return                      # key not present: nothing to check against
+    prompt = _shingles(_prompt_text())
+    hits = {}
+    for q in rows:
+        shared = _shingles(q["question"]) & prompt
+        if shared:
+            hits[q["qid"]] = sorted(shared)[:2]
+    assert not hits, f"prompt text overlaps real questions: {hits}"
+
+
+def test_no_gold_answer_string_appears_in_a_prompt():
+    """The heading example named a director and a film that are the gold
+    answer to a public question. Any gold proper name of two or more words
+    must not appear in prompt text."""
+    import json, re
+    rows = _key_rows()
+    if not rows:
+        return
+    prompt = _prompt_text().lower()
+    hits = {}
+    for q in rows:
+        blob = json.dumps(q.get("answer"), ensure_ascii=False)
+        for name in re.findall(r"[A-Z][a-z]+(?: [A-Z][a-z]+)+", blob):
+            if len(name) > 6 and name.lower() in prompt:
+                hits.setdefault(q["qid"], []).append(name)
+    assert not hits, f"gold answer text appears in a prompt: {hits}"
+
+
+
+# -- the scorer must not grade its own work --------------------------------
+# The committed 91.6% was graded by gemini-3.1-flash-lite, the model that
+# wrote the answers. score.py read JUDGE_MODEL at module scope, but the only
+# load_dotenv() in the project runs in src/common/llm.py, which score.py
+# imports lazily inside judge_one -- so the read came back None and the
+# fallback silently took GEN_MODEL. metrics.json meanwhile asserted the judge
+# was "different from the one that produced the answers".
+
+def test_score_loads_the_environment_before_reading_the_judge_model():
+    src = open("/Users/anantkumar/graph_rag/src/r2/score.py", encoding="utf-8").read()
+    assert "load_dotenv()" in src, "score.py must load .env itself"
+    assert src.index("load_dotenv()") < src.index('os.environ.get("JUDGE_MODEL")'), \
+        "load_dotenv() must run before JUDGE_MODEL is read"
+
+
+def test_the_judge_model_resolves_to_a_different_model_than_the_answerer():
+    """The two ids must not be equal once the environment is loaded."""
+    import os
+    from dotenv import load_dotenv
+    load_dotenv("/Users/anantkumar/graph_rag/.env")
+    judge, gen = os.environ.get("JUDGE_MODEL"), os.environ.get("GEN_MODEL")
+    if not judge and not gen:
+        return                      # no .env on this machine: nothing to check
+    assert judge, "JUDGE_MODEL is not set"
+    assert judge != gen, f"judge and answerer are the same model: {judge}"
+
+
+def test_score_reports_whether_the_grade_was_independent():
+    """The artifact must carry the fact, so a reader of the file alone cannot
+    be misled the way metrics.json was."""
+    src = open("/Users/anantkumar/graph_rag/src/r2/score.py", encoding="utf-8").read()
+    assert '"judge_independent"' in src, "score output must record independence"
+    assert '"answered_by"' in src, "score output must record who wrote the answers"
+
+
 if __name__ == "__main__":
     raise SystemExit(main())

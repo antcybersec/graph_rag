@@ -28,11 +28,18 @@ validates unattended.
 
 **Open:** run it. ~260 requests for a clean 50 + 50, inside one day's 500.
 
-**Measured 22 Nov:** the daily cap is **per model**, not per key. The answering
-model is `gemini-3.1-flash-lite` and the judge is
-`gemini-3.1-flash-lite-preview`, which is a different id and therefore a
-different 500/day pool -- so scoring the public set does not spend any of the
-budget the two runs need. The run plan for the day is ~240 requests on the
+**Measured 22 Nov, and WRONG -- corrected 24 Nov.** The claim was that the
+daily cap is per model, so the judge id `gemini-3.1-flash-lite-preview` had its
+own 500/day pool and scoring was free. Two things are wrong with it. Google's
+rate-limit page says limits are "applied per project, not per API key" and
+says nothing about two model ids getting separate daily allowances; it
+publishes no free-tier requests-per-day figure for any Gemini 3.x Flash Lite
+id at all, so the 500 was never a documented number for this model. And
+measured directly: 121 + 117 + ~72 + 61 = **~371 answering calls inside one
+Pacific day** (timestamps checked, no reset between them) were enough to
+return `429 RESOURCE_EXHAUSTED`. Budget judge calls against the same pool and
+plan on ~350 usable calls a day, not 500. The judge setting was also not in
+effect for the committed score -- see the self-grading entry below. The run plan for the day is ~240 requests on the
 answering model (both sets, now that `event_series` costs one model call fewer)
 and ~50 on the judge, against 500 each. The exhausted quota returns at **13:36
 IST on 23 Nov**, which is not a guess: the 429 body carries

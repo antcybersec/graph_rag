@@ -10,7 +10,7 @@ items lowers the score.
 
 Two things keep it from flattering us:
 
-* The judge is a different model from the one that answered (JUDGE_MODEL),
+* The judge must be a different model from the one that answered (JUDGE_MODEL),
   so a system that likes its own phrasing cannot score itself up.
 * Status is scored separately and bounds the fact score. Answering a
   `not_in_corpus` question with a confident name is not 70% right; it is the
@@ -25,6 +25,14 @@ import argparse
 import json
 import os
 from pathlib import Path
+
+from dotenv import load_dotenv
+
+# `generate` is imported lazily inside judge_one, so the only `load_dotenv()`
+# in the project (src/common/llm.py) had not run by the time JUDGE_MODEL was
+# read below. It came back unset, the fallback took GEN_MODEL, and the system
+# graded its own answers while metrics.json claimed an independent judge.
+load_dotenv()
 
 from pydantic import BaseModel, Field
 
@@ -112,6 +120,22 @@ def main() -> int:
     got = {a["qid"]: a for a in (json.loads(l) for l in open(args.answers, encoding="utf-8") if l.strip())}
     model = os.environ.get("JUDGE_MODEL") or None
 
+    # Whatever model actually wrote these answers is recorded in them. If the
+    # judge is that same model, the accuracy figure is self-assessment and
+    # every claim of independence built on it is false -- so say so here,
+    # loudly, rather than letting it reach a results table.
+    answered_by = sorted({str(step.get("model")) for a in got.values()
+                          for step in (a.get("trace") or [])
+                          if isinstance(step, dict) and step.get("model")})
+    judge = model or os.environ.get("GEN_MODEL")
+    self_graded = bool(judge) and answered_by == [judge]
+    if self_graded:
+        print(f"!! the judge ({judge}) is the model that wrote these answers.\n"
+              f"   This score is self-assessment, not an independent grade. Set\n"
+              f"   JUDGE_MODEL to a different model id and score again.\n")
+    elif answered_by:
+        print(f"judge {judge}; answers were written by {', '.join(answered_by)}")
+
     results, cites = [], []
     for qid, g in gold.items():
         if qid not in got:
@@ -157,7 +181,9 @@ def main() -> int:
         "citation_recall_avg": round(sum(recalls) / len(recalls), 3) if recalls else None,
         "citation_precision_avg": round(sum(precisions) / len(precisions), 3) if precisions else None,
         "by_expected_status": by_status,
-        "judge_model": model or os.environ.get("GEN_MODEL"),
+        "judge_model": judge,
+        "answered_by": answered_by,
+        "judge_independent": not self_graded,
         "per_question": results,
     }
     out = Path(args.out or args.answers + ".score.json")
