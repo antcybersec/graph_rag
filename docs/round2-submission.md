@@ -32,7 +32,7 @@ Or `./finish.sh`, which does all of it unattended and waits for the quota
 first.
 
 Three of those need neither a model nor a key, which is why they are worth
-running often: `tests/test_r2.py` (81 pure-function checks), `src.r2.smoke`
+running often: `tests/test_r2.py` (100 pure-function checks), `src.r2.smoke`
 (all ten route cases against the live graph) and `src.r2.audit` (each answer
 held against the arithmetic its own record carries). The audit is the only
 check the hidden set gets, because it ships with no answers.

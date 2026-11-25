@@ -494,6 +494,64 @@ duplication is presentational: the mean invites a question the median answers.
 Fixed in `README.md` by quoting both and naming the route split, since
 `evidence` is 9 of 50 questions and 52% of all queries.
 
+## 2g. A provider outage was indistinguishable from an empty corpus — *25 Nov, honesty 10% + accuracy 40%*
+
+A paired verification run from `ba9cee1` was spoiled, and what spoiled it was
+worth more than the run.
+
+**What happened.** Gemini returned `503 UNAVAILABLE` — *"This model is
+currently experiencing high demand"* — 39 times across the pair. Retries
+exhausted, so `run.py` fell to its generic exception handler, which writes a
+placeholder record. That placeholder's status is `not_in_corpus`. The hidden
+half took 33 of them consecutively; the public half took 7, scattered.
+
+**Why this is the worst possible failure shape.** `not_in_corpus` is a claim
+about the corpus. It was written because the *model* could not be reached, and
+those two things have nothing to do with each other. The resulting hidden file
+has 34 `not_in_corpus` answers out of 47 and looks finished. One of them was
+r2-041, whose answer in a good run traces Martin Fourcade's medals including
+the 2018 Winter Mixed relay — a question the corpus plainly answers, recorded
+as a question the corpus does not contain. A judge reading that file sees a
+system that is confidently wrong about two thirds of a set.
+
+**Why the existing guard missed it.** `run.py` already stops dead on a quota
+wall rather than papering over the rest of the file, and `finish.sh` says so in
+a comment. But `_is_quota_error` matches `RESOURCE_EXHAUSTED` and `429`, and a
+503 is neither — correctly, since a 503 *is* transient and worth retrying. The
+guard was built for the failure that had already happened. One transient 503
+deserves a placeholder; thirty-three in a row is an outage.
+
+**Fixed.** A streak counter: `OUTAGE_STREAK = 3` consecutive placeholder
+writes stops the run with the same contract as the quota wall — keep what
+worked, name the error, say to re-run with `--resume`. `--resume` already
+re-answers any record with no trace, so the placeholders are not sticky. One
+isolated failure still does not lose the run, which is what kept 43 real
+answers in the public half of this very run. Four tests, two on the
+classifier and two driving `main()` through a stubbed agent.
+
+**What it cost.** The day's quota, and the run. 1–14 answered, 15–47 lost to
+the outage, 48 hit the real 429 at ~20:00 IST. The committed artifacts were
+never overwritten — the run wrote to a scratch path — so nothing regressed.
+
+**What is still open.** The committed hidden pair still exits 1 on `check.py`,
+with six problems, all of them the 12 orphan log lines left by the r2-035 and
+r2-036 503s on 24 Nov: 6 extra for r2-035, 3 for r2-036, 3 duplicate
+`__bootstrap__` lines, and `431 - 12 = 419`. `check.py` itself identifies each
+one as *"outside the question's own window"*. The code fix (`_prune_log`) landed
+in `e78af0a` but cannot retroactively repair an artifact written before it
+existed. Hand-pruning those 12 lines would make the check pass; it would also
+mean the shipped log is not the log the run wrote. The artifacts should come
+from one clean run instead, and the committed public pair already passes with
+exit 0.
+
+**Also fixed, found by making the mistake.** `check.py` took its two
+positional arguments the wrong way round here and raised `KeyError: 'trace'`
+from the middle of a comparison. It now names the mistake and exits 2, and it
+no longer assumes a `trace` key exists. A traceback on the deliverable a judge
+runs by hand reads as a broken system; a sentence reads as a typo.
+
+---
+
 ## 3. The build fails on the judges' machine — *up to 15%*
 
 **Cost:** repeatability is graded on "clean setup, locked dependencies" and a

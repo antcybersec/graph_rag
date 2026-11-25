@@ -34,6 +34,17 @@ def _is_quota_error(exc: Exception) -> bool:
             or "429" in text and ("quota" in text.lower() or "rate limit" in text.lower()))
 
 
+#: How many questions in a row may fail before the run gives up on the
+#: provider. One failure is bad luck. Three in a row is an outage, and the
+#: placeholder written for each one says "not_in_corpus", which is a claim
+#: about the corpus and not about the model being unreachable. Writing that
+#: claim 33 times -- which is what a sustained 503 did to one hidden run --
+#: produces a file that looks answered and is confidently wrong about two
+#: thirds of it. Stopping keeps the answers that worked and leaves the rest
+#: for --resume, which re-answers any record with no trace.
+OUTAGE_STREAK = 3
+
+
 def _prune_log(log_path, keep: set) -> int:
     """Keep only the query-log lines belonging to answers being kept.
 
@@ -129,7 +140,8 @@ def main() -> int:
 
     t0 = time.time()
     problems_total = 0
-    quota_exhausted = False
+    incomplete = ""
+    failure_streak = 0
     with open(answers_path, "w", encoding="utf-8") as out:
         for i, q in enumerate(questions, 1):
             if q["qid"] in done:
@@ -153,7 +165,7 @@ def main() -> int:
                           f"   When the quota resets, finish with:\n"
                           f"     python -m src.r2.run {args.questions} {args.answers} --resume",
                           file=sys.stderr)
-                    quota_exhausted = True
+                    incomplete = "the provider's quota is exhausted"
                     break
                 # A question that crashes still needs a line in the file, and
                 # the honest status for a question we could not process is
@@ -164,6 +176,22 @@ def main() -> int:
                           "answer": "", "explanation": f"the run failed on this question: {exc}",
                           "citations": [], "input_tokens": 0, "output_tokens": 0,
                           "latency_ms": 0, "trace": [], "route": "error"}
+                failure_streak += 1
+                if failure_streak >= OUTAGE_STREAK:
+                    print(f"\n!! {failure_streak} questions in a row failed, the last at "
+                          f"question {i} ({q['qid']}).\n   {str(exc)[:300]}\n"
+                          f"   That is an outage, not bad luck, and every further question "
+                          f"would be written as not_in_corpus --\n"
+                          f"   a claim about the corpus, for a model that could not be "
+                          f"reached. Stopping instead.\n"
+                          f"   {len(done)} answers are safe in {answers_path}.\n"
+                          f"   When the provider recovers, finish with:\n"
+                          f"     python -m src.r2.run {args.questions} {args.answers} --resume",
+                          file=sys.stderr)
+                    incomplete = f"{failure_streak} questions in a row failed on the provider"
+                    break
+            else:
+                failure_streak = 0
             done[record["qid"]] = record
             problems = verify(record)
             if problems:
@@ -182,9 +210,9 @@ def main() -> int:
           f"in {time.time() - t0:.0f}s")
     if problems_total:
         print(f"WARNING: {problems_total} trace problems -- fix before submitting")
-    if quota_exhausted:
-        print("INCOMPLETE: the run stopped on a provider quota limit. Re-run with "
-              "--resume once it resets.")
+    if incomplete:
+        print(f"INCOMPLETE: the run stopped because {incomplete}. Re-run with "
+              f"--resume once the provider is back.")
         return 2
     return 0
 

@@ -1188,5 +1188,153 @@ def test_prune_survives_a_corrupt_line():
         assert p.read_text(encoding="utf-8").strip() == '{"qid": "q1"}'
 
 
+# A sustained provider outage used to be indistinguishable, in the answer
+# file, from a corpus that does not contain the answer. One hidden run took
+# 33 consecutive 503 UNAVAILABLE ("high demand") failures and wrote
+# `not_in_corpus` for every one of them: a claim about the corpus, made
+# because the model could not be reached. The file looked finished and was
+# confidently wrong about two thirds of it. The run now stops instead.
+
+def test_a_503_is_not_classified_as_a_quota_wall():
+    from src.r2.run import _is_quota_error
+    class ServerError(Exception):
+        pass
+    overloaded = ServerError(
+        "503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is "
+        "currently experiencing high demand.', 'status': 'UNAVAILABLE'}}")
+    assert not _is_quota_error(overloaded)
+
+
+def test_a_429_resource_exhausted_is_classified_as_a_quota_wall():
+    from src.r2.run import _is_quota_error
+    assert _is_quota_error(Exception("429 RESOURCE_EXHAUSTED. quota"))
+
+
+def test_a_run_of_failures_stops_the_run_instead_of_writing_not_in_corpus():
+    """The defect this guards: 33 placeholders, each one a corpus claim."""
+    import json as _json, sys as _sys, tempfile
+    from pathlib import Path
+    import src.r2.agent as _agent_mod
+    import src.r2.conn as _conn_mod
+    from src.r2.run import main, OUTAGE_STREAK
+
+    class _Overloaded(Exception):
+        pass
+
+    class _DeadAgent:
+        def __init__(self, conn, query_log=None):
+            self.sports, self.games, self.bootstrap_steps = [], [], []
+        def answer(self, qid, question):
+            raise _Overloaded("503 UNAVAILABLE. high demand")
+
+    saved = (_agent_mod.Agent, _conn_mod.get_connection, _conn_mod.describe,
+             _sys.argv)
+    with tempfile.TemporaryDirectory() as d:
+        qfile, afile = Path(d) / "q.jsonl", Path(d) / "a.jsonl"
+        qfile.write_text("\n".join(
+            _json.dumps({"qid": f"q{i}", "question": "who won?"})
+            for i in range(1, 11)) + "\n", encoding="utf-8")
+        _agent_mod.Agent = _DeadAgent
+        _conn_mod.get_connection = lambda *a, **k: object()
+        _conn_mod.describe = lambda *a, **k: "stub"
+        _sys.argv = ["run", str(qfile), str(afile)]
+        try:
+            rc = main()
+        finally:
+            (_agent_mod.Agent, _conn_mod.get_connection,
+             _conn_mod.describe, _sys.argv) = saved
+        lines = [l for l in afile.read_text(encoding="utf-8").splitlines() if l.strip()]
+        assert rc == 2, rc
+        assert len(lines) == OUTAGE_STREAK - 1, len(lines)
+        assert all(_json.loads(l)["route"] == "error" for l in lines)
+
+
+def test_one_isolated_failure_does_not_stop_the_run():
+    """Losing one answer must still not lose the run."""
+    import json as _json, sys as _sys, tempfile
+    from pathlib import Path
+    import src.r2.agent as _agent_mod
+    import src.r2.conn as _conn_mod
+    from src.r2.run import main
+
+    class _FlakyAgent:
+        def __init__(self, conn, query_log=None):
+            self.sports, self.games, self.bootstrap_steps = [], [], []
+        def answer(self, qid, question):
+            if qid in ("q2", "q5"):          # isolated, never consecutive
+                raise Exception("503 UNAVAILABLE. high demand")
+            return {"qid": qid, "status": "answered", "answer": "someone",
+                    "explanation": "", "citations": ["doc-1"],
+                    "input_tokens": 1, "output_tokens": 1, "latency_ms": 1,
+                    "trace": [{"query": "q", "provider": "gemini"}], "route": "text"}
+
+    saved = (_agent_mod.Agent, _conn_mod.get_connection, _conn_mod.describe,
+             _sys.argv)
+    with tempfile.TemporaryDirectory() as d:
+        qfile, afile = Path(d) / "q.jsonl", Path(d) / "a.jsonl"
+        qfile.write_text("\n".join(
+            _json.dumps({"qid": f"q{i}", "question": "who won?"})
+            for i in range(1, 8)) + "\n", encoding="utf-8")
+        _agent_mod.Agent = _FlakyAgent
+        _conn_mod.get_connection = lambda *a, **k: object()
+        _conn_mod.describe = lambda *a, **k: "stub"
+        _sys.argv = ["run", str(qfile), str(afile)]
+        try:
+            rc = main()
+        finally:
+            (_agent_mod.Agent, _conn_mod.get_connection,
+             _conn_mod.describe, _sys.argv) = saved
+        lines = [l for l in afile.read_text(encoding="utf-8").splitlines() if l.strip()]
+        assert rc == 0, rc
+        assert len(lines) == 7, len(lines)
+
+
+# check.py is deliverable 5's validator, and a judge runs it by hand. Given
+# its two positional arguments the wrong way round it used to raise KeyError
+# from the middle of a comparison, which reads as a broken system rather than
+# as a typo. (The arguments were swapped here, which is how this was found.)
+
+def test_check_names_the_mistake_when_the_arguments_are_swapped():
+    import json as _json, sys as _sys, tempfile
+    from pathlib import Path
+    from src.r2.check import main as check_main
+    with tempfile.TemporaryDirectory() as d:
+        answers, log = Path(d) / "a.jsonl", Path(d) / "log.jsonl"
+        answers.write_text(_json.dumps(
+            {"qid": "q1", "status": "answered", "answer": "x", "citations": [],
+             "trace": [{"query": "k", "tigergraph": True}]}) + "\n",
+            encoding="utf-8")
+        log.write_text(_json.dumps({"qid": "q1", "query": "k"}) + "\n",
+                       encoding="utf-8")
+        saved = _sys.argv
+        _sys.argv = ["check", str(answers), str(log)]   # swapped on purpose
+        try:
+            rc = check_main()
+        finally:
+            _sys.argv = saved
+        assert rc == 2, rc
+
+
+def test_check_does_not_crash_on_a_record_with_no_trace_key():
+    """A hand-written or truncated answer file must still be reportable."""
+    import json as _json, sys as _sys, tempfile
+    from pathlib import Path
+    from src.r2.check import main as check_main
+    with tempfile.TemporaryDirectory() as d:
+        qs, answers = Path(d) / "q.jsonl", Path(d) / "a.jsonl"
+        qs.write_text(_json.dumps({"qid": "q1", "question": "who won?"}) + "\n",
+                      encoding="utf-8")
+        answers.write_text(_json.dumps(
+            {"qid": "q1", "status": "answered", "answer": "x",
+             "citations": ["doc-1"]}) + "\n", encoding="utf-8")
+        saved = _sys.argv
+        _sys.argv = ["check", str(qs), str(answers)]
+        try:
+            rc = check_main()          # must report, not raise KeyError
+        finally:
+            _sys.argv = saved
+        assert rc == 1, rc
+
+
 if __name__ == "__main__":
     raise SystemExit(main())
