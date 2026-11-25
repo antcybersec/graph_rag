@@ -476,6 +476,7 @@ CREATE OR REPLACE QUERY sources_for_event(STRING event_id) FOR GRAPH {GRAPH} SYN
       WHERE e.event_id == event_id;
   Res = SELECT s FROM C:c -(ASSERTED_BY>:b)- SourceRecord:s;
   PRINT Res[Res.source_id, Res.title, Res.source_text, Res.published_at,
+             Res.published_local,
             Res.tier, Res.tier_name];
 }}
 """)
@@ -494,6 +495,7 @@ CREATE OR REPLACE QUERY list_sources() FOR GRAPH {GRAPH} SYNTAX v3 {{
      the same selection-over-graph-candidates the sports and Games use. */
   Res = SELECT s FROM SourceRecord:s;
   PRINT Res[Res.source_id, Res.title, Res.source_text, Res.published_at,
+             Res.published_local,
             Res.tier, Res.tier_name];
 }}
 """)

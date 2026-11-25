@@ -136,6 +136,7 @@ CREATE SCHEMA_CHANGE JOB r2_build_schema FOR GRAPH {GRAPH_NAME} {{
         title STRING,
         source_text STRING,
         published_at STRING,
+        published_local STRING,
         tier INT,
         tier_name STRING,
         tier_reason STRING
@@ -215,6 +216,42 @@ CREATE SCHEMA_CHANGE JOB r2_add_vectors FOR GRAPH {GRAPH_NAME} {{
 
 RUN SCHEMA_CHANGE JOB r2_add_vectors
 """
+
+# Adding an attribute to a vertex type that already exists cannot go in
+# r2_build_schema: ADD VERTEX on an existing type is rejected, so re-running
+# the build job would not pick it up. This job is additive and touches only
+# SourceRecord -- in particular it does not go near Chunk, whose 16,377
+# embeddings take about half an hour to rebuild.
+#
+# Safe to run on a loaded graph, and safe to skip: an existing attribute makes
+# it fail, which `ensure_published_local` treats as already done.
+PUBLISHED_LOCAL_JOB = f"""
+USE GRAPH {GRAPH_NAME}
+
+CREATE SCHEMA_CHANGE JOB r2_add_published_local FOR GRAPH {GRAPH_NAME} {{
+    ALTER VERTEX SourceRecord ADD ATTRIBUTE (published_local STRING);
+}}
+
+RUN SCHEMA_CHANGE JOB r2_add_published_local
+"""
+
+
+def ensure_published_local(conn) -> str:
+    """Add SourceRecord.published_local if it is not already there."""
+    try:
+        out = apply(conn, PUBLISHED_LOCAL_JOB, "r2_add_published_local")
+        return "added"
+    except RuntimeError as exc:
+        text = str(exc).lower()
+        # TigerGraph's wording for "that attribute is already there" is
+        # "conflict with another attribute", not "already exists" -- checking
+        # for the latter made a job that had in fact succeeded look like a
+        # hard failure on every subsequent run.
+        if ("conflict with another attribute" in text
+                or "already exist" in text or "duplicate" in text):
+            return "already present"
+        raise
+
 
 CREATE_GRAPH = f"CREATE GRAPH {GRAPH_NAME}()"
 

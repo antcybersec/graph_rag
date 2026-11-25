@@ -1036,5 +1036,105 @@ def test_an_entity_swap_is_still_different_even_with_figures_unchanged():
     assert c["verdict"] == "DIFFERENT", c["verdict"]
 
 
+
+# -- a slot of one has nothing to lose to --------------------------------
+# A source describing a contest by its venue is unreachable by name:
+# "Coliseum event" shares no word with "men's 100 metres", and the venue
+# identifies nothing because 18 different 2028 events use that Coliseum. The
+# claim kept a slot of its own, and resolve() then reported it as STANDS --
+# the resolution layer affirmatively telling the composer that a value an
+# official decision had already overridden holds. Grounding by value overlap
+# fixes it: measured over the whole corpus it adopts one group, three claims,
+# with zero ties and zero other groups touched.
+
+def _claim(src, subject, pred, value, tier=1, tier_name="official decision",
+           stance="asserts", status="final", published="2028-07-23"):
+    from src.r2.claims import norm_key
+    return {"source_id": src, "subject": subject, "subject_key": norm_key(subject),
+            "predicate": pred, "value": value, "value_key": norm_key(value),
+            "population": "", "stance": stance, "status": status, "tier": tier,
+            "tier_name": tier_name, "published_at": published,
+            "published_local": published, "effective": published,
+            "effective_sort": int(published.replace("-", "")), "event_id": "", "hedged": False}
+
+
+def test_value_overlap_grounds_a_subject_that_names_no_event():
+    from src.r2.claims import _ground_by_value_overlap
+    claims = [
+        _claim("S1", "men's 100 metres", "gold_medallist", "A"),
+        _claim("S1", "men's 100 metres", "silver_medallist", "B"),
+        _claim("S2", "Coliseum event", "gold_medallist", "A"),
+        _claim("S2", "Coliseum event", "silver_medallist", "B"),
+    ]
+    for c in claims[:2]:
+        c["event_id"] = "EV-1"
+    _ground_by_value_overlap(claims)
+    assert all(c["event_id"] == "EV-1" for c in claims[2:]), [c["event_id"] for c in claims]
+    assert all(c["slot_subject"] == "EV-1" for c in claims[2:])
+
+
+def test_value_overlap_needs_two_pairs_not_one():
+    """One shared medallist name recurs across editions, so a single
+    overlapping pair is not an identification."""
+    from src.r2.claims import _ground_by_value_overlap
+    claims = [_claim("S1", "men's 100 metres", "gold_medallist", "A"),
+              _claim("S2", "Coliseum event", "gold_medallist", "A")]
+    claims[0]["event_id"] = "EV-1"
+    _ground_by_value_overlap(claims)
+    assert claims[1]["event_id"] == "", claims[1]["event_id"]
+
+
+def test_value_overlap_leaves_a_tie_ungrounded():
+    """A tie means the evidence does not say which contest, and the honest
+    outcome there is still no grounding -- a wrong merge joins two contests."""
+    from src.r2.claims import _ground_by_value_overlap
+    claims = [
+        _claim("S1", "heat one", "gold_medallist", "A"),
+        _claim("S1", "heat one", "silver_medallist", "B"),
+        _claim("S2", "heat two", "gold_medallist", "A"),
+        _claim("S2", "heat two", "silver_medallist", "B"),
+        _claim("S3", "Coliseum event", "gold_medallist", "A"),
+        _claim("S3", "Coliseum event", "silver_medallist", "B"),
+    ]
+    claims[0]["event_id"] = claims[1]["event_id"] = "EV-1"
+    claims[2]["event_id"] = claims[3]["event_id"] = "EV-2"
+    _ground_by_value_overlap(claims)
+    assert claims[4]["event_id"] == "", claims[4]["event_id"]
+
+
+# -- the date the document prints, not the one UTC makes it ---------------
+# 13 of the 39 LA 2028 source records were published in the evening Pacific,
+# so their UTC date is the next day. The questions and the key both use the
+# printed date ("a provisional July 23 scoreboard"), and showing the model UTC
+# made the jury certificate, the board it superseded and the blog that
+# recycled it all read as 24 July -- the chronology the question turns on.
+
+def test_the_printed_date_is_preferred_over_the_utc_one():
+    from src.r2.agent import _as_published
+    assert _as_published({"published_local": "2028-07-23 21:09 PDT (UTC-07:00)",
+                          "published_at": "2028-07-24T04:09:00Z"}).startswith("2028-07-23")
+
+
+def test_the_utc_date_is_used_when_no_printed_one_exists():
+    from src.r2.agent import _as_published
+    assert _as_published({"published_at": "2028-07-24T04:09:00Z"}) == "2028-07-24T04:09:00Z"
+    assert _as_published({}) == ""
+
+
+def test_why_not_says_what_a_rejected_document_recycled_and_when():
+    """"Lower authority" alone is what the composer prompt calls insufficient."""
+    from src.r2.claims import _why_not
+    blog = _claim("S3", "x", "bronze_medallist", "Bouchardy", tier=5,
+                  tier_name="unverified witness", status="stated", published="2028-07-24")
+    board = _claim("S1", "x", "bronze_medallist", "Bouchardy", tier=2,
+                   tier_name="official record", stance="reports",
+                   status="provisional", published="2028-07-23")
+    jury = _claim("S2", "x", "bronze_medallist", "Asante-Mensah")
+    why = _why_not(blog, jury, set(), [blog, board, jury])
+    assert "provisional" in why, why
+    assert "2028-07-23" in why, why
+    assert "an official record" in why, why
+
+
 if __name__ == "__main__":
     raise SystemExit(main())

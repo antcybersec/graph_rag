@@ -392,6 +392,22 @@ def _as_of_sort(iso: str) -> Optional[int]:
     return int(digits[:14].ljust(14, "0")) if digits else None
 
 
+def _as_published(row: dict) -> str:
+    """The publication time as the document prints it, falling back to UTC.
+
+    `published_at` is normalised to UTC, and 13 of the 39 LA 2028 source
+    records were published in the evening Pacific, so their UTC date is the
+    following day. The questions and the answer key both use the printed local
+    date -- "a blog published on July 24", "a provisional July 23 scoreboard",
+    "the signed jury decision dated July 23 at 22:15 PDT". Showing the model
+    UTC made the jury certificate, the scoreboard it superseded and the blog
+    that recycled it all read as 24 July, which is the whole chronology the
+    question turns on. `_within_a_day` was built to absorb the same offset
+    when matching a date; this is the other half of it, for reading one.
+    """
+    return str(row.get("published_local") or row.get("published_at") or "")
+
+
 def _within_a_day(published_at: str, date: str) -> bool:
     """Is this publication timestamp on `date`, or the day either side of it?
 
@@ -1091,7 +1107,8 @@ class Agent:
         # central operations log" or "the jury's certificate", where no date
         # is given at all.
         named = self._select(tr, question, "source document", self.sources, "source_id",
-                             ["published_at", "source_text", "title"], many=True)
+                             ["published_local", "published_at", "source_text", "title"],
+                             many=True)
         for source_id in dict.fromkeys([s["source_id"] for s in by_date] + named):
             seeds += self._merge_claims(
                 tr.run_query("claims_by_source", {"source_id": source_id}))
@@ -1359,7 +1376,8 @@ class Agent:
                         "tier_name": src.get("tier_name", ""),
                         "source_text": src.get("source_text", ""),
                         "source_title": src.get("title", ""),
-                        "published_at": src.get("published_at", "")})
+                        "published_at": src.get("published_at", ""),
+                        "published_local": src.get("published_local", "")})
         return out
 
     def _claims_search(self, tr, plan, ev, term: str, store: bool = True,
@@ -1399,13 +1417,13 @@ class Agent:
                             "source": w.get("source_text", ""),
                             "tier": w.get("tier_name", ""), "status": w.get("status", ""),
                             "effective": w.get("effective", ""),
-                            "published": w.get("published_at", "")}
+                            "published": _as_published(w)}
                            for w in verdict["winners"]],
                 "rejected": [{"value": o["value"], "source_id": o["source_id"],
                               "source": o.get("source_text", ""),
                               "tier": o.get("tier_name", ""), "stance": o.get("stance", ""),
                               "status": o.get("status", ""),
-                              "published": o.get("published_at", ""),
+                              "published": _as_published(o),
                               "why_not": o.get("why_not", "")}
                              for o in verdict["others"]],
                 "no_assertion": verdict.get("no_assertion", False),

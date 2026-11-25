@@ -248,8 +248,16 @@ def load_evidence(conn, records: dict) -> int:
     from src.r2.claims import build_claims, ground_claims
 
     sources = records["sources"]
+    # published_at is UTC, and 13 of the 39 LA 2028 source records were
+    # published in the evening Pacific -- so their UTC date is the *next* day.
+    # The questions use the date the document itself prints, and the answer
+    # key does too ("a provisional July 23 scoreboard"), so the local string
+    # the parser already keeps has to reach the model. Without it the jury's
+    # certificate and the blog that recycled it both read as 24 July and the
+    # chronology the question turns on disappears.
     _batched([(s["source_id"], {"title": s["title"], "source_text": s["source_text"],
                                 "published_at": s["published_at"] or "",
+                                "published_local": s.get("published_raw") or "",
                                 "tier": 0, "tier_name": "", "tier_reason": ""})
               for s in sources],
              lambda b: conn.upsertVertices("SourceRecord", b), "SourceRecord")
@@ -324,6 +332,12 @@ def main() -> int:
         print("applying schema...")
         schema.apply(conn, schema.SCHEMA_JOB, "schema job")
         schema.apply(conn, schema.VECTOR_JOB, "vector job")
+    else:
+        # build.sh promises it is safe to re-run, which has to include a graph
+        # built before an attribute existed. A fresh graph gets published_local
+        # from the vertex definition; an existing one needs the additive job,
+        # which touches SourceRecord alone and never Chunk.
+        print(f"SourceRecord.published_local: {schema.ensure_published_local(conn)}")
         print("installing queries...")
         queries.install(conn)
 

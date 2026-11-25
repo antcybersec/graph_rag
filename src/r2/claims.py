@@ -204,6 +204,11 @@ def build_claims(sources: list[dict], model: Optional[str] = None,
                 "source_id": source["source_id"],
                 "source_text": source["source_text"],
                 "published_at": source["published_at"],
+                # The date the document prints. published_at is UTC and 13 of
+                # the 39 records were published in the evening Pacific, so
+                # their UTC date is the next day -- and the questions use the
+                # printed one.
+                "published_local": source.get("published_raw", ""),
                 "tier": auth["tier"],
                 "tier_name": auth["tier_name"],
                 "tier_reason": auth["reason"],
@@ -278,7 +283,7 @@ def resolve(claims: list[dict], as_of_sort: Optional[int] = None) -> dict:
         blocker = min(blockers, key=lambda c: c["tier"])
         return {"winners": [], "winner": None, "no_assertion": True,
                 "contested": True,
-                "others": [{**c, "why_not": _why_not(c, best, set())} for c in pool],
+                "others": [{**c, "why_not": _why_not(c, best, set(), pool)} for c in pool],
                 "why": (f"{blocker['source_text']} ({blocker['tier_name']}) states this "
                         f"could not be established; the only assertions come from "
                         f"lower-authority sources")}
@@ -290,7 +295,7 @@ def resolve(claims: list[dict], as_of_sort: Optional[int] = None) -> dict:
     for c in pool:
         if any(c["claim_id"] == w["claim_id"] for w in winners):
             continue
-        others.append({**c, "why_not": _why_not(c, best, winning_values)})
+        others.append({**c, "why_not": _why_not(c, best, winning_values, pool)})
     return {"winners": winners, "winner": best, "others": others,
             "no_assertion": False,
             "contested": any(o["why_not"] != "agrees" for o in others)}
@@ -308,7 +313,7 @@ def _no_assertion_reason(reported: list[dict]) -> str:
     return "no source asserts a value on its own authority; the accounts are unverified reports"
 
 
-def _why_not(c: dict, best: dict, winning_values: set) -> str:
+def _why_not(c: dict, best: dict, winning_values: set, pool: Optional[list] = None) -> str:
     stance = c.get("stance", "asserts")
     if stance == "reports":
         return "repeats a claim made elsewhere without endorsing it"
@@ -319,12 +324,35 @@ def _why_not(c: dict, best: dict, winning_values: set) -> str:
     if c["value_key"] in winning_values:
         return "agrees"
     later = (c["published_at"] or "") > (best["published_at"] or "")
+
+    # Where the value came from, when another source in the same slot
+    # published it as provisional. The composer prompt says "lower authority"
+    # alone is not an explanation and asks what a document repeated or
+    # recycled, and from when -- so name it. Nothing here reads a question or
+    # an answer: it is one claim's value matched against another's.
+    origin = ""
+    for other in (pool or []):
+        if other is c or other.get("source_id") == c.get("source_id"):
+            continue
+        if other.get("value_key") != c.get("value_key"):
+            continue
+        if other.get("status") not in ("provisional", "projected"):
+            continue
+        when = str(other.get("published_local") or other.get("published_at") or "")[:10]
+        kind = str(other.get("tier_name") or "source")
+        article = "an" if kind[:1].lower() in "aeiou" else "a"
+        origin = (f"; carries the value {article} {kind} "
+                  f"published as {other['status']}"
+                  + (f" on {when}" if when else ""))
+        break
+
     if c["tier"] > best["tier"]:
         tail = ("; published later but publication time confers no authority" if later else "")
-        return f"lower authority ({c['tier_name']} vs {best['tier_name']}){tail}"
+        return f"lower authority ({c['tier_name']} vs {best['tier_name']}){tail}{origin}"
     if c["status"] in ("provisional", "projected"):
-        return f"{c['status']} value, superseded by a {best['status']} one from an equal source"
-    return "outranked on effective time"
+        return (f"{c['status']} value, superseded by a {best['status']} one "
+                f"from an equal source")
+    return "outranked on effective time" + origin
 
 
 def group_by_slot(claims: list[dict]) -> dict:
@@ -466,4 +494,64 @@ def ground_claims(claims: list[dict], events: list[dict]) -> list[dict]:
         # The canonical slot subject: the event when we could pin one down,
         # the claim's own wording when we could not.
         c["slot_subject"] = c["event_id"] or key
+    _ground_by_value_overlap(claims)
     return claims
+
+
+def _ground_by_value_overlap(claims: list[dict]) -> None:
+    """Pin a subject that names no event but makes the same claims as one.
+
+    `ground_subject` is a token test, so a source describing a contest by its
+    venue is unreachable by name: "Coliseum event" shares no word with
+    "men's 100 metres", and the venue identifies nothing on its own because 18
+    different 2028 events are held at the same Coliseum. The claim therefore
+    kept a slot of its own -- and a slot holding one claim has nothing to lose
+    to, so `resolve` reported it as STANDS. That is the failure that matters:
+    not a citation missed, but the resolution layer affirmatively telling the
+    composer that a value an official decision had already overridden holds.
+
+    So match on what the claims say instead of what their subject is called.
+    A group of ungrounded claims that shares two or more (predicate, value)
+    pairs with one grounded event, and with no other event equally well, is
+    about that event. Two pairs rather than one because a single shared
+    medallist name recurs across editions; uniqueness because a tie means the
+    evidence does not identify which contest, and the honest outcome there is
+    still no grounding.
+
+    Keys on predicates and values only -- never on question text, a question
+    id, or an answer -- so rule 4 is untouched.
+
+    Measured over the whole corpus: this adopts exactly one group, three
+    claims, with zero ties and zero other groups affected. The remaining
+    ungrounded subjects are mostly people ("Tyler Dorrington", "Maja Nyborg"),
+    which name no event because they are not events, and score zero overlap.
+    """
+    owned: dict = {}
+    for c in claims:
+        if c.get("event_id"):
+            owned.setdefault(c["event_id"], set()).add(
+                (c["predicate"], norm_key(str(c.get("value", "")))))
+    if not owned:
+        return
+
+    loose: dict = {}
+    for c in claims:
+        if not c.get("event_id"):
+            loose.setdefault(c["subject_key"], set()).add(
+                (c["predicate"], norm_key(str(c.get("value", "")))))
+
+    adopt: dict = {}
+    for key, pairs in loose.items():
+        scored = [(len(pairs & have), eid) for eid, have in owned.items()]
+        best = max((n for n, _ in scored), default=0)
+        if best < 2:
+            continue
+        winners = [eid for n, eid in scored if n == best]
+        if len(winners) == 1:
+            adopt[key] = winners[0]
+
+    for c in claims:
+        if not c.get("event_id") and c["subject_key"] in adopt:
+            c["event_id"] = adopt[c["subject_key"]]
+            c["slot_subject"] = c["event_id"]
+            c["grounded_by"] = "value overlap"
