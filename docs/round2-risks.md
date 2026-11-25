@@ -411,9 +411,46 @@ fallback (`embed_question`, `vector_search_chunks`, `doc_for_chunk`) and a
 second compose, before reporting silence. 32.3s, 9,003 input and 312 output
 tokens, three model calls.
 
-**Still open:** this was one rehearsal of each half, not two, and the quota for
-the day is nearly spent. Repeat both before the call, and prefer
-`./offline.sh` for practice runs since it needs no key and no quota.
+**Rehearsal two, 25 Nov — and it found the thing rehearsal one could not.**
+Run on three questions chosen at random (`--sample 3 --seed 7`) rather than
+the two the first rehearsal happened to pick, it reported **2 of 3 correct
+reproductions as DIFFERENT**:
+
+- `r2-pub-021` — figures `['63.5','2028','40']` against `['40']`. The re-run
+  simply stopped restating "the men's 63.5 kg at the 2028 Games". Its answer,
+  suspended two hours on gusts over 40 km/h, was identical.
+- `r2-pub-010` — the same seven per-edition nation counts, the same most and
+  the same fewest, with the closing restatement phrased once instead of twice.
+  Wording similarity 19%.
+
+Both false alarms, from comparing figures as an *ordered list*. The composed
+sentence is model-written, so how much of the question it restates varies run
+to run while every fact holds. **A gate that fires on two of three good
+reproductions is worse than no gate**, because a judging call reads it as
+"this does not reproduce" — the identical failure mode as the hardcoded
+`"google"` disclaimer, reached from the opposite direction. Rehearsal one
+passed only because its two questions happened to phrase themselves stably.
+
+Fixed by judging figures as a multiset under the same
+substitution-not-addition rule as `names()`. Re-rehearsed on the same three:
+**2 MATCH, 1 CLOSE, 0 DIFFERENT**, and pub-010's CLOSE now also surfaces that
+its query sequence moved from 5 steps to 4 — which the old verdict discarded
+without mentioning.
+
+The sequence of three rehearsals is worth keeping in view, because each one
+found a different class of defect in the same tool:
+
+| | what it found |
+|---|---|
+| rehearsal 1 | the tool worked, and the provider disclaimer was gone |
+| rehearsal 2 | the gate was too strict: 2 of 3 good runs called DIFFERENT |
+| rehearsal 3 | the fix holds on the data that broke it |
+
+**Still open:** rehearse once more before the call, and prefer `./offline.sh`
+for practice since it needs no key and no quota. Note also that Docker Desktop
+on this machine has twice needed a `pkill -f com.docker` and a relaunch after
+being quit — `docker info` hangs rather than failing. Start it well before the
+call, not during it.
 
 ## 2f. Two efficiency fixes, measured and declined — *24 Nov*
 
