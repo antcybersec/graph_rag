@@ -43,6 +43,7 @@ import argparse
 import difflib
 import json
 import os
+from collections import Counter
 import random
 import re
 import sys
@@ -89,8 +90,18 @@ def names(text: object) -> set:
 def figures(text: object) -> list[str]:
     """Every number in an answer, in order, as written.
 
-    Compared as a list rather than a set: "13 silver and 28 in all" differs
-    from "28 silver and 13 in all", and that difference matters.
+    Returned in order, but `compare` judges them as a multiset, because the
+    composed sentence is model-written and restates a varying amount of the
+    question. Measured on a rehearsal, an ordered comparison called 2 of 3
+    correct reproductions DIFFERENT.
+
+    The cost of that, stated plainly: "13 silver and 28 in all" against "28
+    silver and 13 in all" holds the same multiset, so it comes out CLOSE
+    rather than DIFFERENT. Both ordered lists are printed, so the reordering
+    is visible to whoever is reading -- but a gate keyed on DIFFERENT alone
+    will not stop it. Pairing each figure with the label beside it would, and
+    is the fix if a real swap is ever observed; it has not been, while the
+    false alarms were measured at two in three.
     """
     return _NUM.findall(json.dumps(text, ensure_ascii=False) if not isinstance(text, str) else text)
 
@@ -111,9 +122,33 @@ def compare(old: dict, new: dict) -> dict:
     c_new = sorted(new.get("citations") or [])
     n_old, n_new = names(old.get("answer")), names(new.get("answer"))
     same_status = old.get("status") == new.get("status")
-    same_figures = f_old == f_new
     same_cites = c_old == c_new
     r_old, r_new = retrieval(old), retrieval(new)
+
+    # Figures by the same substitution-not-addition rule as names, and as a
+    # multiset rather than an ordered list.
+    #
+    # Measured on a rehearsal: 2 of 3 correct reproductions were reported
+    # DIFFERENT by an ordered-list comparison, both because the composed
+    # sentence is model-written and restates a different amount of the
+    # question. r2-pub-021 went ['63.5','2028','40'] -> ['40'] by not
+    # repeating "the men's 63.5 kg at the 2028 Games"; its answer -- suspended
+    # two hours, gusts over 40 km/h -- was identical. r2-pub-010 gave the same
+    # seven per-edition counts and the same most and fewest, with the
+    # restatement at the end phrased once instead of twice.
+    #
+    # A gate that fires on two of three good reproductions is worse than no
+    # gate, because the judging call reads it as "this does not reproduce".
+    # So: each side holding a figure the other lacks is a substitution and
+    # stays DIFFERENT; one side being a subset of the other said more or less
+    # of the same thing; an equal multiset in a different order is a
+    # reordering. Both of those are CLOSE, printed, and left to a human --
+    # which keeps the "13 silver and 28 in all" / "28 silver and 13 in all"
+    # swap visible without calling a rewording a failure.
+    k_old, k_new = Counter(f_old), Counter(f_new)
+    figures_swapped = bool((k_old - k_new) and (k_new - k_old))
+    same_figures = f_old == f_new
+    figures_comparable = not figures_swapped
 
     # A substitution, not an addition. One answer saying strictly more than the
     # other is a rewording ("Japan" against "Japan (JPN)") and is not a changed
@@ -123,9 +158,9 @@ def compare(old: dict, new: dict) -> dict:
     swapped = sorted(n_old - n_new) if (n_old - n_new) and (n_new - n_old) else []
     same_names = not swapped
 
-    if not same_status or not same_figures or not same_names:
+    if not same_status or figures_swapped or not same_names:
         verdict = "DIFFERENT"
-    elif same_cites and r_old == r_new:
+    elif same_cites and r_old == r_new and same_figures:
         verdict = "MATCH"
     else:
         # The docstring promised four things must not move and the verdict
@@ -142,6 +177,9 @@ def compare(old: dict, new: dict) -> dict:
         "same_status": same_status,
         "figures": [f_old, f_new],
         "same_figures": same_figures,
+        "figures_comparable": figures_comparable,
+        "figures_only_in_submitted": sorted((k_old - k_new).elements()),
+        "figures_only_in_rerun": sorted((k_new - k_old).elements()),
         "names": [sorted(n_old), sorted(n_new)],
         "same_names": same_names,
         "names_swapped": swapped,
@@ -161,8 +199,18 @@ def report(c: dict, verbose: bool) -> None:
     print(f"\n{mark}{c['qid']}  {c['verdict']}")
     print(f"      status      {c['status'][0]} -> {c['status'][1]}"
           f"{'' if c['same_status'] else '   MOVED'}")
-    print(f"      figures     {c['figures'][0]} -> {c['figures'][1]}"
-          f"{'' if c['same_figures'] else '   MOVED'}")
+    if c["same_figures"]:
+        note = ""
+    elif c["figures_comparable"]:
+        gone = c["figures_only_in_submitted"]
+        extra = c["figures_only_in_rerun"]
+        note = ("   reordered, same figures" if not gone and not extra
+                else f"   restated differently (only in submitted: {gone}, "
+                     f"only in re-run: {extra})")
+    else:
+        note = (f"   SUBSTITUTED (submitted had {c['figures_only_in_submitted']}, "
+                f"re-run has {c['figures_only_in_rerun']})")
+    print(f"      figures     {c['figures'][0]} -> {c['figures'][1]}{note}")
     print(f"      citations   {c['citations'][0]} -> {c['citations'][1]}"
           f"{'' if c['same_citations'] else '   ' + str(len(c['citations_lost'])) + ' lost, ' + str(len(c['citations_gained'])) + ' gained'}")
     print(f"      retrieval   {'identical' if c['same_retrieval'] else 'MOVED'}"

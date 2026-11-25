@@ -605,12 +605,22 @@ def test_reproduction_is_close_not_different_when_only_citations_move():
     assert c["citations_lost"] == ["b"] and c["citations_gained"] == []
 
 
-def test_reproduction_counts_figures_in_order_not_as_a_set():
-    """"13 silver, 28 in all" and "28 silver, 13 in all" are different
-    answers, so the comparison is a list and not a set."""
+def test_reproduction_never_passes_a_reordered_answer_as_identical():
+    """This test used to assert DIFFERENT for "13 silver, 28 in all" against
+    "28 silver, 13 in all", on the reasoning that order carries meaning. It
+    does -- but an ordered comparison was then measured calling 2 of 3 correct
+    reproductions DIFFERENT, because the composed sentence restates a varying
+    amount of the question. A gate that fires on two in three good runs is
+    read in a judging call as "this does not reproduce", which is the worse
+    error.
+
+    So the figures are judged as a multiset now and this case is CLOSE. What
+    must still hold, and is what this checks, is that it is never a clean
+    MATCH: the reordering is always surfaced for a human to look at."""
     c = _compare(_pair(answer="13 silver and 28 in all"),
                  _pair(answer="28 silver and 13 in all"))
-    assert c["verdict"] == "DIFFERENT"
+    assert c["verdict"] != "MATCH", c["verdict"]
+    assert not c["same_figures"]
 
 
 def test_reproduction_notices_a_changed_query_sequence():
@@ -977,6 +987,53 @@ def test_lost_citations_are_no_longer_a_clean_match():
              _rrec("Japan won 9 golds.", ["A"]))
     assert c["verdict"] == "CLOSE", c["verdict"]
     assert c["citations_lost"] == ["B", "C", "D"], c["citations_lost"]
+
+
+
+# -- the gate must not cry wolf on a reworded answer ----------------------
+# Rehearsing the reproduction a second time, on three questions chosen at
+# random rather than the two the first rehearsal happened to use, reported 2
+# of 3 correct reproductions as DIFFERENT. Both were the ordered figure list
+# reacting to prose: r2-pub-021 stopped restating "the men's 63.5 kg at the
+# 2028 Games" and r2-pub-010 phrased its most-and-fewest line once instead of
+# twice. A gate that fires on two of three good reproductions is worse than no
+# gate, because a judging call reads it as "this does not reproduce".
+
+def test_the_gate_does_not_fire_when_the_answer_restates_less_of_the_question():
+    """r2-pub-021, verbatim from the rehearsal."""
+    from src.r2.repro import compare as cmp_
+    c = cmp_(_rrec("The men's 63.5 kg boxing at the 2028 Summer Olympics was suspended "
+                   "for two hours because gusts exceeding 40 km/h created unsafe conditions."),
+             _rrec("The competition was suspended for two hours due to gusts exceeding "
+                   "40 km/h, which created unsafe conditions."))
+    assert c["verdict"] != "DIFFERENT", (c["verdict"], c["figures"])
+    assert c["figures_comparable"]
+
+
+def test_the_gate_still_fires_when_a_figure_really_changes():
+    from src.r2.repro import compare as cmp_
+    c = cmp_(_rrec("Japan won 9 golds."), _rrec("Japan won 11 golds."))
+    assert c["verdict"] == "DIFFERENT", c["verdict"]
+    assert c["figures_only_in_submitted"] == ["9"], c["figures_only_in_submitted"]
+    assert c["figures_only_in_rerun"] == ["11"], c["figures_only_in_rerun"]
+
+
+def test_a_reordered_figure_list_is_close_not_different():
+    """The documented cost of the multiset rule: a genuine swap reads as a
+    reordering. It is CLOSE and both ordered lists are printed, so it stays
+    visible; it is not DIFFERENT."""
+    from src.r2.repro import compare as cmp_
+    c = cmp_(_rrec("13 silver and 28 in all."), _rrec("28 silver and 13 in all."))
+    assert c["verdict"] == "CLOSE", c["verdict"]
+    assert not c["same_figures"]
+    assert c["figures_comparable"]
+
+
+def test_an_entity_swap_is_still_different_even_with_figures_unchanged():
+    """The multiset relaxation must not reopen this morning's hole."""
+    from src.r2.repro import compare as cmp_
+    c = cmp_(_rrec("France won 13 silver medals."), _rrec("Italy won 13 silver medals."))
+    assert c["verdict"] == "DIFFERENT", c["verdict"]
 
 
 if __name__ == "__main__":
