@@ -53,13 +53,23 @@ try:
     generate("say ok", response_schema=T, thinking_budget=0)
 except Exception as e:
     t = f"{type(e).__name__}: {e}"
-    sys.exit(2 if "RESOURCE_EXHAUSTED" in t or "429" in t else 3)
+    if "RESOURCE_EXHAUSTED" in t or "429" in t:
+        sys.exit(2)          # quota: keep waiting for the reset
+    if "503" in t or "UNAVAILABLE" in t or "high demand" in t:
+        sys.exit(4)          # the model is overloaded: also keep waiting
+    sys.exit(3)              # anything else: stop, it wants looking at
 ' 2>/dev/null; do
   rc=$?
   if [ "$rc" = 3 ]; then
-    say "the provider failed for a reason that is not quota -- stopping so it gets looked at"
+    say "the provider failed for a reason that is neither quota nor an outage \
+-- stopping so it gets looked at"
     exit 1
   fi
+  # A 503 is not a quota wall and must not abort the wait. On 25 Nov the model
+  # was overloaded for most of a day; a probe that gave up on the first 503
+  # would have skipped the whole window, and a run started during the outage
+  # would have written placeholders instead of answers. Wait it out.
+  [ "$rc" = 4 ] && say "the model is overloaded (503), not out of quota -- still waiting"
   [ "$(date +%s)" -ge "$deadline" ] && { say "gave up waiting"; exit 1; }
   sleep "$PROBE_EVERY"
 done
