@@ -34,6 +34,32 @@ def _is_quota_error(exc: Exception) -> bool:
             or "429" in text and ("quota" in text.lower() or "rate limit" in text.lower()))
 
 
+def _prune_log(log_path, keep: set) -> int:
+    """Keep only the query-log lines belonging to answers being kept.
+
+    Anything else is from a question about to be answered again, and leaving
+    it behind double-counts that question's queries against its trace.
+    """
+    try:
+        lines = log_path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return 0
+    survivors = []
+    for line in lines:
+        if not line.strip():
+            continue
+        try:
+            qid = json.loads(line).get("qid", "")
+        except json.JSONDecodeError:
+            continue
+        if qid in keep:
+            survivors.append(line)
+    if len(survivors) != len([l for l in lines if l.strip()]):
+        log_path.write_text("\n".join(survivors) + ("\n" if survivors else ""),
+                            encoding="utf-8")
+    return len([l for l in lines if l.strip()]) - len(survivors)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Answer a Round 2 question file")
     ap.add_argument("questions")
@@ -82,6 +108,19 @@ def main() -> int:
     # A fresh run starts a fresh log; a resumed run appends to the existing
     # one, because the lines for the answers it is keeping are already in
     # there and deliverable 5 has to cover every answer in the file beside it.
+    #
+    # But only the lines it is keeping. A question that failed part-way
+    # through -- a 503 from an overloaded model, which is how r2-035 and
+    # r2-036 failed -- already wrote its queries to the log before it died.
+    # Re-answering it appends a second set, and the log then has more lines
+    # for that question than its trace has steps, which is exactly what
+    # `src.r2.check` exists to catch: it failed with six problems on those two
+    # questions and exited 1, on a deliverable a judge runs. Old bootstrap
+    # lines go too, since the resumed run writes its own.
+    if args.resume and log_path.exists():
+        dropped = _prune_log(log_path, keep=set(done))
+        if dropped:
+            print(f"query log: dropped {dropped} line(s) from the attempt that failed")
     query_log = QueryLog(log_path, fresh=not args.resume)
     conn = get_connection()
     agent = Agent(conn, query_log=query_log)

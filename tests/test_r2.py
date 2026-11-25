@@ -1136,5 +1136,57 @@ def test_why_not_says_what_a_rejected_document_recycled_and_when():
     assert "an official record" in why, why
 
 
+
+# -- a resumed run must not leave the failed attempt's queries behind -----
+# r2-035 and r2-036 died on a 503 from an overloaded model after their queries
+# had already reached the log. Re-answering them with --resume appended a
+# second set, so the log held more lines for those two questions than their
+# traces had steps -- and `src.r2.check`, which is deliverable 5 and which a
+# judge runs, failed with six problems and exited 1. It was reported as
+# passing because the problem list prints above the summary and the output had
+# been read through `tail -3`.
+
+def test_resume_drops_log_lines_for_questions_it_will_answer_again():
+    import json as _json, tempfile, os
+    from pathlib import Path
+    from src.r2.run import _prune_log
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / "log.jsonl"
+        p.write_text("\n".join(_json.dumps(r) for r in [
+            {"qid": "q1", "query": "a"},
+            {"qid": "q1", "query": "b"},
+            {"qid": "__bootstrap__", "query": "cat"},
+            {"qid": "q2", "query": "c"},     # q2 failed; these are orphans
+            {"qid": "q2", "query": "d"},
+        ]) + "\n", encoding="utf-8")
+        dropped = _prune_log(p, keep={"q1"})
+        left = [_json.loads(l)["qid"] for l in p.read_text(encoding="utf-8").splitlines() if l.strip()]
+        assert dropped == 3, dropped          # two q2 lines and the old bootstrap
+        assert left == ["q1", "q1"], left
+
+
+def test_resume_keeps_the_log_untouched_when_nothing_is_orphaned():
+    import json as _json, tempfile
+    from pathlib import Path
+    from src.r2.run import _prune_log
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / "log.jsonl"
+        body = "\n".join(_json.dumps({"qid": q, "query": "x"}) for q in ("q1", "q2")) + "\n"
+        p.write_text(body, encoding="utf-8")
+        assert _prune_log(p, keep={"q1", "q2"}) == 0
+        assert p.read_text(encoding="utf-8") == body
+
+
+def test_prune_survives_a_corrupt_line():
+    import tempfile
+    from pathlib import Path
+    from src.r2.run import _prune_log
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / "log.jsonl"
+        p.write_text('{"qid": "q1"}\nnot json at all\n', encoding="utf-8")
+        _prune_log(p, keep={"q1"})
+        assert p.read_text(encoding="utf-8").strip() == '{"qid": "q1"}'
+
+
 if __name__ == "__main__":
     raise SystemExit(main())
