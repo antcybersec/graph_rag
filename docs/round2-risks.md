@@ -614,6 +614,47 @@ it rather than a patch on top of a submitted artifact.
 
 ---
 
+## 2i. Fourth reproduction rehearsal, against the tagged pair — *26 Nov*
+
+The first three rehearsals tested artifacts that are no longer the submission.
+Three questions chosen at random from the newly tagged pair, re-answered
+against the real provider:
+
+```
+3 re-answered: 0 MATCH, 3 CLOSE, 0 DIFFERENT
+  r2-pub-006  answered -> answered   figures ['2024','8'] -> ['2024','8']
+  r2-pub-028  not_in_corpus -> not_in_corpus   figures identical
+  r2-pub-041  answered -> answered   figures [] -> []
+```
+
+Status identical on all three, figures identical on all three, no DIFFERENT.
+The provider line reads `gemini/gemini-3.1-flash-lite` on both sides, which is
+the line that silently disclaimed every reproduction before `repro.py` was
+fixed to read it from the record.
+
+CLOSE rather than MATCH on all three because retrieval moved (4->5, 9->7,
+16->12 steps) and r2-pub-006's citation set went 18 -> 8. Retrieval moving is
+the model choosing what to retrieve, which is the one decision it is supposed
+to own; the gate is right to report it and right not to call it a failure.
+
+**One thing checked rather than assumed.** r2-pub-006 answers "Japan, 8" to a
+*which nation won the most, and how many* question, and losing 10 of 18
+citations on a re-run looked like it might mean the model was doing the
+counting. It is not. The record carries a code-computed block reading `gold
+medals by nation, wrestling at 2024 Summer | unit: gold | highest: 8 ['JPN']`,
+and the answer is that argmax read back. `computed` is present on 33 of 50
+public answers and 30 of 50 hidden ones. The 18 citations are the documents the
+count ran over, which is exactly the gate's computed-citation rule; the
+re-run's 8 is the less complete set, not the better one.
+
+Worth recording because the first two attempts to check this looked at the
+wrong field (`tallies`, which does not exist — the field is `computed`) and
+then at the wrong block of six (`nations per event`, a different axis from the
+question). Both near-misses would have been reported as a central design rule
+failing.
+
+---
+
 ## 3. The build fails on the judges' machine — *up to 15%*
 
 **Cost:** repeatability is graded on "clean setup, locked dependencies" and a
