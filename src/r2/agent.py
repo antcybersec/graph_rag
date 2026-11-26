@@ -89,28 +89,6 @@ ROUTES = {
         "article prose on its own when its fields come up short."),
 }
 
-#: Extra instruction for the source-catalogue selection only.
-#:
-#: The catalogue is 39 records and the question often describes one rather than
-#: naming it -- by the kind of document, by who issued it, or by what it
-#: recorded. Two records can answer to the same description while only one
-#: concerns the thing being asked about, and the heading is the part most
-#: likely to match the question's words while the body is the part that
-#: decides. When the selection takes the heading match, the route gets a
-#: well-formed set of claims about something else and nothing downstream can
-#: tell: there is no empty result to notice, as there would be for a wrong
-#: sport key. The asymmetry is the whole point -- one record too many costs a
-#: query that reads nothing, one too few answers the question from the wrong
-#: document.
-SOURCE_PICK_GUIDANCE = (
-    "A record can match what the question describes in its heading while a "
-    "different record is the one that concerns what the question asks about. "
-    "Judge each record by its whole text, not by how many of the question's "
-    "words appear in its title or its Source line. Where more than one record "
-    "could bear on the question, return all of them rather than only the "
-    "closest: an extra record costs one query and is discarded, a missing one "
-    "is answered around.")
-
 PLANNER_SYSTEM = """You turn a question into a retrieval plan for a graph database of Olympic
 events, films, politicians and LA 2028 source records.
 
@@ -550,19 +528,12 @@ class Agent:
     # -- model-driven selection over graph-supplied candidates --------------
 
     def _select(self, tr: Trace, question: str, label: str, options: list[dict],
-                key_field: str, show_fields: list[str], many: bool = False,
-                guidance: str = "") -> list[str]:
+                key_field: str, show_fields: list[str], many: bool = False) -> list[str]:
         """Ask the model which candidate(s) the question means.
 
         The candidates are graph rows. The model may answer that none of them
         is it, which is how a question about something the corpus does not
         cover stops here instead of being forced onto the nearest match.
-
-        `guidance` is extra instruction for one call site, and exists because
-        the catalogues differ in what a near-miss costs. Picking the wrong
-        sport returns no rows and the route notices; picking the wrong record
-        out of a catalogue of documents returns a perfectly well-formed set of
-        claims about something else, and nothing downstream can tell.
         """
         if not options:
             return []
@@ -574,9 +545,8 @@ class Agent:
                   f"Pick the {label} the question is about, from this list only.\n"
                   f"Return the exact key string{'s' if many else ''} shown first on the line.\n"
                   f"{'Return every one the question covers.' if many else 'Return exactly one.'}\n"
-                  f"If none of them is what the question means, set none_match true.\n"
-                  + (f"{guidance}\n" if guidance else "")
-                  + "\n" + "\n".join(lines))
+                  f"If none of them is what the question means, set none_match true.\n\n"
+                  + "\n".join(lines))
         sel = tr.generate(prompt, tool=f"select_{label.replace(' ', '_')}",
                           response_schema=Selection, thinking_budget=0,
                           provider=self.small_provider, model=self.small_model,
@@ -1138,7 +1108,7 @@ class Agent:
         # is given at all.
         named = self._select(tr, question, "source document", self.sources, "source_id",
                              ["published_local", "published_at", "source_text", "title"],
-                             many=True, guidance=SOURCE_PICK_GUIDANCE)
+                             many=True)
         for source_id in dict.fromkeys([s["source_id"] for s in by_date] + named):
             seeds += self._merge_claims(
                 tr.run_query("claims_by_source", {"source_id": source_id}))

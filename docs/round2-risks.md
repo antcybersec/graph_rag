@@ -728,10 +728,29 @@ nor rule out" it. Both want a rule about asserting an occurrence that no
 record confirms, which is a composer change with a blast radius across all 100
 questions. Not attempted without the quota to measure it.
 
-**Status: unmeasured.** Today's quota went on the submitted pair, two
-scorings, the resume and the rehearsal; the probe for this change returned
-`429` after writing zero answers, which is the outage guard behaving
-correctly. A local-model probe of the selector returned nothing either way, so
+**Status: unmeasured, and parked off `main`.** Today's quota went on the
+submitted pair, two scorings, the resume and the rehearsal; the probe for this
+change returned `429` after writing zero answers, which is the outage guard
+behaving correctly.
+
+It now lives on the branch `source-pick-guidance` and **not on `main`**,
+because leaving it on `main` broke something worth more than the point it
+might win. `r2-submission` is two commits behind `main`, so `main` carried a
+38-line change to `agent.py` while still carrying the answer files produced
+*without* it. A judge who clones `main` rather than the tag, re-runs, and gets
+different answers than the committed ones is looking at a repeatability
+failure — 15% of the score — caused entirely by an unmeasured change kept in
+the wrong place. `main`'s `agent.py` and test suite are now byte-identical to
+the tag's, verified by `git diff r2-submission -- src/r2/agent.py
+tests/test_r2.py` returning nothing. This document and
+`measure_evidence.sh` stay, because neither can change an answer.
+
+The quota may not come back in time. 29 Nov is the submission day rather than
+a working day, and 27 and 28 are not certain, so the tagged pair is the
+submission unless a measurement clearly beats it. Merging the branch is
+therefore gated on completing *both* stages — the 9-question gate and a full
+paired re-run — in one day. A half-finished promotion is worse than no
+promotion. A local-model probe of the selector returned nothing either way, so
 qwen3:8b cannot stand in for this. `./measure_evidence.sh` runs stage one when
 the quota resets: the 9 evidence questions and their scores against the
 baseline 6.5/9, written to a scratch path that cannot touch the tagged
