@@ -759,6 +759,73 @@ change is reverted and `r2-submission` stands as tagged.
 
 ---
 
+## 2k. The hidden set's partials, audited by hand — *26 Nov, one real bug found*
+
+The hidden half ships with no answer key, so the only checks it gets are the
+audit, `check.py`, and reading it. Eight of its 50 answers are `partial`. All
+eight read, with the corpus checked behind each claim:
+
+**Three are correctly partial** — the list shape that scored full marks on the
+public set: give every edition the corpus has and name the ones it does not.
+The claimed absences were verified against the corpus rather than taken on
+trust, and all four are real: no men's 100 metres 2020 (r2-022), no women's
+high jump 2020 (r2-013), no women's slalom 2018 or 2022 (r2-034). Nothing to
+fix.
+
+**Two are the authority questions working as designed.** r2-012 refuses to let
+a July 17 headline establish a barring the shooting jury's final decision
+contradicts, and r2-021 reports what can be said about a 9,000-metre split
+"without presenting an estimate as a measurement" — naming the official record
+as unverified and the coaching memo's 23:43.10 as provisional. These are the
+two best answers in the file.
+
+**One is a genuine gap.** r2-015 names Jim Hunt as the governor who both
+preceded and succeeded James G. Martin, then says the corpus does not state
+his total years in office. `computed` is empty. If the corpus carries his
+terms, that total is arithmetic the code should be doing.
+
+**And two were a real bug, now fixed on a branch.** r2-018 and r2-019 ask which
+nation won the most long-track speed skating golds and the most biathlon events
+at the **2026 Winter** Games. Their traces:
+
+```
+events_in_sport_games {"sport_key": "biathlon", "games_year": 2026, "season": "Summer"}
+medals_by_nation      {"sport_key": "biathlon", "games_year": 2026, "season": "Summer"}
+```
+
+Six query sites and four tally labels fell back to `"Summer"` whenever the
+planner left the season blank, and neither plan carried a season at all. The
+queries matched nothing, `medals_by_nation` had nothing to tally, `computed`
+came back empty, and the composer counted the medals itself out of the article
+prose — "France won the most biathlon events, with 3", an argmax asserted by
+the model. **Code doing every count, argmax and tie is the rule this system is
+built on, and on these two questions it silently did none of them.**
+
+No prompt change would have helped, because the planner emitted no season to
+correct. The Games catalogue already knew: a year maps to exactly one season
+for 19 of the 21 years in this corpus, and only 1988 and 1992 carry both, from
+before the cycles were offset. `_season_for` now takes the planner's season
+when there is one, otherwise asks `self.games`, and guesses only when the year
+is ambiguous, absent, or outside the corpus. It reads graph rows and
+model-emitted years, never the question.
+
+Measured blast radius, against the committed artifacts rather than argued:
+**zero public questions and exactly two hidden ones** sent a Winter year as
+Summer. The fix is a no-op on every Summer question by construction, so the
+92.3% public measurement stays a measurement of this code — and a test asserts
+that against `answers_public.jsonl` directly, checking that every
+`(games_year, season)` pair the submitted run sent comes back identical from
+the lookup. That test caught its own first version modelling reality wrongly:
+the `games_year: 0` coverage checks take their season from the plan, and it now
+asserts that rather than skipping them.
+
+On branch `season-from-graph`, not `main`. Promoting it costs ~125 calls to
+re-run the hidden set plus a spot-check of the public `sport_games` questions
+— cheaper than the full pair a prompt change forces, because the public path
+provably does not move.
+
+---
+
 ## 3. The build fails on the judges' machine — *up to 15%*
 
 **Cost:** repeatability is graded on "clean setup, locked dependencies" and a
