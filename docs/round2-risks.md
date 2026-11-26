@@ -552,6 +552,68 @@ runs by hand reads as a broken system; a sentence reads as a typo.
 
 ---
 
+## 2h. Both halves pass at last — *26 Nov, the submitted pair*
+
+One clean paired run from `b44af87`, the first commit carrying both outage
+guards. Public 10:24-11:06Z, hidden 11:06-11:37Z, scored 11:37Z.
+
+| | public | hidden |
+|---|---|---|
+| `check.py` exit code | **0** | **0** |
+| answers | 50/50 | 50/50 |
+| status split | 44 answered, 4 not_in_corpus, 2 partial | 38 answered, 4 not_in_corpus, 8 partial |
+| answers with a TigerGraph step | 50 | 50 |
+| query log | 422 lines / 51 ids | 434 lines / 51 ids |
+| accuracy | **92.3%**, 44/50 fully correct, 46/50 status | key held by the judges |
+| citations | recall 0.891 / precision 0.914 | — |
+
+Graded by `gemini-3.1-flash-lite-preview` against answers written by
+`gemini-3.1-flash-lite`, which `score.py` states in its own header and
+`metrics.json` records as `judge_independent`.
+
+**The outage guards earned their place on the first run after they landed.**
+Three public questions failed mid-run -- r2-pub-025 and r2-pub-048 to 503
+UNAVAILABLE, r2-pub-033 to **504 DEADLINE_EXCEEDED**, a fourth code this
+project had not seen. They were scattered rather than consecutive, so
+`OUTAGE_STREAK` correctly did *not* fire and 47 real answers survived. The
+first score, with those three placeholders in the file, read 88.3% / 44 status
+/ recall 0.829. `--resume` re-answered exactly those three, `_prune_log`
+dropped their 14 orphan log lines, and the file went to 92.3% / 46 status /
+recall 0.891 with `check.py` at 0. Without `_prune_log` that resume would have
+produced the same orphaned-log failure the committed pair had been carrying
+since 24 Nov.
+
+504 was added to `finish.sh`'s keep-waiting set alongside 503. It is the same
+congestion seen from the other end.
+
+**What this costs against the previous pair.** The 24 Nov pair scored 92.5% /
+47 status / recall 0.909 / precision 0.896 -- two tenths of a point and one
+status better on accuracy, with higher recall and lower precision. It also
+exited **1** on `check.py` for the hidden half. Trading 0.2 accuracy points for
+a self-consistent deliverable 5 is the right trade: repeatability is 15% and a
+judge runs that command by hand.
+
+**The one real defect the score exposes, and it is a family.** Three questions
+turn on *what the absence of a record means*, and the system gets it wrong in
+both directions:
+
+- **r2-pub-048** (0.50) — invented an official record stating the duration
+  could not be established, where the key says the official status is null.
+- **r2-pub-049** (0.00) — answered a question whose key is `not_in_corpus`.
+- **r2-pub-050** (0.00) — said `not_in_corpus` where the key wants the answer
+  that *a missing log entry does not prove the absence of the thing*.
+
+That is one idea, missed three ways: an unrecorded event is neither a
+confirmed absence nor licence to invent a record. 048 and 049 are
+over-assertion, 050 is over-abstention, and all three would be addressed by
+the same instruction. Worth up to ~2 points of the 40% weight and it is the
+largest remaining lever on the public set. Not attempted on 26 Nov: the day's
+quota went on the run and two scorings, and a prompt change to the evidence
+block invalidates the pair that now passes, so it needs a full re-run behind
+it rather than a patch on top of a submitted artifact.
+
+---
+
 ## 3. The build fails on the judges' machine — *up to 15%*
 
 **Cost:** repeatability is graded on "clean setup, locked dependencies" and a

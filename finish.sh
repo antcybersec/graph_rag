@@ -55,7 +55,11 @@ except Exception as e:
     t = f"{type(e).__name__}: {e}"
     if "RESOURCE_EXHAUSTED" in t or "429" in t:
         sys.exit(2)          # quota: keep waiting for the reset
-    if "503" in t or "UNAVAILABLE" in t or "high demand" in t:
+    # 503 UNAVAILABLE is the overloaded model; 504 DEADLINE_EXCEEDED is the
+    # same congestion seen from the other end, and one of the three answers
+    # the 26 Nov run lost was a 504, not a 503. Both are worth waiting out.
+    if any(s in t for s in ("503", "UNAVAILABLE", "high demand",
+                            "504", "DEADLINE_EXCEEDED")):
         sys.exit(4)          # the model is overloaded: also keep waiting
     sys.exit(3)              # anything else: stop, it wants looking at
 ' 2>/dev/null; do

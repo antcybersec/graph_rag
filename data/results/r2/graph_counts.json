@@ -1,7 +1,7 @@
 {
   "graph": "local @ http://localhost graph=r2",
   "vertices_total": 30800,
-  "edges_total": 48896,
+  "edges_total": 48900,
   "vertices": {
     "Athlete": 5406,
     "Chunk": 16377,
@@ -19,7 +19,7 @@
     "Venue": 393
   },
   "edges": {
-    "ABOUT_EVENT": 55,
+    "ABOUT_EVENT": 58,
     "ASSERTED_BY": 96,
     "DESCRIBES_EVENT": 2750,
     "DESCRIBES_FILM": 546,
@@ -33,7 +33,7 @@
     "IN_SPORT": 2750,
     "MEDAL_FOR": 8493,
     "PREV_EDITION": 1682,
-    "SUPERSEDES": 16,
+    "SUPERSEDES": 17,
     "WON": 7064
   }
 }
