@@ -655,6 +655,91 @@ failing.
 
 ---
 
+## 2j. The one question whose failure is retrieval, not judgement — *26 Nov, unmeasured*
+
+Of the six public questions that lost points, `r2-pub-050` is the only one
+whose answer is a sentence the corpus states outright.
+
+> **Q.** Does the absence of a central operations-log entry prove that no
+> equipment pause happened?
+> **Key.** No. It means no verified entry exists; the event may or may not
+> have had a pause. Both witness estimates remain unverified.
+> **Ours.** `not_in_corpus` — "the provided documents do not address the
+> evidential value of such absences".
+
+`SYN-LA28-S028` ends: *"The check could neither confirm nor rule out a
+pause."* We hold the answer and said we did not.
+
+**The trace says why.** The plan came back `{"route": "evidence",
+"wants_evidence": true}` and nothing else — no entities, no sport, no event
+phrase, because the question names no athlete, sport, year or event. The
+evidence route's lexical pass searches `plan.entities + event_phrase +
+athlete + person`, so with an empty plan it searched nothing. Its own
+docstring describes the capability that would have saved this question — *"a
+search for 'equipment pause' finds the operations log that a search for the
+athlete does not"* — and the plumbing to reach it was missing.
+
+That leaves the source-catalogue selection as the only channel, and it
+returned exactly one record: `SYN-LA28-S038`, the triathlon race director's
+log, whose Source line reads *"signed operations log"*. Two of the 39 records
+answer to "an operations log"; the question's other term, *equipment pause*,
+appears in only one of them, and that is the one not chosen. The heading match
+beat the body match.
+
+**What was rejected, and why.** The obvious fix is to search on the question's
+own words. The README and risk 8 both advertise that *no Round 2 code reads
+the wording of a question*, and the judges "will check the code". Spending a
+documented Rule 4 property — rated *could be fatal* — on one public point is a
+bad trade, so no code was added that reads question text.
+
+**What was done instead.** `_select` gained a `guidance` argument, passed at
+exactly one of its six call sites: the source catalogue, reached only by the
+evidence route. It tells the selector to judge a record by its whole text
+rather than by how many of the question's words land in its title or Source
+line, and to return every record that could bear on the question rather than
+only the closest. The model still does all the interpreting; the code still
+only uses keys the graph handed it. A test asserts the other five catalogues'
+prompts are byte-identical, and another asserts the guidance names no
+question, document id or gold value.
+
+**Why the risk is lower than it looks**, which the existing traces settle for
+free:
+
+| question | score | source records selected |
+|---|---|---|
+| 039, 040, 043, 044, 047 | 1.0 | 11, 11, 20, 6, 18 |
+| 022 | 1.0 | 0 |
+| 041 | 0.5 | 5 |
+| 049 | 0.0 | 15, including the right one |
+| **050** | **0.0** | **1, and it is the wrong one** |
+
+Every evidence question that scores full marks already selects a broad set,
+and the one that fails is the only one that returned a single record. The
+guidance asks for the behaviour the working cases already have; it is not a
+new behaviour imposed on them.
+
+**Scope, honestly.** This can only fix 050. `r2-pub-049` already retrieved
+`SYN-LA28-S028` and still scored 0.0, because its failure is a status
+judgement — the key declines a question that presupposes an officially
+confirmed stoppage, and we answered it correctly on the facts with the wrong
+status. `r2-pub-048`'s loss is the same family: our answer opens by asserting
+the stoppage *occurred*, where the only official check "could neither confirm
+nor rule out" it. Both want a rule about asserting an occurrence that no
+record confirms, which is a composer change with a blast radius across all 100
+questions. Not attempted without the quota to measure it.
+
+**Status: unmeasured.** Today's quota went on the submitted pair, two
+scorings, the resume and the rehearsal; the probe for this change returned
+`429` after writing zero answers, which is the outage guard behaving
+correctly. A local-model probe of the selector returned nothing either way, so
+qwen3:8b cannot stand in for this. `./measure_evidence.sh` runs stage one when
+the quota resets: the 9 evidence questions and their scores against the
+baseline 6.5/9, written to a scratch path that cannot touch the tagged
+artifacts. A full paired run follows only if that improves. If it does not, the
+change is reverted and `r2-submission` stands as tagged.
+
+---
+
 ## 3. The build fails on the judges' machine — *up to 15%*
 
 **Cost:** repeatability is graded on "clean setup, locked dependencies" and a
