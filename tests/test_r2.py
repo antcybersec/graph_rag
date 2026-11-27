@@ -1447,5 +1447,121 @@ def test_the_fix_changes_no_season_already_in_the_committed_public_traces():
     assert from_plan > 0, "expected some year-0 coverage checks"
 
 
+# -- years in office are arithmetic, so code does them --------------------
+# r2-015 named Jim Hunt as the governor who both preceded and succeeded
+# James G. Martin and then said "the evidence does not state the total number
+# of years Jim Hunt served as governor". The graph held both terms the whole
+# time -- January 8 1977 to January 5 1985, and January 9 1993 to January 6
+# 2001 -- and nothing added them up, so the composer declined a subtraction
+# and a sum. The hard part is not the addition: it is knowing the two blocks
+# are the same office, because an infobox block with no office name is loaded
+# under a key synthesised per block, so the keys can never join them. The
+# succession fields can: Hunt's first block is succeeded by Martin and his
+# second is preceded by Martin.
+
+def test_a_term_is_measured_from_two_full_dates():
+    import src.r2.agent as A
+    assert A._term_years("January 8, 1977", "January 5, 1985") == (7.99, 2919, "day")
+
+
+def test_the_corpus_four_date_spellings_all_parse():
+    import src.r2.agent as A
+    for text, want in (("January 8, 1977", (1977, 1, 8, "day")),
+                       ("8 January 1977", (1977, 1, 8, "day")),
+                       ("February 1964", (1964, 2, 1, "month")),
+                       ("1972", (1972, 1, 1, "year"))):
+        got = A._term_date(text)
+        assert got is not None, text
+        d, precision = got
+        assert (d.year, d.month, d.day, precision) == want, (text, got)
+
+
+def test_a_term_still_being_served_is_dropped_not_counted_as_zero():
+    import src.r2.agent as A
+    assert A._term_years("January 5, 1981", "") is None
+    assert A._term_years("", "January 5, 1981") is None
+    assert A._term_years("not a date", "January 5, 1981") is None
+
+
+def test_a_term_that_ends_before_it_starts_is_refused():
+    import src.r2.agent as A
+    assert A._term_years("January 5, 1985", "January 5, 1981") is None
+
+
+def test_a_coarse_boundary_keeps_its_precision():
+    import src.r2.agent as A
+    assert A._term_years("1972", "1975") == (3.0, 1096, "year")
+    assert A._term_years("February 1964", "January 8, 1977")[2] == "month"
+
+
+def _hunt_terms():
+    """Jim Hunt's three HELD_OFFICE blocks, as the graph returns them."""
+    return [
+        {"slot": 0, "to_id": "Q880570#slot0", "term_start": "January 9, 1993",
+         "term_end": "January 6, 2001", "predecessor": "James G. Martin",
+         "successor": "Mike Easley"},
+        {"slot": 1, "to_id": "Q880570#slot1", "term_start": "January 8, 1977",
+         "term_end": "January 5, 1985", "predecessor": "James Holshouser",
+         "successor": "James G. Martin"},
+        {"slot": 2, "to_id": "27th lieutenant governor of north carolina",
+         "term_start": "January 5, 1973", "term_end": "January 8, 1977",
+         "predecessor": "Hoyt Patrick Taylor Jr.", "successor": "James C. Green"},
+    ]
+
+
+def test_two_unnamed_blocks_join_when_the_holder_between_them_matches():
+    import src.r2.agent as A
+    groups = A._office_groups(_hunt_terms())
+    assert len(groups) == 2, [[t["slot"] for t in g] for g in groups]
+    joined = next(g for g in groups if len(g) == 2)
+    assert sorted(t["slot"] for t in joined) == [0, 1]
+    total = sum(A._term_years(t["term_start"], t["term_end"])[1] for t in joined)
+    assert round(total / 365.2425) == 16, total
+
+
+def test_a_different_office_is_not_absorbed_into_the_governorship():
+    import src.r2.agent as A
+    groups = A._office_groups(_hunt_terms())
+    alone = next(g for g in groups if len(g) == 1)
+    assert alone[0]["slot"] == 2, alone
+    assert "lieutenant governor" in alone[0]["to_id"]
+
+
+def test_blocks_sharing_an_office_vertex_are_one_office():
+    import src.r2.agent as A
+    terms = [{"slot": 0, "to_id": "governor of maine", "term_start": "January 7, 1987",
+              "term_end": "January 5, 1995", "predecessor": "Joseph E. Brennan",
+              "successor": "Angus King"},
+             {"slot": 1, "to_id": "governor of maine", "term_start": "1980",
+              "term_end": "1982", "predecessor": "", "successor": ""}]
+    assert len(A._office_groups(terms)) == 1
+
+
+def test_unrelated_terms_stay_apart():
+    import src.r2.agent as A
+    terms = [{"slot": 0, "to_id": "a", "term_start": "January 1, 1990",
+              "term_end": "January 1, 1994", "predecessor": "Alice",
+              "successor": "Bob"},
+             {"slot": 1, "to_id": "b", "term_start": "January 1, 2000",
+              "term_end": "January 1, 2004", "predecessor": "Carol",
+              "successor": "Dave"}]
+    assert len(A._office_groups(terms)) == 2
+
+
+def test_the_office_total_reads_no_question_text():
+    """The grouping and the arithmetic take terms, never a question.
+
+    Rule 4 is the reason: the repository advertises that no Round 2 code reads
+    the wording of a question, and a helper that took one would quietly cost
+    that claim.
+    """
+    import inspect
+    import src.r2.agent as A
+    for fn in (A._office_groups, A._term_years, A._term_date):
+        params = list(inspect.signature(fn).parameters)
+        assert not any(p in ("question", "q", "text_of_question") for p in params), \
+            (fn.__name__, params)
+
+
 if __name__ == "__main__":
     raise SystemExit(main())

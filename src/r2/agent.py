@@ -33,8 +33,10 @@ that can always try again is an agent that never reports a gap.
 """
 from __future__ import annotations
 
+import datetime as dt
 import json
 import os
+import re
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -471,6 +473,116 @@ def _tally(what: str, unit: str, pairs: list) -> Optional[dict]:
         "ranked": ranked[:12],
         "dropped": len(pairs) - len(clean),
     }
+
+
+_MONTHS = {m.lower(): i for i, m in enumerate(
+    ["January", "February", "March", "April", "May", "June", "July",
+     "August", "September", "October", "November", "December"], 1)}
+
+_TERM_DMY = re.compile(r"^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$")
+_TERM_MDY = re.compile(r"^([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})$")
+_TERM_MY = re.compile(r"^([A-Za-z]+)\s+(\d{4})$")
+_TERM_Y = re.compile(r"^(\d{4})$")
+_COARSENESS = {"day": 0, "month": 1, "year": 2}
+
+
+def _term_date(text: str):
+    """One term boundary as `(date, precision)`, or None if it says nothing.
+
+    The corpus writes a boundary four ways -- "January 8, 1977",
+    "8 January 1977", "February 1964" and "1972" -- and sometimes leaves it
+    empty. A coarse boundary is still a boundary, so it is kept with its
+    precision recorded rather than dropped; the precision then travels with
+    the duration, because "about 12 years" computed from two bare years must
+    not be presented as if it came from two full dates.
+    """
+    t = (text or "").strip()
+    for pat, order in ((_TERM_DMY, "dmy"), (_TERM_MDY, "mdy")):
+        m = pat.match(t)
+        if m:
+            d, mon, y = ((m.group(1), m.group(2), m.group(3)) if order == "dmy"
+                         else (m.group(2), m.group(1), m.group(3)))
+            if mon.lower() in _MONTHS:
+                try:
+                    return dt.date(int(y), _MONTHS[mon.lower()], int(d)), "day"
+                except ValueError:
+                    return None
+    m = _TERM_MY.match(t)
+    if m and m.group(1).lower() in _MONTHS:
+        return dt.date(int(m.group(2)), _MONTHS[m.group(1).lower()], 1), "month"
+    m = _TERM_Y.match(t)
+    if m:
+        return dt.date(int(m.group(1)), 1, 1), "year"
+    return None
+
+
+def _term_years(start: str, end: str):
+    """`(years, days, precision)` for one term, or None when it cannot be known.
+
+    An unknown duration returns None and is dropped rather than counted as
+    zero, the same convention the event fields use for -1: a term still being
+    served has an empty end date, and treating that as a zero-length term
+    would understate a total that the answer then states as fact.
+    """
+    a, b = _term_date(start), _term_date(end)
+    if not a or not b:
+        return None
+    days = (b[0] - a[0]).days
+    if days < 0:
+        return None
+    coarser = a[1] if _COARSENESS[a[1]] >= _COARSENESS[b[1]] else b[1]
+    return round(days / 365.2425, 2), days, coarser
+
+
+def _office_groups(terms: list[dict]) -> list[list[dict]]:
+    """Group one person's terms into offices, using only the graph's fields.
+
+    Two kinds of evidence join two blocks into one office. The first is the
+    office vertex: an equal `to_id` is the same office, and that is all that
+    is needed when the infobox named it. The second is the succession chain,
+    and it is the one that matters here, because an infobox block with no
+    office name is loaded under a key synthesised per block -- so a governor
+    who served, left, and came back has two unnamed blocks that no key can
+    ever join, and asking "how many years in total" of the key alone gives
+    two separate eights and never sixteen.
+
+    The graph does record what joins them: the holder in between. Jim Hunt's
+    1977-1985 block has successor "James G. Martin" and his 1993-2001 block
+    has predecessor "James G. Martin". One person does not both succeed and
+    precede the same holder in two unrelated offices, so that shared name is
+    the office, and the two blocks are one line of succession.
+
+    This reads `predecessor`, `successor` and `to_id`, all of them loaded
+    from the infobox. It never reads the question.
+    """
+    parent = list(range(len(terms)))
+
+    def find(i: int) -> int:
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    def union(i: int, j: int) -> None:
+        a, b = find(i), find(j)
+        if a != b:
+            parent[max(a, b)] = min(a, b)
+
+    for i, ti in enumerate(terms):
+        for j in range(i + 1, len(terms)):
+            tj = terms[j]
+            if ti.get("to_id") and ti.get("to_id") == tj.get("to_id"):
+                union(i, j)
+                continue
+            si, pi = norm_key(ti.get("successor") or ""), norm_key(ti.get("predecessor") or "")
+            sj, pj = norm_key(tj.get("successor") or ""), norm_key(tj.get("predecessor") or "")
+            if (si and si == pj) or (sj and sj == pi):
+                union(i, j)
+
+    groups: dict[int, list[dict]] = {}
+    for i, t in enumerate(terms):
+        groups.setdefault(find(i), []).append(t)
+    return [sorted(g, key=lambda t: t.get("slot") or 0) for g in groups.values()]
 
 
 def _medal_rows(result, block: str = "medals") -> list[dict]:
@@ -1094,6 +1206,41 @@ class Agent:
                         nxt += [t.get("predecessor", ""), t.get("successor", "")]
             frontier = [n for n in nxt if n]
         ev["office_chains"] = chains
+        # The years are arithmetic, so code does them. r2-015 is the question
+        # this exists for: the planner found the right person, the graph held
+        # both of his governorships, and the answer still said "the evidence
+        # does not state the total number of years" -- because nothing had
+        # added them up and the composer would not do it unprompted. Adding
+        # them is subtraction over two dates per term and a sum per office,
+        # which is exactly the work that belongs here rather than in a model.
+        for ch in chains:
+            names = {o.get("office_key"): o.get("name") for o in ch["offices"]}
+            for group in _office_groups(ch["terms"]):
+                pairs, days, coarse = [], 0, set()
+                for t in group:
+                    got = _term_years(t.get("term_start") or "", t.get("term_end") or "")
+                    if not got:
+                        continue
+                    years, d, precision = got
+                    pairs.append((f"{t.get('term_start')} to {t.get('term_end')}", years))
+                    days += d
+                    coarse.add(precision)
+                if not pairs:
+                    continue
+                named = [names.get(t.get("to_id")) for t in group
+                         if names.get(t.get("to_id"))
+                         and not str(t.get("to_id", "")).startswith(
+                             ch.get("person_id") or "\0")]
+                label = (named[0] if named
+                         else "office unnamed in the infobox, blocks "
+                              + "+".join(str(t.get("slot")) for t in group))
+                ev.setdefault("office_totals", []).append(
+                    {"person": ch["person"], "office": label, "terms": len(pairs),
+                     "days": days, "years": round(days / 365.2425, 2),
+                     "whole_years": round(days / 365.2425),
+                     "precision": sorted(coarse)})
+                self._add_tally(ev, f"years served by {ch['person']} in one office "
+                                    f"({label})", "years", pairs)
         if not chains:
             ev["notes"].append(f"no person article in the corpus matches {name!r}")
 
@@ -1614,6 +1761,18 @@ class Agent:
                                  f"{t.get('term_start')!r} -> {t.get('term_end')!r} "
                                  f"preceded_by={t.get('predecessor')!r} "
                                  f"succeeded_by={t.get('successor')!r}")
+        if ev.get("office_totals"):
+            parts.append("YEARS IN OFFICE, ALREADY ADDED UP FOR YOU (one line per "
+                         "office; blocks with no infobox name are joined into one "
+                         "office when the holder between them matches, so a person "
+                         "who served, left and returned is counted once):")
+            for ot in ev["office_totals"]:
+                approx = "" if ot["precision"] == ["day"] else \
+                    f" (boundaries only to the {'/'.join(ot['precision'])}, so this is approximate)"
+                parts.append(f"  {ot['person']} -- {ot['office']}: {ot['terms']} term(s), "
+                             f"{ot['days']} days = {ot['years']} years, "
+                             f"{ot['whole_years']} to the nearest whole year"
+                             f"{approx}")
         if ev.get("event_facts"):
             parts.append("EVENT ARTICLE FIELDS:")
             for e in ev["event_facts"]:
