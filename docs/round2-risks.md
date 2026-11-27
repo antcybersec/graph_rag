@@ -1002,6 +1002,49 @@ and to give every reason the text offers rather than the first.
 
 **Residual:** real but small, and only measurable through the next score.
 
+### 2l. The gate that stopped a change (27 Nov)
+
+`source-pick-guidance` was built on 26 Nov because r2-pub-050's selector
+picked `SYN-LA28-S038`, a triathlon race director's log whose Source line says
+"signed operations log", over `SYN-LA28-S028`, the archery incident check whose
+body is the only place an equipment pause is mentioned. Heading match beat body
+match. The branch passed a guidance string to the source catalogue's `_select`
+call telling it to judge a record by its text.
+
+It was deliberately not merged without measurement. `./measure_evidence.sh`
+re-answered the 9 public evidence questions on 27 Nov, against a baseline of
+6.5 of 9 from the tagged pair.
+
+| | baseline | after |
+|---|---|---|
+| r2-pub-022 039 040 043 044 | 1.0 each | 1.0 each |
+| r2-pub-041 | 0.5 | 0.5 |
+| r2-pub-047 | 1.0 | **0.8** |
+| r2-pub-049 | 0.0 | **1.0** |
+| r2-pub-050 | 0.0 | 0.0 |
+| **total** | **6.5** | **7.3** |
+
+The total improved and the change was **still rejected**, because the trace
+says why it improved and it was not the change. r2-pub-050 selected
+`SYN-LA28-S038` again — byte for byte the same wrong record, so on the only
+question the guidance was built to fix it is a measured no-op. What moved was
+r2-pub-049, whose status flipped from `answered` to `not_in_corpus` over
+retrieval that differs in one of 22 selections, and r2-pub-047, which lost 0.2
+for not mentioning a certificate. Both are composer nondeterminism on
+unchanged retrieval. +0.8 of noise, 0.0 of effect.
+
+Merging it would have bought nothing and cost the thing that matters more: with
+an inert change in the run, a regression anywhere in the pair could no longer
+be attributed. The branch stays unmerged and the finding is the deliverable —
+a plausible fix, built on a correct diagnosis, that does not do what it was
+designed to do. The gate cost ~35 calls and was worth every one.
+
+What it also shows: r2-pub-049's gold status is `not_in_corpus`, and the system
+reaches it or misses it on a coin flip. That is the 048/049 calibration gap in
+risk 2j, now with a second observation. It is a composer change with a blast
+radius across all 100 questions and it was not attempted on a day with one run
+left in it.
+
 ---
 
 ## What this says to do next, in order
