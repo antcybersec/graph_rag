@@ -1095,6 +1095,105 @@ root cause is named, the obvious fix is shown to be a wash, the real fix is
 identified in a component that already exists, and the reason it was not
 shipped is the same reason the submission is reproducible.
 
+### 2n. A correct answer that the arithmetic block would have made wrong (27 Nov)
+
+`audit` flagged hidden r2-027 on the re-run, as it had on the tagged run:
+
+```
+FIGURE NOT IN THE ARITHMETIC: ['6.41'] appear in the answer but not among
+  the figures the query computed
+SUPERLATIVE NOT TAKEN FROM THE ARITHMETIC: the plan asked for the most, the
+  ranking puts ['El Mariachi'] at 276.817 in 'gross divided by budget, films
+  where both figures are stated in the same currency', and the answer names
+  neither that holder nor that figure
+```
+
+The question asks which Ron Howard film earned most relative to its budget.
+The answer -- The Da Vinci Code, ratio 6.41 -- **is correct**. Checked directly
+against the graph: `films_by_director` with `director_key='ron howard'` returns
+7 films, all with budget and gross stated in USD, and their ratios are 2.3,
+2.85, 6.3, 3.81, 5.46, **6.41** and 6.35. 6.41 is The Da Vinci Code
+(budget 125,000,000, gross 801,300,000) and it is the maximum.
+
+**The answer is right because the composer ignored the arithmetic it was given.**
+The trace shows `films_by_director` called twice and then
+`films_with_figures {"currency": ""}`, which returns every film in the corpus.
+The ratio tally was built from that second result, so it has 478 entries and
+ranks El Mariachi first at 276.817 -- a film Ron Howard did not direct. Had the
+composer obeyed the block headed ARITHMETIC ALREADY DONE FOR YOU, which it is
+told is authoritative, it would have answered "El Mariachi".
+
+So the arithmetic rule -- the one commitment this whole system rests on -- was
+pointed at the wrong population on this question, and the only reason the
+answer is right is that the model did the division itself and got it right.
+That is luck, and it is the inverse of the usual failure: not a model
+overriding correct code, but a model rescuing incorrect code.
+
+**Not fixed, and the reason is measured.** Three questions call
+`films_by_director`: r2-pub-005, r2-pub-017 and r2-027. Both public ones score
+1.0 and r2-027 is already correct, so restricting the tally to the pinned
+director's films has **no accuracy upside at all** -- its only gain is that
+`computed` would then contain the ranking the answer actually used. Against
+that, 2l measured what happens when the figures in front of a composer change:
+correct arithmetic added to the office route turned a correct answer wrong.
+Changing the population of a tally on a day with no second run, for zero
+expected points, is the trade that discipline exists to refuse.
+
+It is written down instead, because it is a **latent** fault rather than a
+current error, and a latent fault that the audit catches on every run is in
+better shape than one nobody has looked at. If the composer ever starts
+trusting the block as instructed, this question starts failing.
+
+### 2o. The hidden set re-run on the promoted fix (27 Nov)
+
+The season fix was merged and the hidden set re-run on it -- the hidden set
+only, not the pair, and that choice is the point.
+
+A full paired re-run costs ~300 calls and would have re-rolled the public
+accuracy. The season fix provably cannot change a public answer
+(`test_the_fix_changes_no_season_already_in_the_committed_public_traces`
+asserts every (games_year, season) pair in the committed public traces comes
+back identical), so re-running the public half could only have introduced
+composer nondeterminism into a measured 92.3% on the last available run day.
+The 9-question gate in 2l had just measured that nondeterminism directly: 2 of
+9 answers moved on unchanged retrieval. Extrapolated over 50 questions that is
+a coin flip on several points, taken for tidiness rather than for score.
+
+| | tagged run | re-run |
+|---|---|---|
+| answers | 50/50 | 50/50 |
+| `check.py` | exit 0 | **exit 0** |
+| answered / n-i-c / partial | 38 / 4 / 8 | **40 / 5 / 5** |
+| citations | 198 | **212** |
+| answers with no TigerGraph step | 0 | 0 |
+| answered-or-partial with no citation | 0 | 0 |
+| answers with empty `computed` | 20 | **18** |
+
+Four answers changed, and each was read against the corpus rather than counted:
+
+- **r2-018** partial to answered. Speed skating at 2026 now queried as Winter;
+  `computed` went from empty to 6 blocks; the answer is NED with 5 golds, taken
+  from `gold medals by nation ... highest 5 ['NED']`.
+- **r2-019** partial to answered. Biathlon at 2026 likewise. The previous run
+  said "France won the most biathlon events, with 3" -- a figure the model
+  counted out of prose because the Summer query had matched nothing. It now
+  says FRA with 6, from `gold medals by nation ... highest 6 ['FRA']`. The
+  figure was wrong *and* model-asserted; it is now right *and* code-computed.
+  This question alone is why the fix was worth a run.
+- **r2-012** partial to answered, and nothing to do with the season fix. The
+  previous answer described the jury decision without answering the question;
+  the new one answers "No." and then cites the same two records. Better, and
+  it is nondeterminism rather than a change we made.
+- **r2-028** answered to `not_in_corpus`, which looked like the one regression
+  and is not. The previous answer said "48 athletes took part in the men's 400
+  metres at the 2024 Summer Olympics". The event vertex has
+  `competitors: -1` -- the corpus's "not stated" marker -- and the 48 comes
+  from a prose sentence about how many *qualified*. The new answer gives the 48
+  and says the corpus does not state participation, which is the honest reading
+  of a field that is explicitly absent.
+
+Three improvements, one correction, no regression, both halves still exit 0.
+
 ---
 
 ## What this says to do next, in order
