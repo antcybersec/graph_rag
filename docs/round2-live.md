@@ -141,9 +141,10 @@ stoppage occurred where the only official check could neither confirm nor rule
 it out, and it declined a question the corpus answers in one sentence.
 `docs/round2-risks.md` 2j has the diagnosis, down to which of 39 source records
 the selector picked and why — the heading matched and the body did not. The fix
-is written and sits unmerged on a branch because there was not a quota day left
-to measure it, and shipping an unmeasured change would have broken the thing
-repeatability is scored on.
+was written, measured on 27 Nov, and **rejected**: it changed nothing on the
+question it was built for. Risk 2l is that measurement. Volunteer this; a
+diagnosis that survived and a fix that did not is a better answer than a fix
+that shipped unmeasured.
 
 **"Is the accuracy number yours or a real one?"**
 92.3% on the 50 public questions, graded fact by fact against the published key
@@ -157,6 +158,28 @@ The hidden half has no accuracy number because the key is theirs.
 400 citations across both files, 0 that are not genuine corpus documents, and 0
 answered-or-partial answers with no citation at all. Public recall 0.891,
 precision 0.914.
+
+**"How do you know your changes help?"** — the best question to be asked, and
+there is a straight answer. Three fixes were ready on 27 Nov, each with a
+correct diagnosis and passing tests. Each was gated on the questions whose
+traces touch its code path, found by grepping the committed answer files for
+the query name, and each gate cost under 40 model calls against a ~300-call
+paired run.
+
+| change | gate | verdict |
+|---|---|---|
+| source selection | 9 public evidence questions | **rejected** — score rose 6.5 → 7.3 and the target question selected the same wrong record byte for byte, so the rise was noise |
+| years in office | 4 questions calling `office_chain` | **rejected** — correct arithmetic, verified against all 73 officeholders, that turned a correct hidden answer into a wrong one |
+| season from the graph | 0 public / 2 hidden, measured before writing it | **merged** |
+
+The second one is the one to tell. It computes years in office correctly and
+still made the system worse: handed totals for five unnamed infobox blocks, the
+composer attached "his first presidency" to an 8.88-year block that was a
+different office, having previously named the right 26-day term. More correct
+arithmetic in front of a composer is not automatically an improvement, because
+every figure added is a figure it can attach to the wrong subject.
+
+Both rejected branches are pushed, with the measurement in the commit message.
 
 **"What did you get wrong and fix?"**
 `docs/round2-risks.md` is the honest list and it is better material than any

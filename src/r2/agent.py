@@ -2,16 +2,24 @@
 
 Three commitments shape every line of this file.
 
-**Rule 4 compliance is structural, not promised.** Nothing here reads the
-wording of a question. There is no regex over question text, no question id is
-ever consulted, and no answer is stored in the code. The only component that
-interprets a question is the model, and the only values it may emit are keys
-the graph just handed it: sports and Games come from `list_sports` and
-`list_games`, a contest comes from `series_by_sport`, an athlete from
-`athlete_search`, a person from `person_search`. Deterministic string work
-happens exclusively on *model-extracted entity names* and *graph keys* -- never
-on the question. That is why the same code answers the judges' unseen
-questions as answers these: it has never seen a question either.
+**Rule 4 compliance is structural, not promised.** Nothing here inspects the
+wording of a question: no regex over question text, no keyword or substring
+test, no branch whose condition depends on phrasing, no question id ever
+consulted, and no answer stored in the code.
+
+The question text itself does move through two places, and both treat it as an
+opaque string -- said plainly here rather than left for a grep to find. It is
+handed to the model to interpret, and `_vector_search` embeds it whole as a
+retrieval query. One interprets it; the other measures its distance to
+passages. Neither looks at what it says.
+
+The only values the model may emit are keys the graph just handed it: sports
+and Games come from `list_sports` and `list_games`, a contest comes from
+`series_by_sport`, an athlete from `athlete_search`, a person from
+`person_search`. Deterministic string work happens exclusively on
+*model-extracted entity names* and *graph keys* -- never on the question. That
+is why the same code answers the judges' unseen questions as answers these:
+nothing in it is conditioned on any particular question's wording.
 
 **The graph decides what is missing, not the model's confidence.**
 `coverage_check` asks the corpus whether a document matching what the question

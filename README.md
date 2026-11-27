@@ -212,15 +212,22 @@ negative fact.**
 Rule 4 forbids regexes on question wording, use of question ids, and answers
 built into the code. Here that is structural rather than promised:
 
-- **No code in the answering path reads the wording of a question.** The only
-  component that interprets a question is the model.
+- **No code in the answering path inspects the wording of a question.** There
+  is no regex over question text, no keyword or substring test, and no branch
+  whose condition depends on how a question is phrased. Grep for it.
+- The question text is used in exactly two ways, and both treat it as an opaque
+  string: it is handed to the model to interpret, and in `_vector_search` it is
+  embedded whole — `" ".join([question] + plan.entities)` — as a semantic
+  retrieval query. One interprets it, the other measures its distance to
+  passages; neither reads what it says. This is stated rather than left for a
+  grep to find, because the question text does move and a reader will see it.
 - The only values the model may emit are keys the graph has just handed it.
 - Deterministic string work happens exclusively on **entity names the model
   extracted** and on **graph keys** — never on the question.
 - No question id reaches the agent; `run.py` passes only the text.
 
-That is why the same code answers questions it has never seen: it has never
-seen any question.
+That is why the same code answers questions it has never seen: nothing in it is
+conditioned on any particular question's wording.
 
 **Two places in this repository do pattern-match on question text, and neither
 is in the Round 2 answering path.** Pointing them out is easier than hoping
