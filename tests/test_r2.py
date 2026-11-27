@@ -1447,5 +1447,52 @@ def test_the_fix_changes_no_season_already_in_the_committed_public_traces():
     assert from_plan > 0, "expected some year-0 coverage checks"
 
 
+def test_the_status_rubric_does_not_route_unconfirmed_claims_to_not_in_corpus():
+    """The defect this guards cost 2.0 of the 3.84 points the public set lost.
+
+    The rubric said two incompatible things four lines apart: the `partial`
+    clause routed "rival claims, none confirmed" to partial, and the fourth
+    shape routed the same situation to not_in_corpus. The key agrees with the
+    first. Measured against all 100 committed answers, no correct
+    not_in_corpus answer relied on the second -- every one of them is plain
+    absence -- so the contradiction was removable at a cost of nothing.
+    """
+    from src.r2.agent import COMPOSER_SYSTEM
+    assert "Unverified is not confirmed" not in COMPOSER_SYSTEM, \
+        "the contradicted fourth shape is back in the rubric"
+    assert "the state of the evidence is itself a" in COMPOSER_SYSTEM, \
+        "the corrected fourth shape is missing"
+    assert "not_in_corpus** only when the" in COMPOSER_SYSTEM, \
+        "not_in_corpus is no longer restricted to a corpus with nothing on the subject"
+
+
+def test_the_composer_is_told_never_to_invent_a_record_that_settles_a_dispute():
+    """The sharpest honesty failure in the public set: a status justified by an
+    official record that did not exist. 10% of the score is honesty, so an
+    invented record is worse than the gap it was hiding."""
+    from src.r2.agent import COMPOSER_SYSTEM
+    assert "inventing a record" in COMPOSER_SYSTEM
+    assert "could not be" in COMPOSER_SYSTEM
+
+
+def test_the_composer_is_told_a_missing_record_is_not_proof_of_absence():
+    """The mirror failure: treating a gap in the log as a finding about the
+    world. Absence of evidence is the one inference the corpus cannot licence
+    on its own."""
+    from src.r2.agent import COMPOSER_SYSTEM
+    assert "absent evidence, not evidence of absence" in COMPOSER_SYSTEM
+
+
+def test_the_calibration_error_is_described_as_going_both_ways():
+    """Measured, not assumed: of the four calibration failures, two over-claim
+    and two under-claim. A prompt that says the error has one direction
+    teaches half the mistake, and any nudge that fixes one pair breaks the
+    other."""
+    from src.r2.agent import COMPOSER_SYSTEM
+    assert "goes wrong in **both** directions" in COMPOSER_SYSTEM
+    assert "one direction" not in COMPOSER_SYSTEM, \
+        "the single-direction framing is back"
+
+
 if __name__ == "__main__":
     raise SystemExit(main())
