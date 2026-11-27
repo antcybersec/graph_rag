@@ -525,6 +525,38 @@ class Agent:
                               key=lambda r: (r.get("published_at", ""), r.get("source_id", "")))
         self.bootstrap_steps = boot.steps
 
+    def _season_for(self, plan, year: int = 0) -> str:
+        """The season to query with, when the planner did not name one.
+
+        Six query sites used to fall back to `"Summer"` whenever the plan left
+        the season blank, and a question about a Winter Games does not always
+        say "Winter" in a way the planner records. Two hidden questions --
+        biathlon and long-track speed skating, both at the 2026 Winter Games --
+        were asked of the graph as `season="Summer"`. The queries matched
+        nothing, `medals_by_nation` had nothing to tally, no arithmetic was
+        computed, and the composer counted the medals itself out of the
+        article prose. That is the one thing the design says the model must
+        never do.
+
+        The Games catalogue already knows the answer. A year maps to exactly
+        one season for 19 of the 21 years in this corpus; only 1988 and 1992
+        carry both, from before the two cycles were offset. So: take the
+        planner's season if it gave one, otherwise ask the graph, and only
+        fall back to the old guess when the year is ambiguous, missing, or not
+        in the corpus at all.
+
+        This reads `self.games`, which the graph handed over at bootstrap, and
+        `plan.years`, which the model emitted. It does not read the question.
+        """
+        if getattr(plan, "season", ""):
+            return plan.season
+        for candidate in ([year] if year else []) + list(getattr(plan, "years", []) or []):
+            seasons = {g.get("season") for g in self.games
+                       if g.get("year") == candidate and g.get("season")}
+            if len(seasons) == 1:
+                return seasons.pop()
+        return "Summer"
+
     # -- model-driven selection over graph-supplied candidates --------------
 
     def _select(self, tr: Trace, question: str, label: str, options: list[dict],
@@ -772,24 +804,24 @@ class Agent:
             return
         events = rows(tr.run_query("events_in_sport_games",
                                    {"sport_key": plan.sport_key, "games_year": year,
-                                    "season": plan.season or "Summer"}), "Res")
+                                    "season": self._season_for(plan, year)}), "Res")
         ev["events"] = events
         for e in events:
             self._cite(ev, e["event_id"], e.get("title", ""))
         self._add_tally(ev, f"nations per event, {plan.sport_key} at {year} "
-                            f"{plan.season or 'Summer'}", "nations",
+                            f"{self._season_for(plan, year)}", "nations",
                         [(e.get("event_name", ""), e.get("nations")) for e in events])
         self._add_tally(ev, f"competitors per event, {plan.sport_key} at {year} "
-                            f"{plan.season or 'Summer'}", "competitors",
+                            f"{self._season_for(plan, year)}", "competitors",
                         [(e.get("event_name", ""), e.get("competitors")) for e in events])
         medal_res = tr.run_query("medals_by_nation",
                                  {"sport_key": plan.sport_key, "games_year": year,
-                                  "season": plan.season or "Summer",
+                                  "season": self._season_for(plan, year),
                                   "medal": plan.medal or ""})
         counts = scalar(medal_res, "counts_by_noc", {}) or {}
         ev["medals_by_nation"] = {"medal": plan.medal or "", "counts": counts,
                                   "by_medal": scalar(medal_res, "counts_by_noc_and_medal", {}) or {}}
-        where = f"{plan.sport_key} at {year} {plan.season or 'Summer'}"
+        where = f"{plan.sport_key} at {year} {self._season_for(plan, year)}"
         self._add_tally(ev, f"{plan.medal or 'all'} medals by nation, {where}",
                         f"{plan.medal or 'medals (gold+silver+bronze)'}",
                         sorted(counts.items()))
@@ -819,7 +851,7 @@ class Agent:
                 noc = picked[0]
                 detail = tr.run_query("nation_medals_detail",
                                       {"noc": noc, "sport_key": plan.sport_key,
-                                       "games_year": year, "season": plan.season or "Summer",
+                                       "games_year": year, "season": self._season_for(plan, year),
                                        "medal": plan.medal or ""})
                 ev["nation_detail"] = {"noc": noc, "events": rows(detail, "Res"),
                                        "medals": _medal_rows(detail)}
@@ -860,7 +892,7 @@ class Agent:
 
     def _route_repeat_champions(self, tr, question, plan, ev):
         res = tr.run_query("repeat_champions", {"sport_key": plan.sport_key,
-                                                "season": plan.season or "Summer"})
+                                                "season": self._season_for(plan)})
         grouped = scalar(res, "years_by_athlete_event", {}) or {}
         repeats = {k: sorted(v) for k, v in grouped.items() if len(v) > 1}
         ev["repeat_champions"] = repeats
@@ -878,7 +910,7 @@ class Agent:
                 event_name = label.split(" | ", 1)[-1]
                 cov = tr.run_query("coverage_check",
                                    {"sport_key": sk, "event_key": norm_key(event_name),
-                                    "games_year": 0, "season": plan.season or "Summer"},
+                                    "games_year": 0, "season": self._season_for(plan)},
                                    tool="coverage_check_repeat_event")
                 for e in rows(cov, "Res"):
                     if e.get("games_year") in years:
@@ -889,14 +921,14 @@ class Agent:
     def _route_multi_medal_games(self, tr, question, plan, ev):
         year = plan.years[0] if plan.years else 0
         res = tr.run_query("medals_by_athlete_at_games",
-                           {"games_year": year, "season": plan.season or "Summer",
+                           {"games_year": year, "season": self._season_for(plan, year),
                             "medal": plan.medal or ""})
         counts = scalar(res, "counts_by_athlete", {}) or {}
         events = scalar(res, "events_by_athlete", {}) or {}
         ranked = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
         multi = [(n, c) for n, c in ranked if c > 1]
         ev["medal_counts"] = {
-            "games": f"{year} {plan.season or 'Summer'}",
+            "games": f"{year} {self._season_for(plan, year)}",
             "medal": plan.medal or "any",
             "athletes_with_more_than_one": [
                 {"athlete": n, "count": c, "events": sorted(events.get(n, []))}
@@ -905,7 +937,7 @@ class Agent:
             "top": ranked[:5],
         }
         self._add_tally(ev, f"individual {plan.medal or 'medals'} per athlete, "
-                            f"{year} {plan.season or 'Summer'}",
+                            f"{year} {self._season_for(plan, year)}",
                         f"{plan.medal or 'medals'}", ranked)
         ev["notes"].append(
             f"{len(ranked)} athletes hold an individual {plan.medal or 'medal'} at these "

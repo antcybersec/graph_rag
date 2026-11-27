@@ -1336,5 +1336,116 @@ def test_check_does_not_crash_on_a_record_with_no_trace_key():
         assert rc == 1, rc
 
 
+# Six query sites and four labels fell back to "Summer" whenever the planner
+# left the season blank. Two hidden questions -- biathlon and long-track speed
+# skating, both at the 2026 WINTER Games -- were therefore asked of the graph
+# as season="Summer". Nothing matched, medals_by_nation had nothing to tally,
+# `computed` came back empty, and the composer counted the medals itself out
+# of the article prose. The graph knew the answer the whole time: a year maps
+# to exactly one season for 19 of the 21 years in this corpus.
+
+def _season_agent(games=None):
+    import src.r2.agent as A
+    a = A.Agent.__new__(A.Agent)
+    a.games = games if games is not None else [
+        {"year": y, "season": "Summer"} for y in
+        (1900, 1996, 2000, 2004, 2008, 2012, 2016, 2020, 2024, 2028)
+    ] + [
+        {"year": y, "season": "Winter"} for y in
+        (1994, 1998, 2002, 2006, 2010, 2014, 2018, 2022, 2026)
+    ] + [
+        {"year": 1988, "season": "Summer"}, {"year": 1988, "season": "Winter"},
+        {"year": 1992, "season": "Summer"}, {"year": 1992, "season": "Winter"},
+    ]
+    return a
+
+
+class _P:
+    def __init__(self, season="", years=()):
+        self.season, self.years = season, list(years)
+
+
+def test_a_winter_year_is_queried_as_winter():
+    import src.r2.agent as A
+    a = _season_agent()
+    assert A.Agent._season_for(a, _P(years=[2026]), 2026) == "Winter"
+    for y in (1994, 1998, 2002, 2006, 2010, 2014, 2018, 2022, 2026):
+        assert A.Agent._season_for(a, _P(years=[y]), y) == "Winter", y
+
+
+def test_a_summer_year_still_resolves_to_summer():
+    """The fix must be a no-op on every Summer question."""
+    import src.r2.agent as A
+    a = _season_agent()
+    for y in (1900, 1996, 2000, 2004, 2008, 2012, 2016, 2020, 2024, 2028):
+        assert A.Agent._season_for(a, _P(years=[y]), y) == "Summer", y
+
+
+def test_the_planners_own_season_always_wins():
+    import src.r2.agent as A
+    a = _season_agent()
+    assert A.Agent._season_for(a, _P(season="Summer", years=[2026]), 2026) == "Summer"
+    assert A.Agent._season_for(a, _P(season="Winter", years=[2024]), 2024) == "Winter"
+
+
+def test_an_ambiguous_year_falls_back_rather_than_picking_one():
+    """1988 and 1992 carry both seasons; guessing either would be worse."""
+    import src.r2.agent as A
+    a = _season_agent()
+    for y in (1988, 1992):
+        assert A.Agent._season_for(a, _P(years=[y]), y) == "Summer", y
+
+
+def test_a_year_outside_the_corpus_falls_back():
+    import src.r2.agent as A
+    a = _season_agent()
+    assert A.Agent._season_for(a, _P(years=[1936]), 1936) == "Summer"
+    assert A.Agent._season_for(a, _P()) == "Summer"
+
+
+def test_the_plan_year_is_used_when_the_call_site_has_none():
+    """_route_repeat_champions passes no year; the plan's own year must serve."""
+    import src.r2.agent as A
+    a = _season_agent()
+    assert A.Agent._season_for(a, _P(years=[2026])) == "Winter"
+
+
+def test_the_fix_changes_no_season_already_in_the_committed_public_traces():
+    """Regression against the real artifact, not a fixture.
+
+    Every (games_year, season) pair the submitted public run actually sent must
+    come back identical from the lookup, or the 92.3% measurement is no longer
+    a measurement of this code.
+    """
+    import json, os
+    import src.r2.agent as A
+    path = "data/results/r2/answers_public.jsonl"
+    if not os.path.exists(path):
+        return
+    a = _season_agent()
+    checked = from_plan = 0
+    for line in open(path, encoding="utf-8"):
+        record = json.loads(line)
+        plan_season = (record.get("plan") or {}).get("season") or ""
+        for step in (record.get("trace") or []):
+            params = step.get("params") or {}
+            year, season = params.get("games_year"), params.get("season")
+            if season not in ("Summer", "Winter"):
+                continue
+            if not isinstance(year, int) or year <= 0:
+                # Nothing to look up, so the season can only have come from
+                # the plan, and _season_for returns that untouched. Assert it
+                # really did rather than skipping the row quietly.
+                assert plan_season == season, (
+                    f"year 0 with season {season} but plan.season {plan_season!r}")
+                from_plan += 1
+                continue
+            got = A.Agent._season_for(a, _P(years=[year]), year)
+            assert got == season, f"{year}: committed {season}, lookup {got}"
+            checked += 1
+    assert checked > 0, "no (year, season) pairs found to check"
+    assert from_plan > 0, "expected some year-0 coverage checks"
+
+
 if __name__ == "__main__":
     raise SystemExit(main())
