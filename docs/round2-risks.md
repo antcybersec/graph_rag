@@ -1089,11 +1089,26 @@ that rejected the two changes in 2l applies here, and more strongly, because
 this one cannot be gated on a handful of questions -- its blast radius *is* the
 whole set.
 
-**What to say if a judge asks what we would do next.** This, with this table.
-It is a better answer than a feature: the loss is measured per question, the
-root cause is named, the obvious fix is shown to be a wash, the real fix is
-identified in a component that already exists, and the reason it was not
-shipped is the same reason the submission is reproducible.
+**Correction, 27 Nov, later the same day: the fix named above is a no-op, and
+2p has the one that works.** The claim was that binding status to
+`coverage_check` evidence would fix this. It would not. Replaying the rule over
+all 100 committed answers -- every `coverage_check` step records its row count
+in the trace, so this costs no quota at all -- the number of answers where
+every `coverage_check` returned zero rows *and* we answered or partialled is
+**zero, in both halves**. The rule would never once have fired. Had this been
+shipped on the strength of the paragraph above, it would have consumed a full
+quota day and changed nothing.
+
+The paragraph was wrong in a specific and instructive way: it identified a real
+signal, assumed without checking that the signal discriminated the failing
+cases, and then wrote a convincing argument on top of the assumption. The cost
+of checking was one script over files already on disk.
+
+**What to say if a judge asks what we would do next.** 2p, and this correction
+alongside it. The pair is a better answer than either: the loss was measured
+per question, the first root cause named was plausible and wrong, the check
+that falsified it was free and was run before any quota was spent, and the
+cause it led to instead was a contradiction in our own prompt.
 
 ### 2n. A correct answer that the arithmetic block would have made wrong (27 Nov)
 
@@ -1193,6 +1208,96 @@ Four answers changed, and each was read against the corpus rather than counted:
   of a field that is explicitly absent.
 
 Three improvements, one correction, no regression, both halves still exit 0.
+
+### 2p. The calibration defect, found and measured (27 Nov)
+
+2m established that four of the six public questions that lose points are
+calibration failures worth 2.0 points, failing in both directions. It then
+named the wrong cause. The right one is not in the retrieval at all. It is in
+`COMPOSER_SYSTEM`, and it is a contradiction between two passages four lines
+apart.
+
+The `partial` clause said:
+
+> partial ... **This includes the case where the corpus records rival claims
+> but confirms none of them**: the claims are an answer to what the sources
+> say, and the unconfirmed value is the missing part.
+
+The fourth of the four shapes said:
+
+> **Unverified is not confirmed.** Asked for a confirmed, official or
+> established value, figures that the sources themselves mark as unverified
+> cross nothing off -> **not_in_corpus**.
+
+Same situation, opposite statuses, one prompt. The key agrees with the first:
+r2-pub-048's key is `partial` and r2-pub-050's is `answered`. No keyed question
+in the public set supports the second. A model handed both rules will pick
+one per question, which is exactly the both-directions failure 2m measured and
+could not explain.
+
+**The blast radius was measured before anything was changed, and it is small.**
+Of the eight answers across both halves that come back `not_in_corpus` and are
+either keyed correct or unkeyed, every one is plain absence -- "the corpus does
+not contain the box-office gross for Cocoon" -- and not one leans on the
+fourth shape. Only five answers in either half invoke unverified-style
+reasoning at all, and on the public side all three of those already score 0.5
+or worse. So removing the contradiction risked at most 1.0 point and stood to
+recover 3.0. That is the opposite of the 100-question exposure 2m assumed, and
+it is why this was affordable to gate on a day with 175 calls left.
+
+**The gate: 4 targets, 3 controls, 24 calls.**
+
+| qid | role | before | after |
+|---|---|---|---|
+| r2-pub-028 | control -- plain absence | 1.00 | 1.00 |
+| r2-pub-046 | control -- a count is not a name | 1.00 | 1.00 |
+| r2-pub-041 | at risk | 0.50 | 0.60 |
+| r2-pub-042 | target | 0.50 | **1.00** |
+| r2-pub-048 | target | 0.50 | 0.50 |
+| r2-pub-049 | target | 0.00 | 0.00 |
+| r2-pub-050 | target | 0.00 | **1.00** |
+| | | 3.50 | **5.10** |
+
++1.60 with no regression on any of the seven. Both fixes are by the intended
+mechanism rather than by luck: r2-pub-042 had asserted there was "no evidence"
+that Long Beach Arena was the planned venue and now names it, and r2-pub-050
+had declined a question whose whole subject is whether a missing log entry
+proves anything, and now answers it -- "No, the absence of an entry in the
+central operations log does not prove..." -- which is what its key asks for.
+On a 50-question set, +1.60 is +3.2 points of accuracy, 92.3% to about 95.5%.
+
+**Two further refinements were written and both measured worse.** This is the
+part worth reading.
+
+| version | the idea | total on 6 | regressions |
+|---|---|---|---|
+| remove the contradiction | 1 edit | **+1.50** | none |
+| split value vs judgement | the key distinguishes a request for a confirmed *value* from a request for a *judgement* about the evidence | +1.00 | none |
+| add a supersession rule | a superseded record still truthfully states what it stated | +0.50 | r2-pub-046, 1.00 -> **0.00** |
+
+Both refinements are defensible on paper, and the second one did exactly what
+it was written to do -- it fixed r2-pub-042 by getting the composer to treat a
+provisional venue allocation as the original plan it plainly is. It also broke
+a control that had nothing to do with it. The simplest version of the fix is
+the one that measures best, and the only reason that is known is that the
+controls were in the gate from the start. Had the gate contained the four
+targets alone, the worst of the three versions would have looked like the best.
+
+**Why it is not in the submission.** Using it means re-running both halves from
+one code version: 241 answering calls plus 50 for the judge. Roughly 175
+remained in the 27 Nov pool after the gate. A public-only re-run is not an
+option -- it would leave the two halves produced by different code, so a judge
+re-running the repository would reproduce neither, and the 15% repeatability
+claim would be false. The fix is committed on `calibration-evidential-state`
+with its gate numbers in the commit message, and `scripts/promote-calibration.sh`
+runs the whole promotion as one command.
+
+**The honest caveat.** +1.60 is seven questions, four of them chosen because
+they were failing. The three rules the fix rests on generalise -- a corpus
+holding a dispute is not a silent corpus, a missing record is not proof of
+absence, and an invented official record is worse than an admitted gap -- but
+the measurement does not prove they generalise. The controls held and no
+question regressed, which is the most that 24 calls can establish.
 
 ---
 

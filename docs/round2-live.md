@@ -174,15 +174,40 @@ once**:
 
 Say the opposite directions out loud, because it is the whole point: no
 instruction to be bolder or more cautious can fix this, it would trade one pair
-for the other. The real defect is that the composer sets its status from its own
-confidence when `coverage_check` — which is already called on every question —
-has already asked the corpus whether a matching document exists at all. Binding
-status to that evidence is the fix, it touches all 100 questions including the
-44 that are fully correct, and it was not shipped because there was no second
-run to recover from a regression. `docs/round2-risks.md` 2m is the full
-analysis. Volunteer r2-pub-048 specifically: the system invented an official
-record to justify a status, which is the worst failure available to something
-graded on honesty, and we found it ourselves and wrote it down.
+for the other.
+
+**The cause is a contradiction in our own prompt, and it is worth showing them
+the two passages.** Four lines apart in `COMPOSER_SYSTEM`, the `partial` clause
+routed "the corpus records rival claims but confirms none of them" to
+`partial`, and the fourth of the four shapes routed the same situation to
+`not_in_corpus`. The key agrees with the first. A model handed both rules picks
+one per question, which is precisely a failure in both directions, and no
+amount of calibration advice fixes a rule that disagrees with itself.
+
+Be straight about the first answer we gave to this, because the correction is
+the more useful half. We first said the fix was to bind status to
+`coverage_check`, which is called on every question and already knows whether a
+matching document exists. Then we replayed that rule over all 100 committed
+answers — the row count of every `coverage_check` is in the trace, so it cost
+no quota — and it would have fired **zero** times. A plausible mechanism,
+asserted without the free check that falsifies it. If they ask how we avoid
+fooling ourselves, this is the example to give.
+
+The real fix is one edit, it was gated on 27 Nov over 4 failing questions and
+3 controls, and it measured **+1.60 with no regressions** — r2-pub-042 now
+names the planned venue it had denied, and r2-pub-050 now answers the question
+about what a missing log entry proves. Two more elaborate versions of it
+measured *worse*, one of them breaking a control from 1.00 to 0.00. It is not
+in the submission for one reason, and it is an arithmetic reason: using it
+means re-running both halves from one code version, 291 calls, against about
+175 left in the day's free-tier pool. Re-running only the public half would
+leave the two halves built by different code and make the repeatability claim
+false. `docs/round2-risks.md` 2p has the tables; the branch is
+`calibration-evidential-state`.
+
+Volunteer r2-pub-048 specifically: the system invented an official record to
+justify a status, which is the worst failure available to something graded on
+honesty, and we found it ourselves and wrote it down.
 `docs/round2-risks.md` 2j has the diagnosis, down to which of 39 source records
 the selector picked and why — the heading matched and the body did not. The fix
 was written, measured on 27 Nov, and **rejected**: it changed nothing on the
