@@ -1045,6 +1045,56 @@ risk 2j, now with a second observation. It is a composer change with a blast
 radius across all 100 questions and it was not attempted on a day with one run
 left in it.
 
+### 2m. Where the 3.84 lost points actually are (27 Nov)
+
+The public score file was read question by question rather than in aggregate,
+which it should have been a week ago. 92.3% is 3.84 points lost over 6 of 50
+questions, and **four of the six are one defect**:
+
+| qid | key says | we said | direction |
+|---|---|---|---|
+| r2-pub-049 | `not_in_corpus` | answered | **over**-claims |
+| r2-pub-048 | `partial`, status null | answered, having *invented* an official record saying the duration could not be verified | **over**-claims |
+| r2-pub-050 | answered | `not_in_corpus` | **under**-claims |
+| r2-pub-042 | answered | partial -- "no evidence" that Long Beach Arena was the planned venue, which the corpus documents | **under**-claims |
+
+That is 2.0 of the 3.84, or 52% of all public point loss, from a single root
+cause. The remaining 1.84 is incompleteness: r2-pub-041 missing three facts it
+had retrieved, and r2-pub-024 missing one of three.
+
+**The important part is that the four fail in opposite directions.** This kills
+the obvious fix. Any instruction that makes the composer more willing to answer
+recovers 050 and 042 and loses 049 and 048; any instruction that makes it more
+cautious does the reverse. A nudge cannot work here, and a nudge is what would
+have been written without this table -- risk 2j proposed exactly that and it
+would have been a wash at best.
+
+The actual defect is structural: **the composer decides its status from its own
+confidence, when the graph has already answered the question it should be
+deciding from.** `coverage_check` asks the corpus whether a document matching
+what the plan pinned down exists at all, and zero matches is the evidence that
+separates "the corpus does not record this" from "I am not sure". That signal
+exists, is called, and does not bind the status. r2-pub-048 is the sharpest
+illustration: the system did not merely guess wrong, it *invented an official
+record* stating the duration could not be verified, in order to justify a
+status. An invented record is the worst failure available to a submission
+graded 10% on honesty, and it happened in service of calibration.
+
+**Not attempted, deliberately.** Binding status to coverage evidence changes
+the composer for all 100 questions, 44 of which are currently fully correct. On
+27 Nov there was one run left in the day's quota and no second run to recover
+from a regression; the expected value of a 2-point fix that can move 44 correct
+answers is not positive without a day to measure it on. The same discipline
+that rejected the two changes in 2l applies here, and more strongly, because
+this one cannot be gated on a handful of questions -- its blast radius *is* the
+whole set.
+
+**What to say if a judge asks what we would do next.** This, with this table.
+It is a better answer than a feature: the loss is measured per question, the
+root cause is named, the obvious fix is shown to be a wash, the real fix is
+identified in a component that already exists, and the reason it was not
+shipped is the same reason the submission is reproducible.
+
 ---
 
 ## What this says to do next, in order

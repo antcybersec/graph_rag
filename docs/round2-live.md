@@ -135,10 +135,29 @@ header saying they are not in the Round 2 path, and the README names all three
 itself rather than leaving them to be found by grep. Offer the grep.
 
 **"What is it worst at?"** — answer this one properly, it is the question that
-builds the most credit. Three public questions turn on what the absence of a
-record means, and the system is wrong in both directions: it asserted a
-stoppage occurred where the only official check could neither confirm nor rule
-it out, and it declined a question the corpus answers in one sentence.
+builds the most credit, and there is now a number for it. 92.3% is 3.84 points
+lost over 6 of 50 questions, and **four of the six are a single defect worth
+2.0 of those points — 52% of everything lost — failing in both directions at
+once**:
+
+| qid | key says | we said |
+|---|---|---|
+| r2-pub-049 | `not_in_corpus` | answered |
+| r2-pub-048 | `partial`, status null | answered, having *invented* an official record |
+| r2-pub-050 | answered | `not_in_corpus` |
+| r2-pub-042 | answered | "no evidence" for a venue the corpus documents |
+
+Say the opposite directions out loud, because it is the whole point: no
+instruction to be bolder or more cautious can fix this, it would trade one pair
+for the other. The real defect is that the composer sets its status from its own
+confidence when `coverage_check` — which is already called on every question —
+has already asked the corpus whether a matching document exists at all. Binding
+status to that evidence is the fix, it touches all 100 questions including the
+44 that are fully correct, and it was not shipped because there was no second
+run to recover from a regression. `docs/round2-risks.md` 2m is the full
+analysis. Volunteer r2-pub-048 specifically: the system invented an official
+record to justify a status, which is the worst failure available to something
+graded on honesty, and we found it ourselves and wrote it down.
 `docs/round2-risks.md` 2j has the diagnosis, down to which of 39 source records
 the selector picked and why — the heading matched and the body did not. The fix
 was written, measured on 27 Nov, and **rejected**: it changed nothing on the
