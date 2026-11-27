@@ -114,14 +114,39 @@ python -m src.r2.repro <questions> data/results/r2/answers_public.jsonl --sample
 Let the judge pick the questions with `--qid`, or let it sample at random —
 random is the more convincing of the two and it is the default.
 
-What it reports, and what to say about it: the latest rehearsal returned
-**0 MATCH, 3 CLOSE, 0 DIFFERENT**, with status and figures identical on all
-three. Do not oversell this. Every rehearsal so far has returned CLOSE rather
-than MATCH, because retrieval moves between runs — 4→5, 9→7, 16→12 steps — and
-one citation set went 18→8. That is the model choosing what to retrieve, which
-is the one decision it is supposed to own; the status, the figures and the
-arithmetic are what hold still. If a judge's bar is byte equality, say plainly
-that we do not meet it and why the composed sentence cannot be byte-identical.
+What it reports, and what to say about it. **This changed on 27 Nov and the
+old advice here was to avoid claiming MATCH, because no rehearsal had ever
+returned one.** Nine questions were rehearsed on the submitted code that
+evening: **5 MATCH, 3 CLOSE, 1 DIFFERENT**.
+
+Read the three verdicts out rather than the headline, because the detail is
+better than the summary:
+
+- The **3 CLOSE** are all the same thing: the same figures emitted in a
+  different order, or retrieval taking 9 steps instead of 11. Status, figures
+  and citation counts identical.
+- The **1 DIFFERENT**, r2-010, is worth volunteering. Status identical, figures
+  identical, citations identical, retrieval identical — 4 of 4 graded
+  dimensions hold. It differs because the prose said "Norway" one run and "NOR"
+  the next, and dropped the clause "the day after the final". That is a
+  composed sentence varying, which is the one thing that cannot be made
+  deterministic, and the tool is right to flag it rather than hide it.
+- The **5 MATCH** include r2-018 and r2-019, and there is a reason those two
+  are in the list. They are the questions the season fix repaired. Before it,
+  the Winter Games were queried as Summer, nothing matched, and the composer
+  counted medals out of the article prose — a number a language model produced,
+  which is a number that moves between runs. Now the figure is read from
+  `gold medals by nation ... highest 6 ['FRA']`, computed in code from graph
+  rows. **The arithmetic rule is not only an accuracy argument, it is a
+  repeatability argument**: every figure moved out of the model and into code
+  is a figure that reproduces exactly. That is the sentence to say on this
+  slide.
+
+Still do not oversell it. 5 of 9 is not "it reproduces", the sample is small,
+and a judge who re-runs a different nine may see a different split. If their
+bar is byte equality, say plainly that we do not meet it, that the composed
+sentence is generated prose and cannot be, and that what holds still is the
+status, the figures, the citations and the route.
 
 ---
 
@@ -218,4 +243,8 @@ fixed, tested, and written down with the mechanism.
 - Do not re-run the submitted pair to "show it working". It costs ~250 requests
   and overwrites the artifacts that pass.
 - Do not quit Docker Desktop and expect to restart it quickly. See above.
-- Do not claim MATCH on reproduction. It has never returned MATCH.
+- Do not claim reproduction is clean. It returned 5 MATCH of 9 on 27 Nov,
+  which is a real result and not a clean one; quote the split, not the best
+  verdict in it. Before that date no rehearsal had ever returned MATCH, so
+  if anything in the repository still says it never does, that line is older
+  than the measurement.
