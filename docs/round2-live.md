@@ -147,6 +147,31 @@ better than the summary:
   is a figure that reproduces exactly. That is the sentence to say on this
   slide.
 
+**"Why not just set the temperature to zero?"** — expect this one, and it is a
+good question with a measured answer. Until 28 Nov no temperature was set
+anywhere, so every call ran at the provider default of 1.0; say that plainly
+first, because it is the sort of thing a reviewer finds with one grep and it
+looks careless. Then give the measurement: it was set to 0 and the same five
+questions were run twice with identical inputs, and **one of five came back
+byte-identical while two statuses flipped between the two runs**. It was
+reverted.
+
+The reason is the useful part. Answering here is a cascade, not one call — the
+planner picks a route, the route queries the graph, some routes call the model
+again to choose a source document, and the composer only ever sees what that
+produced. Greedy decoding at the last step does nothing about a different
+choice at the first, and a different choice at the first means *different
+evidence*. The variance is in what gets retrieved, which is the one decision
+the model is meant to own.
+
+So this lands exactly where the design already stood: the figures, statuses and
+citations reproduce because they are computed in code rather than sampled,
+which is why one of the 7 MATCH holds every graded field identical while its
+prose is only 47% similar. There is also a consistency reason not to pin it
+now — the submitted answers were generated at the default, so code fixing
+temperature at 0 would no longer reproduce its own artifacts, and a judge
+running the repository would get a third thing. `docs/round2-risks.md` 2r.
+
 Still do not oversell it. Nine is a small sample and a judge who re-runs a
 different nine may see a different split; the honest framing is that no graded
 field moved in this one, not that nothing ever moves. We have the number for
@@ -193,6 +218,18 @@ asks for an officially confirmed duration that the corpus never confirms, and
 we answer it instead of declining. That is the honest answer to "what is it
 worst at" today: it is still, specifically, reluctant to say that a value does
 not exist.
+
+Volunteer that `audit.py` catches it unprompted — "status is answered but the
+answer reads like a refusal" — and that a fix which acts on that flag instead
+of printing it sits on `determinism-and-refusal-gate`, gated at 0.00 -> 1.00 on
+that question with all three controls holding. It is not merged because the
+same gate took r2-pub-048 from 0.50 to 0.00: 048's answer reports what a
+document says, "the official record states that the duration could not be
+established", and an attributed statement is content rather than a refusal,
+which a leading-clause test cannot distinguish. Promoting it needs another
+~291-call run across both halves on the submission date, with no second run to
+recover. `docs/round2-risks.md` 2s. A fix measured, costed and declined is a
+better answer here than a fix shipped on the last day.
 
 **The cause is a contradiction in our own prompt, and it is worth showing them
 the two passages.** Four lines apart in `COMPOSER_SYSTEM`, the `partial` clause

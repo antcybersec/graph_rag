@@ -1377,6 +1377,99 @@ another both-halves run at ~291 calls, against roughly 207 left in the 28 Nov
 pool. There is no second run today, and 29 Nov is the submission date rather
 than a working day. This run is the submission.
 
+### 2r. Where the nondeterminism actually comes from -- temperature was not it (28 Nov)
+
+2q measured a "nondeterminism tax": seven answers moved across the 28 Nov
+re-run although the code change could touch a handful, and four of those moves
+cost points. The obvious cause was sampling temperature, and a grep found
+something that looked damning: **`src/common/llm.py` never set a temperature at
+all**, so every call in both rounds ran at the provider default of 1.0 --
+sampling from the distribution on a task that has one right answer.
+
+That is a real finding and the inference from it was wrong. Setting
+`temperature=0` and running the same five questions twice, same inputs, same
+code:
+
+| qid | run A | run B | |
+|---|---|---|---|
+| r2-pub-028 | `not_in_corpus` | `not_in_corpus` | citations differ |
+| r2-pub-046 | `not_in_corpus` | **`partial`** | **status flipped** |
+| r2-pub-048 | `not_in_corpus` | **`answered`** | **status flipped** |
+| r2-pub-049 | `not_in_corpus` | `not_in_corpus` | citations differ |
+| r2-pub-050 | `answered` | `answered` | identical |
+
+**One of five byte-identical, and two statuses flipped between consecutive
+runs at temperature 0.** The hypothesis is falsified, and the change was
+reverted rather than shipped.
+
+**Why it fails, and why the answer matters more than the fix would have.**
+Answering a question here is not one model call, it is a cascade: the planner
+chooses a route, a route issues graph queries, some routes call the model again
+to select a source document, and the composer sees whatever that produced.
+Greedy decoding at the last step does nothing about a different choice at the
+first, and a different choice at the first yields *different evidence*. The
+nondeterminism is in what gets retrieved, not in how the final sentence is
+sampled.
+
+Which is the argument this whole system was built on, arriving from the
+opposite direction. The model is supposed to own exactly one decision -- what
+to look at -- and that decision is the one that moves. Everything downstream of
+it that matters is computed in code, which is why the 28 Nov reproduction
+returned **7 MATCH of 9 with retrieval identical on all nine** while the prose
+on one of them was only 47% similar. Status, figures, citations and route hold
+*because* they are not sampled. Temperature was never the lever; moving work
+out of the model and into code is, and that lever has been pulled since Round 1.
+
+There is also a hard consistency reason not to set it now: the committed
+answers were generated at the provider default, so code pinning temperature to
+0 would no longer reproduce its own artifacts. A judge running the repository
+would get a third thing.
+
+**What to say if asked how repeatable this is.** Quote three numbers, in this
+order: 7 MATCH / 2 CLOSE / 0 DIFFERENT on nine random questions with retrieval
+identical throughout; seven of 100 answers moved on the full re-run, listed
+individually in 2q; and one in five byte-identical at temperature 0, which is
+the measurement that says where the variance lives. The third is the most
+interesting of the three and the only one that was a surprise.
+
+### 2s. The last public zero, and why it is still there (28 Nov)
+
+After the 2q promotion, `r2-pub-049` is the only public question scoring zero:
+it asks for an officially confirmed duration the corpus never confirms, answers
+it anyway, and `audit.py` flags the contradiction in its own words -- "status is
+answered but the answer reads like a refusal".
+
+A fix exists on `determinism-and-refusal-gate` and is deliberately not merged.
+It moves that flag out of the audit and into the honesty gate: when the
+composer's answer *opens* with a refusal, the status follows the answer.
+Measured over the 100 committed answers for no quota, the leading-clause test
+fires on exactly one answer, r2-pub-049 -- while the obvious whole-text version
+fires on two and the second is hidden r2-006, which opens with a certified time
+of 26:28.42 and only later says what that time does not determine. Answering
+with a caveat is correct and common, and the whole-text test destroys it. That
+difference is the entire reason the test is where it is.
+
+Gated on five questions: r2-pub-049 **0.00 -> 1.00** by the intended mechanism,
+all three controls held, and **r2-pub-048 0.50 -> 0.00**. The regression is the
+reason it stops here. 048's answer legitimately reports what a document says --
+"the official record states that the duration could not be established" -- and
+an attributed statement is content, not a refusal. A leading-clause test cannot
+tell those apart. A second run showed 048 phrased differently and unaffected,
+so the cost is intermittent and the expected value is roughly +0.75 of a point
+against a tax measured at -1.00 on the public half of the previous re-run.
+
+Promoting it needs another both-halves run at ~291 calls; about 146 remained in
+the 28 Nov pool, and 29 Nov is the submission date. One run, no second to
+recover from a draw like r2-pub-044 and r2-pub-047. **So the submission keeps
+the measured 93.9% and the defect stays documented**, which is the same
+arithmetic that held this fix's predecessor back on 27 Nov and the same
+discipline that rejected the two changes in 2l.
+
+The sharpening that would spare 048 -- ignore a refusal that sits inside an
+attribution -- is written down here rather than attempted, because on 27 Nov
+two sharpenings of a fix that already measured well both measured worse, and
+one of them broke a control from 1.00 to 0.00.
+
 ---
 
 ## What this says to do next, in order
