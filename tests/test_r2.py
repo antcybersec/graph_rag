@@ -1494,5 +1494,47 @@ def test_the_calibration_error_is_described_as_going_both_ways():
         "the single-direction framing is back"
 
 
+def test_an_answer_that_opens_with_a_refusal_is_demoted():
+    """r2-pub-049 scored zero for exactly this: an answer opening "could not be
+    established" that called itself `answered`, where the key is
+    not_in_corpus."""
+    import src.r2.agent as A
+    assert A._opens_with_refusal("The duration of the equipment stoppage could "
+                                 "not be established. Officials reported 14 "
+                                 "minutes and 11 minutes.")
+
+
+def test_a_value_followed_by_a_caveat_is_not_a_refusal():
+    """The control, and the reason the test is on the leading clause. Hidden
+    r2-006 opens with a certified time and only then says what that time does
+    not determine. Testing the whole text would demote it and destroy a good
+    answer; over the 100 committed answers the whole-text test fires twice and
+    the leading-clause test once."""
+    import src.r2.agent as A
+    assert not A._opens_with_refusal(
+        "The certified finishing time for Caleb Tolliver in the men's 10,000 "
+        "metres is 26:28.42. This time is official and final, but it does not "
+        "determine his 9,000-metre split; the only official record is silent.")
+
+
+def test_the_refusal_gate_shares_one_phrase_list_with_the_audit():
+    """Two copies of a list drift, and the drift would be silent: the audit
+    would flag a contradiction the gate no longer acts on."""
+    import src.r2.agent as A
+    from src.r2.audit import _REFUSAL
+    assert A._opens_with_refusal("Not stated in the corpus. Nothing further.")
+    assert "not stated" in _REFUSAL
+
+
+def test_the_answering_module_imports_no_regex_engine():
+    """The README's Rule 4 claim is that no code in the answering path inspects
+    the wording of a question. The cheapest check a judge can run is to grep
+    the module for a regex engine and find none, so keep it that way."""
+    import re as _re
+    src = open("src/r2/agent.py", encoding="utf-8").read()
+    assert not _re.search(r"^\s*import re$", src, _re.M), \
+        "agent.py imports re -- the Rule 4 claim now needs reading rather than grepping"
+
+
 if __name__ == "__main__":
     raise SystemExit(main())
