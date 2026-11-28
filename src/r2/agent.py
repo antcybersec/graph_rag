@@ -241,20 +241,33 @@ status:
     2. Cross off each item you can give as a value -- a name, a number, a
        duration, a date, a reason. **"There is no confirmed value", "it could
        not be established", "it could not be verified" and "the sources
-       disagree" do not cross anything off.** They are the reason an item is
-       missing, and "no value exists" is not a value. Writing that sentence
-       well does not change the status.
+       disagree" do not cross off a request for the value itself.** They are
+       the reason that item is missing, and "no value exists" is not a value;
+       writing the sentence well does not change that.
+       **They do cross off a request for the state of the evidence.** If the
+       question asked what the sources say, which of them disagree, or
+       whether the thing is established or proven, then that is the item, and
+       those sentences are the value it asked for. Decide which of the two a
+       question wants before you judge it; many want both, one of each.
     3. None crossed off -> not_in_corpus. Some -> partial. All -> answered.
 
-  Step 2 is where this goes wrong, and it goes wrong in one direction: a good
-  account of why a figure is missing reads like an answer and is not one. If
-  the question asked how long something was and nothing establishes how long
-  it was, you can state none of what was asked, however much you can say
-  about it.
+  Step 2 is where this goes wrong, and it goes wrong in **both** directions.
+  One way: a good account of why a figure is missing reads like an answer and
+  is not one -- if the question asked how long something was and nothing
+  establishes how long it was, you can state none of what was asked, however
+  much you can say about it. The other way, which is the same mistake
+  inverted: a question about the evidence itself gets refused as though the
+  corpus were silent, when the corpus is full of the dispute the question was
+  asking about. Neither "be bolder" nor "be more careful" fixes this. The
+  only thing that fixes it is reading step 1 honestly -- deciding what was
+  actually asked for, a value or the state of the evidence or both -- before
+  looking at what you have.
 
 
-  Explaining *why* something is missing is not stating it. These are the four
-  shapes where that goes wrong. Each is a shape, not a case: match the shape
+  Matching the item to what you hold is the whole of it. These are the four
+  shapes where that goes wrong -- the first three because explaining why
+  something is missing is not stating it, the fourth because the explanation
+  was what the question wanted. Each is a shape, not a case: match the shape
   of the question in front of you, whatever it is about.
 
   - **One item per thing listed.** A question that names four editions, four
@@ -268,10 +281,25 @@ status:
     a quantity with no identities attached crosses nothing off ->
     **not_in_corpus**. Still say what the figure is and cite it; that sentence
     is the reason the names are missing, not the names.
-  - **Unverified is not confirmed.** Asked for a confirmed, official or
-    established value, figures that the sources themselves mark as unverified
-    cross nothing off -> **not_in_corpus**. Report them, say who claimed what
-    and that none was confirmed, cite it, and keep the status honest.
+  - **Unverified is not absent, and the state of the evidence is itself a
+    value.** When the corpus holds documents about the thing and they carry
+    rival claims that nothing confirms, the corpus is not silent -- it
+    records a dispute, and the dispute is a finding. Report the claims, say
+    who claimed what, say that none is confirmed, and cite them.
+    That sentence *does* cross off any item asking what the sources say, or
+    asking whether something is established: "is it proven", "was it
+    confirmed", "does the lack of a record settle it" are questions about
+    the state of the evidence, and the state of the evidence is something
+    you can state. So such a question is **partial** when it also asked for
+    a value the sources never settle, **answered** when the evidential state
+    is the whole of what it asked, and **not_in_corpus** only when the
+    corpus holds nothing about the subject at all.
+    Two things never to do here, both of which read as caution and score as
+    invention. Never settle a dispute by inventing a record -- an official
+    finding, a determination, a ruling that something "could not be
+    verified" -- when no such record is in the evidence. And never say that
+    a missing entry proves the thing did not happen, unless a source says
+    so: a missing record is absent evidence, not evidence of absence.
 
 answer:
   Plain text, complete and compact. Give every fact the question asks for.
