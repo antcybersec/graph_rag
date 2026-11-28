@@ -114,25 +114,30 @@ python -m src.r2.repro <questions> data/results/r2/answers_public.jsonl --sample
 Let the judge pick the questions with `--qid`, or let it sample at random —
 random is the more convincing of the two and it is the default.
 
-What it reports, and what to say about it. **This changed on 27 Nov and the
-old advice here was to avoid claiming MATCH, because no rehearsal had ever
-returned one.** Nine questions were rehearsed on the submitted code that
-evening: **5 MATCH, 3 CLOSE, 1 DIFFERENT**.
+What it reports, and what to say about it. **Rehearsed on the submitted code
+on 28 Nov, nine random questions returned 7 MATCH, 2 CLOSE, 0 DIFFERENT, with
+retrieval identical on every one of them.** Two dates of history are worth
+having ready, because the direction is the point: before 27 Nov no rehearsal
+had ever returned a single MATCH, on 27 Nov it was 5 MATCH / 3 CLOSE / 1
+DIFFERENT, and it is now 7 / 2 / 0.
 
 Read the three verdicts out rather than the headline, because the detail is
 better than the summary:
 
-- The **3 CLOSE** are all the same thing: the same figures emitted in a
-  different order, or retrieval taking 9 steps instead of 11. Status, figures
-  and citation counts identical.
-- The **1 DIFFERENT**, r2-010, is worth volunteering. Status identical, figures
-  identical, citations identical, retrieval identical — 4 of 4 graded
-  dimensions hold. It differs because the prose said "Norway" one run and "NOR"
-  the next, and dropped the clause "the day after the final". That is a
-  composed sentence varying, which is the one thing that cannot be made
-  deterministic, and the tool is right to flag it rather than hide it.
-- The **5 MATCH** include r2-018 and r2-019, and there is a reason those two
-  are in the list. They are the questions the season fix repaired. Before it,
+- The **2 CLOSE** are the same thing in both cases: the same figures restated
+  differently — one re-run wrote the "100" of a weight category into the figure
+  list and the submitted answer had not. Status, citation counts and retrieval
+  identical.
+- There is **no DIFFERENT** in this sample. The one the 27 Nov rehearsal found
+  was prose variation with all four graded dimensions holding, so it is still
+  worth describing if they ask what a DIFFERENT looks like here.
+- The **7 MATCH** are the argument. Figures, statuses, citation counts and
+  retrieval step counts all reproduce exactly; only the wording moves, and on
+  one of them the wording is only 47% similar while every graded field is
+  identical. That gap is the whole design in one line: the prose is generated
+  and varies, and nothing graded depends on the prose.
+- Reach for r2-018 and r2-019 if they want a mechanism. They are the questions
+  the season fix repaired. Before it,
   the Winter Games were queried as Summer, nothing matched, and the composer
   counted medals out of the article prose — a number a language model produced,
   which is a number that moves between runs. Now the figure is read from
@@ -142,11 +147,14 @@ better than the summary:
   is a figure that reproduces exactly. That is the sentence to say on this
   slide.
 
-Still do not oversell it. 5 of 9 is not "it reproduces", the sample is small,
-and a judge who re-runs a different nine may see a different split. If their
-bar is byte equality, say plainly that we do not meet it, that the composed
-sentence is generated prose and cannot be, and that what holds still is the
-status, the figures, the citations and the route.
+Still do not oversell it. Nine is a small sample and a judge who re-runs a
+different nine may see a different split; the honest framing is that no graded
+field moved in this one, not that nothing ever moves. We have the number for
+that too — across the full 100-question re-run on 28 Nov, seven answers changed
+in some way, and `docs/round2-risks.md` 2q lists every one. If their bar is
+byte equality, say plainly that we do not meet it, that the composed sentence
+is generated prose and cannot be, and that what holds still is the status, the
+figures, the citations and the route.
 
 ---
 
@@ -160,21 +168,31 @@ header saying they are not in the Round 2 path, and the README names all three
 itself rather than leaving them to be found by grep. Offer the grep.
 
 **"What is it worst at?"** — answer this one properly, it is the question that
-builds the most credit, and there is now a number for it. 92.3% is 3.84 points
-lost over 6 of 50 questions, and **four of the six are a single defect worth
-2.0 of those points — 52% of everything lost — failing in both directions at
-once**:
+builds the most credit, and the best version of the answer is the one where we
+found the defect, measured it, fixed it and can say what the fix cost.
 
-| qid | key says | we said |
-|---|---|---|
-| r2-pub-049 | `not_in_corpus` | answered |
-| r2-pub-048 | `partial`, status null | answered, having *invented* an official record |
-| r2-pub-050 | answered | `not_in_corpus` |
-| r2-pub-042 | answered | "no evidence" for a venue the corpus documents |
+The 27 Nov submission scored 92.3%, which was 3.84 points lost over 6 of 50
+questions. **Four of the six were a single defect worth 2.0 of those points —
+52% of everything lost — and they failed in opposite directions**:
 
-Say the opposite directions out loud, because it is the whole point: no
-instruction to be bolder or more cautious can fix this, it would trade one pair
-for the other.
+| qid | key says | the 27 Nov answer | now |
+|---|---|---|---|
+| r2-pub-050 | answered | `not_in_corpus` | **fixed** |
+| r2-pub-042 | answered | "no evidence" for a venue the corpus documents | **fixed** |
+| r2-pub-048 | `partial`, status null | answered, having *invented* an official record | status now `partial` |
+| r2-pub-049 | `not_in_corpus` | answered | still wrong |
+
+Say the opposite directions out loud, because it is what identified the cause:
+no instruction to be bolder or more cautious could fix this, it would trade one
+pair for the other. That is the signature of a rule that disagrees with itself,
+not of a model that is miscalibrated.
+
+The current number is **93.9%, with status correct on 49 of 50** — up from 46 —
+and r2-pub-049 is the only question in the public set still scoring zero. It
+asks for an officially confirmed duration that the corpus never confirms, and
+we answer it instead of declining. That is the honest answer to "what is it
+worst at" today: it is still, specifically, reluctant to say that a value does
+not exist.
 
 **The cause is a contradiction in our own prompt, and it is worth showing them
 the two passages.** Four lines apart in `COMPOSER_SYSTEM`, the `partial` clause
@@ -193,17 +211,26 @@ no quota — and it would have fired **zero** times. A plausible mechanism,
 asserted without the free check that falsifies it. If they ask how we avoid
 fooling ourselves, this is the example to give.
 
-The real fix is one edit, it was gated on 27 Nov over 4 failing questions and
-3 controls, and it measured **+1.60 with no regressions** — r2-pub-042 now
-names the planned venue it had denied, and r2-pub-050 now answers the question
-about what a missing log entry proves. Two more elaborate versions of it
-measured *worse*, one of them breaking a control from 1.00 to 0.00. It is not
-in the submission for one reason, and it is an arithmetic reason: using it
-means re-running both halves from one code version, 291 calls, against about
-175 left in the day's free-tier pool. Re-running only the public half would
-leave the two halves built by different code and make the repeatability claim
-false. `docs/round2-risks.md` 2p has the tables; the branch is
-`calibration-evidential-state`.
+The real fix is one edit — remove the contradiction and let the `partial`
+clause govern. It was gated on 27 Nov over 4 failing questions and 3 controls
+for 24 calls and measured +1.60 with no regressions, then promoted on 28 Nov
+across both halves from one code version. **Two more elaborate versions of it
+measured worse**, and that is the part worth volunteering: splitting the rule
+along value-versus-judgement scored +1.00, and adding a supersession rule
+scored +0.50 while breaking a control from 1.00 to 0.00. Ranked on the four
+failing questions alone, that worst version would have looked like the best
+one. The controls are the only reason we know otherwise, and they were in the
+gate from the start.
+
+Be equally straight about what the promotion cost, because they may well find
+it. Five public answers moved and two moved down — r2-pub-044 dropped a date
+it had previously given, and r2-pub-047 attributed a count to a source the key
+does not support. Two hidden answers changed status in a direction we think is
+worse, and `docs/round2-risks.md` 2q names both. Three of those four do not go
+through the passage that changed at all; they are the re-run's nondeterminism,
+about one status flip in nine, which lands on any re-run whatever the code
+says. The +1.6 points is net of all of it. `2p` has the gate tables, `2q` the
+promotion.
 
 Volunteer r2-pub-048 specifically: the system invented an official record to
 justify a status, which is the worst failure available to something graded on
@@ -216,7 +243,7 @@ diagnosis that survived and a fix that did not is a better answer than a fix
 that shipped unmeasured.
 
 **"Is the accuracy number yours or a real one?"**
-92.3% on the 50 public questions, graded fact by fact against the published key
+93.9% on the 50 public questions, graded fact by fact against the published key
 by `gemini-3.1-flash-lite-preview`, a different model from the one that wrote
 the answers — `metrics.json` records `judge_independent` and `score.py` prints
 both model names in its header. It is still our own harness, so treat it as an
@@ -224,9 +251,9 @@ estimate. Say so first; it is the difference between a measurement and a claim.
 The hidden half has no accuracy number because the key is theirs.
 
 **"Show me a citation is real."**
-400 citations across both files, 0 that are not genuine corpus documents, and 0
-answered-or-partial answers with no citation at all. Public recall 0.891,
-precision 0.914.
+426 citations across both files, 0 that are not genuine corpus documents, and 0
+answered-or-partial answers with no citation at all. Public recall 0.900,
+precision 0.945.
 
 **"How do you know your changes help?"** — the best question to be asked, and
 there is a straight answer. Three fixes were ready on 27 Nov, each with a
@@ -268,8 +295,8 @@ fixed, tested, and written down with the mechanism.
 - Do not re-run the submitted pair to "show it working". It costs ~250 requests
   and overwrites the artifacts that pass.
 - Do not quit Docker Desktop and expect to restart it quickly. See above.
-- Do not claim reproduction is clean. It returned 5 MATCH of 9 on 27 Nov,
-  which is a real result and not a clean one; quote the split, not the best
-  verdict in it. Before that date no rehearsal had ever returned MATCH, so
-  if anything in the repository still says it never does, that line is older
-  than the measurement.
+- Do not claim reproduction is clean. It returned 7 MATCH of 9 on 28 Nov with
+  no graded field moving, which is a good result on a small sample and not a
+  guarantee; quote the split and the sample size, not the best verdict in it.
+  If anything in the repository still says a rehearsal has never returned
+  MATCH, or still quotes 5 of 9, that line is older than the measurement.

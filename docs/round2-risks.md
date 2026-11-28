@@ -561,11 +561,11 @@ guards. Public 10:24-11:06Z, hidden 11:06-11:37Z, scored 11:37Z.
 |---|---|---|
 | `check.py` exit code | **0** | **0** |
 | answers | 50/50 | 50/50 |
-| status split | 44 answered, 4 not_in_corpus, 2 partial | 38 answered, 4 not_in_corpus, 8 partial |
+| status split | 45 answered, 3 not_in_corpus, 2 partial | 42 answered, 4 not_in_corpus, 4 partial |
 | answers with a TigerGraph step | 50 | 50 |
-| query log | 422 lines / 51 ids | 434 lines / 51 ids |
-| accuracy | **92.3%**, 44/50 fully correct, 46/50 status | key held by the judges |
-| citations | recall 0.891 / precision 0.914 | — |
+| query log | 447 lines / 51 ids | 423 lines / 51 ids |
+| accuracy | **93.9%**, 44/50 fully correct, **49/50 status** | key held by the judges |
+| citations | recall 0.900 / precision 0.945 | — |
 
 Graded by `gemini-3.1-flash-lite-preview` against answers written by
 `gemini-3.1-flash-lite`, which `score.py` states in its own header and
@@ -1298,6 +1298,84 @@ holding a dispute is not a silent corpus, a missing record is not proof of
 absence, and an invented official record is worse than an admitted gap -- but
 the measurement does not prove they generalise. The controls held and no
 question regressed, which is the most that 24 calls can establish.
+
+### 2q. The calibration fix, promoted and measured on both halves (28 Nov)
+
+2p gated the fix at +1.60 over seven questions and held it back because
+promotion needs both halves from one code version. 28 Nov opened a fresh
+500-call pool, so it was run: 50 public, 50 hidden, judge over the public set,
+roughly 293 calls.
+
+| | banked (27 Nov) | promoted (28 Nov) |
+|---|---|---|
+| public accuracy | 92.3% | **93.9%** |
+| fully correct | 44/50 | 44/50 |
+| **status correct** | 46/50 | **49/50** |
+| citation recall | 0.891 | **0.900** |
+| citation precision | 0.914 | **0.945** |
+| questions scoring zero | r2-pub-049, r2-pub-050 | **r2-pub-049 only** |
+| hidden citations | 212 | **224** |
+
+Every aggregate the brief grades moved the right way, and the one that matters
+most for what this fix was built to do is **status correct, 46 to 49**. The
+calibration defect of 2m is substantially closed: of the four questions it
+named, r2-pub-042 and r2-pub-050 are now fully correct and r2-pub-041 improved,
+leaving r2-pub-049 as the single remaining zero in the public set.
+
+**What the re-run cost, stated in full.** Five public answers moved and two of
+them moved down:
+
+| qid | | why |
+|---|---|---|
+| r2-pub-050 | 0.00 -> **1.00** | now answers what a missing log entry proves |
+| r2-pub-042 | 0.50 -> **1.00** | now names the planned venue it had denied |
+| r2-pub-041 | 0.50 -> **0.80** | more of the key's facts given |
+| r2-pub-044 | 1.00 -> 0.50 | omitted the July 1 allocation date; status and citations still perfect |
+| r2-pub-047 | 1.00 -> 0.50 | attributed a count to an "LA28 shooting jury" the key does not support, and cited 2 of 4 instead of 3 of 4 |
+
+Two hidden answers also changed status, and both look worse to us than what
+they replaced, though the hidden key is held by the judges so this is our
+reading and not a score:
+
+- **r2-013** held five of six requested editions and said so, `partial`. It now
+  gives the five and calls itself `answered`, while its own explanation still
+  notes the 2020 Games are absent. A question naming six editions asks for six
+  values; this is the first of the four shapes, and it is the shape the answer
+  no longer obeys.
+- **r2-028** said the corpus does not state how many athletes took part and
+  that 48 is the number who *qualified*. It now says 48 competed, while its own
+  explanation still says "were able to qualify". Whether that costs anything
+  depends on a key we cannot see -- the published article does say 48 -- but an
+  answer contradicting its own explanation is not something to be comfortable
+  about.
+
+**Are those four regressions caused by the fix? Three of them, no.** The edit
+governs one situation: rival claims that nothing confirms. r2-pub-044 is an
+omitted date, r2-013 is a missing edition, and r2-028 is the difference between
+qualifying and competing. None involves a rival claim, and none goes through
+the passage that changed. They are the re-run's nondeterminism, which the 27
+Nov rehearsal measured at roughly one status flip in nine on byte-identical
+retrieval and which lands on any re-run whatever the code says. r2-pub-047 is
+the one that plausibly is ours: the fix tells the composer to say who claimed
+what, and on that question it named a source the key does not support.
+
+**So the nondeterminism tax is now measured on 100 questions rather than 9.**
+Seven answers moved across both halves on a re-run whose code change can touch
+only a handful: three up, four down or sideways. That is the number to quote
+when asked how repeatable this is -- not as an excuse, but because it is the
+honest denominator for every before-and-after table in this file, including the
+one above. The +1.6 points is net of it.
+
+**Why it was promoted anyway.** On the half where a key exists, accuracy, status
+correctness, citation recall and citation precision all improved, and the
+number of questions scoring zero halved. The concerns on the hidden half are
+inferences about an unseen key, and one of the two may well favour the new
+answer. Reverting would trade four measured improvements for two guesses.
+
+**What was not possible.** Fixing r2-pub-047 or the two hidden flips means
+another both-halves run at ~291 calls, against roughly 207 left in the 28 Nov
+pool. There is no second run today, and 29 Nov is the submission date rather
+than a working day. This run is the submission.
 
 ---
 

@@ -1,15 +1,15 @@
 {
  "questions": 50,
- "accuracy_pct": 92.3,
+ "accuracy_pct": 93.9,
  "fully_correct": 44,
- "status_correct": 46,
- "citation_recall_avg": 0.891,
- "citation_precision_avg": 0.914,
+ "status_correct": 49,
+ "citation_recall_avg": 0.9,
+ "citation_precision_avg": 0.945,
  "by_expected_status": {
   "answered": {
    "n": 44,
-   "status_ok": 42,
-   "accuracy_pct": 94.7
+   "status_ok": 44,
+   "accuracy_pct": 96.5
   },
   "not_in_corpus": {
    "n": 4,
@@ -18,7 +18,7 @@
   },
   "partial": {
    "n": 2,
-   "status_ok": 1,
+   "status_ok": 2,
    "accuracy_pct": 75.0
   }
  },
@@ -36,7 +36,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified all athletes, weight categories, and years as listed in the key.",
+   "note": "The system correctly identified all athletes, their respective categories, and their winning years.",
    "citations": {
     "gold_docs": 13,
     "cited": 13,
@@ -53,7 +53,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified the athletes, events, and years as specified in the key.",
+   "note": "The system correctly identified both fencers, their respective events, and the winning years as specified in the key.",
    "citations": {
     "gold_docs": 5,
     "cited": 5,
@@ -70,7 +70,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified all eight events listed in the key, despite the difference in ordering and formatting.",
+   "note": "The system correctly identified all eight events won by Japan.",
    "citations": {
     "gold_docs": 8,
     "cited": 8,
@@ -87,7 +87,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified the winners for all years listed, including the 2028 Olympic gold medalist as per the provided key.",
+   "note": "The system correctly identified the winners for all requested years.",
    "citations": {
     "gold_docs": 4,
     "cited": 4,
@@ -104,7 +104,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified all four films and their corresponding years.",
+   "note": "The system correctly identified all films listed in the key with their respective release years.",
    "citations": {
     "gold_docs": 4,
     "cited": 4,
@@ -121,7 +121,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified the nation and the count as specified in the key.",
+   "note": "The system answer perfectly matches the key.",
    "citations": {
     "gold_docs": 8,
     "cited": 18,
@@ -155,7 +155,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified the count of 8 and listed the same countries as the key.",
+   "note": "The system correctly identified the count and listed all eight nations present in the key.",
    "citations": {
     "gold_docs": 16,
     "cited": 16,
@@ -172,7 +172,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified the number of nations for each year listed in the key and accurately identified the years with the maximum and minimum number of nations.",
+   "note": "The system correctly identified the number of nations for each year listed and correctly identified the max and min years.",
    "citations": {
     "gold_docs": 8,
     "cited": 8,
@@ -189,7 +189,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified the number of nations for each year and correctly identified the max and min years.",
+   "note": "The system correctly identified the number of nations for each year and accurately identified the years with the maximum and minimum number of nations.",
    "citations": {
     "gold_docs": 7,
     "cited": 7,
@@ -206,7 +206,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified all data points, the maximum year, and the minimum year from the key.",
+   "note": "The system correctly identified all data points, the maximum, and the minimum.",
    "citations": {
     "gold_docs": 8,
     "cited": 8,
@@ -223,7 +223,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified the number of nations for each listed year and correctly identified the years with the maximum and minimum participation.",
+   "note": "The system correctly identified all data points and accurately determined the maximum and minimum values.",
    "citations": {
     "gold_docs": 8,
     "cited": 8,
@@ -240,7 +240,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified all medals listed in the key. Including extra, accurate information (team medals) does not detract from the score.",
+   "note": "The system included extra correct information regarding team medals, but all required facts from the key were present and correct.",
    "citations": {
     "gold_docs": 7,
     "cited": 9,
@@ -257,7 +257,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified all four Olympic gold medal titles with their respective years and weight categories.",
+   "note": "The system provided all the facts requested in the key.",
    "citations": {
     "gold_docs": 4,
     "cited": 4,
@@ -274,7 +274,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified all three medals and associated details from the key.",
+   "note": "The system correctly identified all three Olympic medals, their corresponding years, and categories as specified in the key.",
    "citations": {
     "gold_docs": 3,
     "cited": 3,
@@ -291,7 +291,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified all six Olympic individual titles listed in the key.",
+   "note": "The system correctly identified all six individual Olympic titles listed in the key.",
    "citations": {
     "gold_docs": 6,
     "cited": 6,
@@ -308,7 +308,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified the film and provided additional correct context.",
+   "note": "The system correctly identified the film mentioned in the key and provided accurate supporting details.",
    "citations": {
     "gold_docs": 5,
     "cited": 1,
@@ -342,7 +342,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified both individuals, using an alternative name (Jock McKernan) for the governor the key identifies as John R. McKernan Jr.",
+   "note": "The system answer accurately identified both successors correctly.",
    "citations": {
     "gold_docs": 1,
     "cited": 2,
@@ -359,7 +359,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system answer covers all facts provided in the key accurately.",
+   "note": "The system answer covers all the facts provided in the key correctly.",
    "citations": {
     "gold_docs": 1,
     "cited": 1,
@@ -376,7 +376,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system answer accurately reflects all facts provided in the key.",
+   "note": "The system's answer accurately captures all factual elements of the key answer.",
    "citations": {
     "gold_docs": 1,
     "cited": 1,
@@ -393,7 +393,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified the boycott as the reason for his absence.",
+   "note": "The system provided an answer that perfectly matches the key's information.",
    "citations": {
     "gold_docs": 1,
     "cited": 1,
@@ -410,7 +410,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system provided the exact explanation required by the key.",
+   "note": "The system answer correctly identifies the time difference and provides the specific times to the thousandth of a second as requested.",
    "citations": {
     "gold_docs": 1,
     "cited": 1,
@@ -426,10 +426,10 @@
    "status_got": "answered",
    "status_correct": true,
    "missing": [
-    "all eight finalists ran under 10 seconds in the semi-finals"
+    "The fact that all eight finalists had run under 10 seconds in the semi-finals."
    ],
    "wrong": [],
-   "note": "The system included two out of the three key facts provided in the answer key, missing the detail about the semi-final performance of all eight runners.",
+   "note": "The system provided two of the three supporting facts but omitted the final point regarding the semi-final performance of the runners.",
    "citations": {
     "gold_docs": 1,
     "cited": 1,
@@ -446,7 +446,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified the event and the number of nations as specified in the key.",
+   "note": "The system correctly identified both the event and the number of nations.",
    "citations": {
     "gold_docs": 1,
     "cited": 1,
@@ -463,7 +463,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system answer correctly identifies the event and the number of nations as specified in the key.",
+   "note": "The system correctly identified the event and the number of nations.",
    "citations": {
     "gold_docs": 1,
     "cited": 1,
@@ -497,7 +497,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified that the information is not in the corpus and declined to answer.",
+   "note": "The system correctly identified that the information was not in the corpus.",
    "citations": {
     "gold_docs": 0,
     "cited": 0,
@@ -530,7 +530,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified the director.",
+   "note": "The system correctly identified the director of the film Cocoon.",
    "citations": {
     "gold_docs": 1,
     "cited": 1,
@@ -547,7 +547,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified that the information is not in the corpus.",
+   "note": "The system correctly identified that the information is not present in the corpus.",
    "citations": {
     "gold_docs": 0,
     "cited": 1,
@@ -563,7 +563,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified all three athletes, the specific events, and the corresponding years as listed in the key.",
+   "note": "The system correctly identified all three athletes, their events, and the corresponding years as listed in the key.",
    "citations": {
     "gold_docs": 6,
     "cited": 6,
@@ -580,7 +580,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified the nation and the number of gold medals.",
+   "note": "The system answer accurately identifies both the nation and the medal count.",
    "citations": {
     "gold_docs": 4,
     "cited": 14,
@@ -597,7 +597,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified all three events listed in the key.",
+   "note": "The system correctly identified all three events mentioned in the key answer.",
    "citations": {
     "gold_docs": 3,
     "cited": 3,
@@ -614,7 +614,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified both the event and the number of nations.",
+   "note": "The system correctly identified the event and the number of nations.",
    "citations": {
     "gold_docs": 1,
     "cited": 1,
@@ -631,7 +631,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified the winner and provided additional accurate context.",
+   "note": "The system correctly identified the winner as Brooke Whitford.",
    "citations": {
     "gold_docs": 1,
     "cited": 1,
@@ -648,7 +648,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified the winner based on the provided key.",
+   "note": "The system correctly identified the winner of the 2028 Summer Olympics floor exercise.",
    "citations": {
     "gold_docs": 1,
     "cited": 1,
@@ -665,7 +665,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified the number of athletes as twenty-two.",
+   "note": "The system answer matches the key answer exactly.",
    "citations": {
     "gold_docs": 1,
     "cited": 1,
@@ -682,13 +682,13 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified the athlete mentioned in the key.",
+   "note": "The system answer accurately identifies the individual and the provisional nature of the ranking.",
    "citations": {
     "gold_docs": 1,
-    "cited": 2,
+    "cited": 1,
     "hit": 1,
     "recall": 1.0,
-    "precision": 0.5
+    "precision": 1.0
    }
   },
   {
@@ -699,7 +699,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified the medalist and the effective timestamp.",
+   "note": "The system correctly identified the athlete and the time, recognizing 10:15 PM as 22:15.",
    "citations": {
     "gold_docs": 2,
     "cited": 1,
@@ -710,19 +710,17 @@
   },
   {
    "qid": "r2-pub-041",
-   "score": 0.5,
+   "score": 0.8,
    "status_expected": "answered",
    "status_got": "answered",
    "status_correct": true,
    "missing": [
-    "The blog post republishes a provisional July 23 scoreboard",
-    "The jury decision was signed at 22:15 PDT",
-    "Sipho Asante-Mensah was confirmed third"
+    "The blog republished a provisional July 23 scoreboard",
+    "The signed jury decision was dated July 23 at 22:15 PDT",
+    "The official result confirmed Sipho Asante-Mensah as third"
    ],
-   "wrong": [
-    "The system incorrectly claims the jury list Bouchardy as fourth (the key implies he was displaced by Asante-Mensah, but does not explicitly name him as fourth)"
-   ],
-   "note": "The system correctly answers that the blog does not supersede the jury, but fails to provide the factual context regarding the provisional nature of the blog's source versus the signed official jury decision.",
+   "wrong": [],
+   "note": "The answer correctly identifies that the blog does not supersede the jury, but fails to mention the key facts explaining why: that the blog was based on a provisional scoreboard and that a specific, official, signed jury decision confirmed a different result.",
    "citations": {
     "gold_docs": 3,
     "cited": 2,
@@ -733,17 +731,13 @@
   },
   {
    "qid": "r2-pub-042",
-   "score": 0.5,
+   "score": 1.0,
    "status_expected": "answered",
-   "status_got": "partial",
-   "status_correct": false,
-   "missing": [
-    "The system failed to confirm that Long Beach Arena was indeed the originally planned venue, erroneously claiming there is no evidence for this."
-   ],
-   "wrong": [
-    "The system incorrectly asserts there is no evidence that Long Beach Arena was the originally planned venue."
-   ],
-   "note": "The system correctly identified the actual venue but failed the requirement to acknowledge the planned venue, treating the documented plan as uncertain or nonexistent.",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified both the planned and actual locations as specified in the key.",
    "citations": {
     "gold_docs": 3,
     "cited": 4,
@@ -760,7 +754,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identifies the inaccuracy of the July 27 entry by citing the official assignment.",
+   "note": "The system correctly identified that the July 27 entry does not establish the event was at Long Beach Arena and correctly identified the Carson Velodrome as the official venue.",
    "citations": {
     "gold_docs": 4,
     "cited": 2,
@@ -771,13 +765,15 @@
   },
   {
    "qid": "r2-pub-044",
-   "score": 1.0,
+   "score": 0.5,
    "status_expected": "answered",
    "status_got": "answered",
    "status_correct": true,
-   "missing": [],
+   "missing": [
+    "The answer failed to mention the context of the July 1 allocation."
+   ],
    "wrong": [],
-   "note": "The system correctly identified the Carson Velodrome and the July 1 allocation date.",
+   "note": "The system provided the correct venue, but missed the specific context of the allocation date provided in the key.",
    "citations": {
     "gold_docs": 1,
     "cited": 1,
@@ -794,12 +790,12 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified both the number of registered entries and the number of competitors. It did not provide the number of nations, but the key did not explicitly mark that as a requirement for the question asked.",
+   "note": "The system correctly identified the number of registered entries and actual competitors as specified in the key.",
    "citations": {
     "gold_docs": 3,
-    "cited": 1,
-    "hit": 1,
-    "recall": 0.333,
+    "cited": 2,
+    "hit": 2,
+    "recall": 0.667,
     "precision": 1.0
    }
   },
@@ -811,7 +807,7 @@
    "status_correct": true,
    "missing": [],
    "wrong": [],
-   "note": "The system correctly identified that the information is not in the corpus and provided a accurate summary of the available information.",
+   "note": "The system correctly identified that the information is not provided in the context.",
    "citations": {
     "gold_docs": 2,
     "cited": 1,
@@ -822,18 +818,24 @@
   },
   {
    "qid": "r2-pub-047",
-   "score": 1.0,
+   "score": 0.5,
    "status_expected": "answered",
    "status_got": "answered",
    "status_correct": true,
-   "missing": [],
-   "wrong": [],
-   "note": "The system accurately identified that the discrepancy arose from a confusion between registered entries and confirmed starters, aligning with the key's explanation.",
+   "missing": [
+    "Mention of the signed certificate confirming 40",
+    "Mention of the event article confirming 40"
+   ],
+   "wrong": [
+    "The system identifies the discrepancy as 'registered entries' vs 'starters' rather than 'advance registered entry slots' vs 'confirmed competitors'",
+    "The system attributes the count to the 'LA28 shooting jury' which is not supported by the key"
+   ],
+   "note": "The system correctly identifies that the newsletter included non-confirmed entries, but introduces unverified sources and deviates from the key's explanation of the terminology.",
    "citations": {
     "gold_docs": 4,
-    "cited": 3,
-    "hit": 3,
-    "recall": 0.75,
+    "cited": 2,
+    "hit": 2,
+    "recall": 0.5,
     "precision": 1.0
    }
   },
@@ -841,20 +843,20 @@
    "qid": "r2-pub-048",
    "score": 0.5,
    "status_expected": "partial",
-   "status_got": "answered",
-   "status_correct": false,
+   "status_got": "partial",
+   "status_correct": true,
    "missing": [
-    "The system failed to accurately reflect that the official status of the pause is null/unconfirmed, by stating that an official record exists which claims it could not be verified."
+    "The answer failed to mention the 11-minute claim from the spectator."
    ],
    "wrong": [
-    "The system invented the existence of an official record stating the duration could not be verified, whereas the key indicates this information is null."
+    "The system incorrectly claimed that official records exist that 'specifically cite and reject' the 11 and 14-minute claims, whereas the key indicates no official duration is known."
    ],
-   "note": "The system correctly identified the conflicting spectator and volunteer claims, but invented an official record to conclude the status, failing the partial key requirement to not invent a settled event or duration.",
+   "note": "The system correctly identified that the duration is unconfirmed but invented details about the existence of specific official records that refute the claims.",
    "citations": {
     "gold_docs": 3,
-    "cited": 3,
-    "hit": 3,
-    "recall": 1.0,
+    "cited": 2,
+    "hit": 2,
+    "recall": 0.667,
     "precision": 1.0
    }
   },
@@ -864,40 +866,36 @@
    "status_expected": "not_in_corpus",
    "status_got": "answered",
    "status_correct": false,
-   "missing": [],
-   "wrong": [
-    "The system provided an answer when it should have declined."
+   "missing": [
+    "The correct instruction for a 'not_in_corpus' status is to decline to give a value."
    ],
-   "note": "The key indicated the answer was not in the corpus and should not be provided. The system attempted to provide an answer instead of declining.",
+   "wrong": [
+    "The system provided invented values (14 minutes, 11 minutes) instead of declining to answer."
+   ],
+   "note": "The system failed to adhere to the instruction for 'not_in_corpus' results, opting to provide specific details that contradict the instruction to decline to give a value.",
+   "citations": {
+    "gold_docs": 3,
+    "cited": 2,
+    "hit": 2,
+    "recall": 0.667,
+    "precision": 1.0
+   }
+  },
+  {
+   "qid": "r2-pub-050",
+   "score": 1.0,
+   "status_expected": "answered",
+   "status_got": "answered",
+   "status_correct": true,
+   "missing": [],
+   "wrong": [],
+   "note": "The system correctly identified that the lack of an entry does not prove the absence of an event and correctly captured the nuance that the status of the pause remains unverified.",
    "citations": {
     "gold_docs": 3,
     "cited": 1,
     "hit": 1,
     "recall": 0.333,
     "precision": 1.0
-   }
-  },
-  {
-   "qid": "r2-pub-050",
-   "score": 0.0,
-   "status_expected": "answered",
-   "status_got": "not_in_corpus",
-   "status_correct": false,
-   "missing": [
-    "The answer should confirm that a missing log entry does not prove the absence of a pause.",
-    "The answer should state that no verified entry exists and the event may or may not have occurred.",
-    "The answer should note that witness estimates remain unverified."
-   ],
-   "wrong": [
-    "Claimed that the corpus does not contain the information required to answer the question, despite it being provided in the key."
-   ],
-   "note": "The system incorrectly identified the status as not_in_corpus when the key provided a definitive answer.",
-   "citations": {
-    "gold_docs": 3,
-    "cited": 0,
-    "hit": 0,
-    "recall": 0.0,
-    "precision": 0.0
    }
   }
  ]
